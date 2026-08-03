@@ -1,0 +1,22 @@
+{
+  "name": "spin-api",
+  "version": "2.0.0",
+  "description": "Backend API & Game Engine Microservice for Spin & Win Platform (Port 8080)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.5",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  }
+}

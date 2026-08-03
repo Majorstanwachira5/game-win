@@ -1,0 +1,13 @@
+{
+  "name": "spin-admin",
+  "version": "1.0.0",
+  "description": "Administrative Control Portal Microservice for Spin & Win Platform (Port 3001)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

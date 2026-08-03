@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database Service (Port 5050 -> 5432)
+  spin-db:
+    image: postgres:15-alpine
+    container_name: spin_win_db
+    restart: always
+    environment:
+      POSTGRES_DB: spin_win_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5050:5432"
+    volumes:
+      - ./spin-db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ./spin-db/seed.sql:/docker-entrypoint-initdb.d/2_seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Backend Core API & Game Engine Service (Port 8080)
+  spin-api:
+    build: ./spin-api
+    container_name: spin_win_api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DB_HOST: spin-db
+      DB_PORT: 5432
+      DB_NAME: spin_win_db
+      DB_USER: postgres
+      DB_PASSWORD: postgrespassword
+    depends_on:
+      spin-db:
+        condition: service_healthy
+
+  # 3. Game Frontend Client Service (Port 3000)
+  spin-client:
+    build: ./spin-client
+    container_name: spin_win_client
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+    depends_on:
+      - spin-api
+
+  # 4. Dedicated Admin Portal Service (Port 3001)
+  spin-admin:
+    build: ./spin-admin
+    container_name: spin_win_admin
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+    depends_on:
+      - spin-api

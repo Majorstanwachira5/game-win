@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPIN & WIN - Admin Control Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Orbitron:wght@600;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- HEADER NAV -->
+        <header class="admin-header">
+            <div class="admin-brand">
+                <span class="shield-icon">🛡️</span>
+                <h1>SPIN & WIN <small>ADMIN DASHBOARD</small></h1>
+            </div>
+            <div class="admin-header-right">
+                <span class="status-indicator live-dot"></span> <span id="socketCountText">Active Sockets: 1</span>
+                <a href="index.html" class="client-link" target="_blank">🌐 LAUNCH CLIENT GAME</a>
+            </div>
+        </header>
+
+        <!-- KPI SUMMARY METRICS -->
+        <section class="kpi-grid">
+            <div class="kpi-card revenue-card">
+                <div class="kpi-label">TOTAL REVENUE (BETS)</div>
+                <div class="kpi-value" id="totalRevenueText">KSh 540,000.00</div>
+                <div class="kpi-sub">Total user wagers processed</div>
+            </div>
+
+            <div class="kpi-card payout-card">
+                <div class="kpi-label">TOTAL PAYOUT (PRIZES)</div>
+                <div class="kpi-value" id="totalPayoutText">KSh 81,000.00</div>
+                <div class="kpi-sub" id="rtpText">Realized RTP: 15.00%</div>
+            </div>
+
+            <div class="kpi-card profit-card">
+                <div class="kpi-label">HOUSE NET PROFIT</div>
+                <div class="kpi-value" id="houseProfitText">KSh 459,000.00</div>
+                <div class="kpi-sub" id="profitMarginText">House Margin: 85.00% (TARGET: 85%)</div>
+            </div>
+
+            <div class="kpi-card spins-card">
+                <div class="kpi-label">TOTAL SPINS PROCESSED</div>
+                <div class="kpi-value" id="totalSpinsText">4,320</div>
+                <div class="kpi-sub">100% Cryptographically verified</div>
+            </div>
+        </section>
+
+        <!-- MAIN DASHBOARD CONTENT TABS -->
+        <div class="admin-body">
+            <!-- LEFT SECTION: PROBABILITY & RIG CONTROLS -->
+            <section class="admin-section probability-section glass-card">
+                <div class="section-header">
+                    <h2>⚙️ PROBABILITY TABLE & HOUSE EDGE ENGINE</h2>
+                    <button id="saveProbabilitiesBtn" class="btn primary-btn">SAVE PROBABILITIES</button>
+                </div>
+                <p class="section-desc">Adjust weights per slice. The mathematical house profit margin is calculated dynamically.</p>
+                
+                <div class="table-wrapper">
+                    <table class="prob-table">
+                        <thead>
+                            <tr>
+                                <th>SLICE ID</th>
+                                <th>LABEL</th>
+                                <th>TYPE</th>
+                                <th>MULTIPLIER</th>
+                                <th>WEIGHT UNITS</th>
+                                <th>PROBABILITY %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="probabilityTableBody">
+                            <!-- Dynamic Probability Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- RIGHT SECTION: RIG DEMO CONTROL & PAYMENT GATEWAY KEYS -->
+            <aside class="admin-sidebar">
+                <!-- DEMO RIG OVERRIDE PANEL -->
+                <div class="glass-card panel-card rig-panel">
+                    <div class="panel-header">
+                        <h3>🎯 DEMO / RIG OVERRIDE TOOL</h3>
+                    </div>
+                    <p class="panel-desc">Force the wheel to land on a specific slice for promotional or testing demos.</p>
+                    
+                    <div class="rig-form-group">
+                        <label>TARGET OUTCOME OVERRIDE:</label>
+                        <select id="rigSliceSelect" class="admin-select">
+                            <option value="">-- DISABLED (Random Crypto RNG) --</option>
+                        </select>
+                    </div>
+
+                    <button id="setRigBtn" class="btn warning-btn">APPLY RIG OVERRIDE</button>
+                    <div id="rigStatusMessage" class="rig-status">Status: Normal Random Mode</div>
+                </div>
+
+                <!-- PAYMENT GATEWAY API KEYS CONFIG -->
+                <div class="glass-card panel-card payment-panel">
+                    <div class="panel-header">
+                        <h3>💳 PAYMENT GATEWAY API KEYS</h3>
+                    </div>
+                    <p class="panel-desc">Configure live credentials for M-Pesa Express, Mobile Money, and Card gateways.</p>
+                    
+                    <div class="api-key-form">
+                        <div class="form-group">
+                            <label>M-PESA PAYBILL / SHORTCODE:</label>
+                            <input type="text" id="mpesaPaybillInput" class="admin-input" value="400200">
+                        </div>
+
+                        <div class="form-group">
+                            <label>M-PESA CONSUMER KEY:</label>
+                            <input type="password" id="mpesaKeyInput" class="admin-input" value="mpesa_live_ck_9823478912">
+                        </div>
+
+                        <div class="form-group">
+                            <label>M-PESA CONSUMER SECRET:</label>
+                            <input type="password" id="mpesaSecretInput" class="admin-input" value="mpesa_live_cs_7812634812">
+                        </div>
+
+                        <div class="form-group">
+                            <label>STRIPE / CARD PUBLIC KEY:</label>
+                            <input type="text" id="stripeKeyInput" class="admin-input" value="pk_live_51Nv98234712398">
+                        </div>
+
+                        <button id="savePaymentKeysBtn" class="btn success-btn">SAVE PAYMENT API KEYS</button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/admin.js"></script>
+</body>
+</html>

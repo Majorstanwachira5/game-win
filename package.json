@@ -1,0 +1,16 @@
+{
+  "name": "spin-and-win-casino",
+  "version": "1.0.0",
+  "description": "High performance Spin and Win casino wheel game with 85% house profit engine, real-time Socket.IO, live comments, payment gateway ready hooks, and admin panel.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test-sim": "node scripts/simulate_rtp.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

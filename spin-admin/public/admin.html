@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPIN & WIN — Admin Control Center v2.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Orbitron:wght@600;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- HEADER NAV -->
+        <header class="admin-header">
+            <div class="admin-brand">
+                <span class="shield-icon">🛡️</span>
+                <h1>SPIN & WIN <small>ADMIN CONTROL CENTER (PORT 3001)</small></h1>
+            </div>
+            <div class="admin-header-right">
+                <span class="status-indicator live-dot"></span>
+                <span id="socketCountText">Sockets: 1</span>
+                <a href="http://localhost:3000" class="client-link" target="_blank">🌐 GAME CLIENT</a>
+                <button id="adminLogoutBtn" class="btn danger-btn sm-btn" style="display:none">LOGOUT</button>
+            </div>
+        </header>
+
+        <!-- ADMIN LOGIN MODAL -->
+        <div id="adminAuthModal" class="admin-auth-overlay">
+            <div class="admin-auth-card">
+                <div class="auth-icon">🔒</div>
+                <h2>ADMIN AUTHENTICATION</h2>
+                <p>Enter administrative master password to unlock panel:</p>
+                <form id="adminLoginForm">
+                    <input type="password" id="adminPasswordInput" placeholder="Enter Admin Password..." required>
+                    <button type="submit" class="btn primary-btn full-btn">UNLOCK DASHBOARD</button>
+                </form>
+                <div id="authErrorMsg" class="auth-error" style="display:none"></div>
+            </div>
+        </div>
+
+        <!-- KPI SUMMARY METRICS -->
+        <section class="kpi-grid">
+            <div class="kpi-card revenue-card">
+                <div class="kpi-label">TOTAL REVENUE (BETS)</div>
+                <div class="kpi-value" id="totalRevenueText">KSh 540,000.00</div>
+                <div class="kpi-sub">Total user wagers across all games</div>
+            </div>
+
+            <div class="kpi-card payout-card">
+                <div class="kpi-label">TOTAL PAYOUT (PRIZES)</div>
+                <div class="kpi-value" id="totalPayoutText">KSh 81,000.00</div>
+                <div class="kpi-sub" id="rtpText">Realized RTP: 15.00%</div>
+            </div>
+
+            <div class="kpi-card profit-card">
+                <div class="kpi-label">HOUSE NET PROFIT</div>
+                <div class="kpi-value" id="houseProfitText">KSh 459,000.00</div>
+                <div class="kpi-sub" id="profitMarginText">House Margin: 85.00%</div>
+            </div>
+
+            <div class="kpi-card spins-card">
+                <div class="kpi-label">TOTAL GAME SESSIONS</div>
+                <div class="kpi-value" id="totalSpinsText">4,320</div>
+                <div class="kpi-sub" id="gameBreakdownText">Wheel: 4320 | Box: 1200 | Dice: 890</div>
+            </div>
+        </section>
+
+        <!-- ADMIN TABS NAV -->
+        <nav class="admin-nav-tabs">
+            <button class="adm-tab active" data-tab="overview">📊 Overview</button>
+            <button class="adm-tab" data-tab="probabilities">⚙️ Wheel Engine</button>
+            <button class="adm-tab" data-tab="players">👥 Players</button>
+            <button class="adm-tab" data-tab="rig">🎯 Demo Rig</button>
+            <button class="adm-tab" data-tab="settings">💳 Payment & Security</button>
+        </nav>
+
+        <!-- MAIN DASHBOARD TAB CONTENT -->
+        <div class="admin-body">
+
+            <!-- ─── OVERVIEW TAB ─── -->
+            <div id="tab-adm-overview" class="adm-panel active">
+                <div class="panel-grid-2">
+                    <div class="glass-card">
+                        <h3>🎮 Game Performance Breakdown</h3>
+                        <div class="game-stats-list" id="gameStatsList">
+                            <div class="stat-row"><span>🎡 Spin Wheel</span><span id="statWheelCount">4,320 plays</span></div>
+                            <div class="stat-row"><span>🎁 Mystery Box</span><span id="statBoxCount">1,200 plays</span></div>
+                            <div class="stat-row"><span>🎲 Dice Roll</span><span id="statDiceCount">890 plays</span></div>
+                            <div class="stat-row"><span>🃏 Pick a Card</span><span id="statCardCount">750 plays</span></div>
+                            <div class="stat-row"><span>🪜 Prize Ladder</span><span id="statLadderCount">430 plays</span></div>
+                            <div class="stat-row"><span>🍀 Lucky 7</span><span id="statLucky7Count">520 plays</span></div>
+                        </div>
+                    </div>
+                    <div class="glass-card">
+                        <h3>🔒 Security & Integrity Status</h3>
+                        <div class="security-status-list">
+                            <div class="sec-row"><span>Helmet Security Headers</span><span class="status-badge active">ACTIVE</span></div>
+                            <div class="sec-row"><span>Rate Limiter (15 req/10s)</span><span class="status-badge active">ACTIVE</span></div>
+                            <div class="sec-row"><span>JWT Auth Token Verification</span><span class="status-badge active">ACTIVE</span></div>
+                            <div class="sec-row"><span>Crypto RNG (crypto.randomBytes)</span><span class="status-badge active">ACTIVE</span></div>
+                            <div class="sec-row"><span>CORS Domain Lock</span><span class="status-badge active">ACTIVE</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── PROBABILITIES TAB ─── -->
+            <div id="tab-adm-probabilities" class="adm-panel">
+                <div class="glass-card">
+                    <div class="section-header">
+                        <h2>⚙️ PROBABILITY TABLE & HOUSE EDGE ENGINE</h2>
+                        <button id="saveProbabilitiesBtn" class="btn primary-btn">SAVE PROBABILITIES</button>
+                    </div>
+                    <p class="section-desc">Adjust weights per wheel slice. House edge is calculated in real time.</p>
+                    <div class="table-wrapper">
+                        <table class="prob-table">
+                            <thead>
+                                <tr>
+                                    <th>SLICE ID</th>
+                                    <th>LABEL</th>
+                                    <th>TYPE</th>
+                                    <th>MULTIPLIER</th>
+                                    <th>WEIGHT UNITS</th>
+                                    <th>PROBABILITY %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="probabilityTableBody">
+                                <!-- Dynamic Probability Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── PLAYERS TAB ─── -->
+            <div id="tab-adm-players" class="adm-panel">
+                <div class="glass-card">
+                    <div class="section-header">
+                        <h2>👥 PLAYER MANAGEMENT</h2>
+                        <button id="refreshPlayersBtn" class="btn secondary-btn">REFRESH LIST</button>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="prob-table">
+                            <thead>
+                                <tr>
+                                    <th>USER ID / PHONE</th>
+                                    <th>BALANCE</th>
+                                    <th>VIP TIER</th>
+                                    <th>XP</th>
+                                    <th>FREE SPINS</th>
+                                    <th>TOTAL WAGERED</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="playersTableBody">
+                                <!-- Dynamic Player Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── RIG DEMO TAB ─── -->
+            <div id="tab-adm-rig" class="adm-panel">
+                <div class="glass-card max-600">
+                    <div class="panel-header">
+                        <h3>🎯 DEMO / RIG OVERRIDE TOOL</h3>
+                    </div>
+                    <p class="panel-desc">Force the spin wheel to land on a specific slice for promotional testing or video demos.</p>
+                    
+                    <div class="form-group">
+                        <label>TARGET OUTCOME OVERRIDE:</label>
+                        <select id="rigSliceSelect" class="admin-select">
+                            <option value="">-- DISABLED (Random Crypto RNG) --</option>
+                        </select>
+                    </div>
+
+                    <button id="setRigBtn" class="btn warning-btn full-btn">APPLY RIG OVERRIDE</button>
+                    <div id="rigStatusMessage" class="rig-status">Status: Normal Random Mode (Crypto RNG)</div>
+                </div>
+            </div>
+
+            <!-- ─── SETTINGS TAB ─── -->
+            <div id="tab-adm-settings" class="adm-panel">
+                <div class="glass-card max-600">
+                    <div class="panel-header">
+                        <h3>💳 PAYMENT GATEWAY API KEYS</h3>
+                    </div>
+                    <p class="panel-desc">Configure parameters for M-Pesa Express, Airtel Money, and Card gateways.</p>
+                    
+                    <div class="api-key-form">
+                        <div class="form-group">
+                            <label>M-PESA PAYBILL / SHORTCODE:</label>
+                            <input type="text" id="mpesaPaybillInput" class="admin-input" value="400200">
+                        </div>
+
+                        <div class="form-group">
+                            <label>MINIMUM DEPOSIT (KSh):</label>
+                            <input type="number" id="minDepositInput" class="admin-input" value="10">
+                        </div>
+
+                        <div class="form-group">
+                            <label>MAXIMUM DEPOSIT (KSh):</label>
+                            <input type="number" id="maxDepositInput" class="admin-input" value="500000">
+                        </div>
+
+                        <button id="savePaymentKeysBtn" class="btn success-btn full-btn">SAVE PAYMENT SETTINGS</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
