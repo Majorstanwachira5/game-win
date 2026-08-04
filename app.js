@@ -739,8 +739,17 @@ function bindSoundAndChat() {
 
 // ─── SOCKET.IO EVENT HANDLERS ──────────────────────────────────────────────
 function initSocketIO() {
+    if (typeof io === 'undefined') return;
     try {
-        window.socket = io(API_BASE);
+        window.socket = io(API_BASE, {
+            transports: ['polling', 'websocket'],
+            reconnectionAttempts: 3,
+            timeout: 5000
+        });
+
+        window.socket.on('connect_error', (err) => {
+            console.warn('Socket connection fallback mode:', err.message);
+        });
 
         window.socket.on('live_winner', (winner) => {
             updateSingleWinnerShowcase(winner);
@@ -762,10 +771,6 @@ function initSocketIO() {
 
         window.socket.on('chat_message', (msg) => {
             addChatMessage(msg);
-        });
-
-        window.socket.on('live_winner', (winner) => {
-            updateSingleWinnerShowcase(winner);
         });
 
         window.socket.on('floating_reaction', (data) => {

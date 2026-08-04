@@ -16,6 +16,14 @@
       "destination": "/spin-api/server.js"
     },
     {
+      "source": "/socket.io/(.*)",
+      "destination": "/spin-api/server.js"
+    },
+    {
+      "source": "/socket.io",
+      "destination": "/spin-api/server.js"
+    },
+    {
       "source": "/health",
       "destination": "/spin-api/server.js"
     },
