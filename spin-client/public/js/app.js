@@ -129,6 +129,7 @@ window.setAuthenticatedUser = function (user, token) {
     APP_STATE.userId = user.id;
     APP_STATE.isAuthenticated = true;
     localStorage.setItem('spin_jwt_token', token);
+    try { localStorage.setItem('spin_user_data', JSON.stringify(user)); } catch(e) {}
 
     const unauthHeader = document.getElementById('unauthHeader');
     const authHeader = document.getElementById('authHeader');

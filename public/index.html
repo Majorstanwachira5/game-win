@@ -1183,8 +1183,44 @@
                 </div>
                 <button type="submit" id="authSubmitBtn" class="spin-gold-btn full-width margin-top">LOG IN NOW</button>
             </form>
+    <!-- NATIVE ANDROID FLOATING CHAT BUTTON -->
+    <button class="mobile-chat-fab" onclick="var s = document.getElementById('mobileBottomSheet'); if(s) s.classList.toggle('open');" title="Open Live Chat">💬</button>
+
+    <!-- NATIVE ANDROID MOBILE BOTTOM SHEET (CHAT & WINNERS) -->
+    <div id="mobileBottomSheet" class="mobile-bottom-sheet">
+        <div class="sheet-handle" onclick="var s = document.getElementById('mobileBottomSheet'); if(s) s.classList.remove('open');"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="color:#ffd700; margin:0; font-size:16px;">💬 LIVE PLAYER CHAT</h3>
+            <button class="close-modal-btn" onclick="var s = document.getElementById('mobileBottomSheet'); if(s) s.classList.remove('open');">&times;</button>
+        </div>
+        <div style="flex:1; overflow-y:auto;" id="mobileChatContent">
+            <p style="color:rgba(255,255,255,0.7); font-size:13px;">Welcome to live casino discussion!</p>
         </div>
     </div>
+
+    <!-- PERSISTENT NATIVE ANDROID BOTTOM NAVIGATION BAR -->
+    <nav class="android-bottom-nav">
+        <button class="android-nav-item active" onclick="window.scrollTo({top: 0, behavior: 'smooth'});">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
+        <button class="android-nav-item" onclick="var el = document.getElementById('casinoGamesGrid'); if(el) el.scrollIntoView({behavior:'smooth'});">
+            <span class="nav-icon">🎮</span>
+            <span>Games</span>
+        </button>
+        <button class="android-nav-item" onclick="if(window.openModal) window.openModal('depositModal');">
+            <span class="nav-icon">💰</span>
+            <span>Wallet</span>
+        </button>
+        <button class="android-nav-item" onclick="if(window.openModal) window.openModal('modal-challenges');">
+            <span class="nav-icon">🎁</span>
+            <span>Rewards</span>
+        </button>
+        <button class="android-nav-item" onclick="if(window.openModal) window.openModal('modal-vip');">
+            <span class="nav-icon">👤</span>
+            <span>Profile</span>
+        </button>
+    </nav>
 
     <!-- SCRIPTS -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
