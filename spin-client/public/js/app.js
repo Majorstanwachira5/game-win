@@ -4,15 +4,18 @@
  */
 
 const getApiBase = () => {
-    if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-        return `${window.location.protocol}//${window.location.hostname}:8080`;
+    if (typeof window !== 'undefined' && window.location) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return `${window.location.protocol}//${window.location.hostname}:8080`;
+        }
+        return window.location.origin;
     }
     return 'http://localhost:8080';
 };
 const API_BASE = getApiBase();
 
 const APP_STATE = {
-    userId: 'demo-user-1',
+    userId: '0712***840',
     token: null,
     isAuthenticated: false,
     balance: 12500.00,
@@ -30,39 +33,19 @@ const APP_STATE = {
 async function apiFetch(endpoint) {
     const headers = { 'Content-Type': 'application/json' };
     if (APP_STATE.token) headers['Authorization'] = `Bearer ${APP_STATE.token}`;
-    try {
-        const res = await fetch(API_BASE + endpoint, { headers });
-        return await res.json();
-    } catch (e) {
-        if (API_BASE !== 'http://localhost:8080') {
-            const fb = await fetch('http://localhost:8080' + endpoint, { headers });
-            return await fb.json();
-        }
-        throw e;
-    }
+    const res = await fetch(API_BASE + endpoint, { headers });
+    return await res.json();
 }
 
 async function apiPost(endpoint, body = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (APP_STATE.token) headers['Authorization'] = `Bearer ${APP_STATE.token}`;
-    try {
-        const res = await fetch(API_BASE + endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body)
-        });
-        return await res.json();
-    } catch (e) {
-        if (API_BASE !== 'http://localhost:8080') {
-            const fb = await fetch('http://localhost:8080' + endpoint, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(body)
-            });
-            return await fb.json();
-        }
-        throw e;
-    }
+    const res = await fetch(API_BASE + endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    });
+    return await res.json();
 }
 
 // ─── INITIALIZATION ────────────────────────────────────────────────────────
@@ -105,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 10. Initialize Socket.IO connection
     try { initSocketIO(); } catch (e) { console.warn('socketIO err:', e); }
+    try { startSeededLiveLoop(); } catch (e) { console.warn('live loop err:', e); }
 
     // 11. Async Auth Verification
     initAuth().catch(e => {
@@ -169,955 +153,1039 @@ window.setUnauthenticatedState = function () {
     if (chatLockOverlay) chatLockOverlay.style.display = 'flex';
 };
 
-function bindAuthEvents() {
-    const modal = document.getElementById('authModal');
-    const closeBtn = document.getElementById('closeAuthModalBtn');
-    const openLoginBtn = document.getElementById('openLoginBtn');
-    const openRegBtn = document.getElementById('openRegisterBtn');
-    const chatLockRegBtn = document.getElementById('chatLockRegBtn');
-    const chatLockLoginBtn = document.getElementById('chatLockLoginBtn');
+let currentAuthMode = 'login';
+
+window.switchAuthTab = function (mode) {
+    currentAuthMode = mode;
+    const authErrorMsg = document.getElementById('authErrorMsg');
     const tabLoginBtn = document.getElementById('tabLoginBtn');
     const tabRegBtn = document.getElementById('tabRegBtn');
     const confirmPassGroup = document.getElementById('confirmPassGroup');
     const authModalTitle = document.getElementById('authModalTitle');
     const authSubmitBtn = document.getElementById('authSubmitBtn');
-    const authForm = document.getElementById('authForm');
+
+    if (authErrorMsg) authErrorMsg.style.display = 'none';
+    if (mode === 'login') {
+        if (tabLoginBtn) tabLoginBtn.classList.add('active');
+        if (tabRegBtn) tabRegBtn.classList.remove('active');
+        if (confirmPassGroup) confirmPassGroup.style.display = 'none';
+        if (authModalTitle) authModalTitle.textContent = 'PLAYER LOGIN';
+        if (authSubmitBtn) authSubmitBtn.textContent = 'LOG IN NOW';
+    } else {
+        if (tabRegBtn) tabRegBtn.classList.add('active');
+        if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+        if (confirmPassGroup) confirmPassGroup.style.display = 'block';
+        if (authModalTitle) authModalTitle.textContent = 'CREATE PLAYER ACCOUNT';
+        if (authSubmitBtn) authSubmitBtn.textContent = 'REGISTER & PLAY';
+    }
+};
+
+window.openAuthModal = function (mode = 'login') {
+    window.switchAuthTab(mode);
+    const m = document.getElementById('authModal');
+    if (m) {
+        m.style.display = 'flex';
+        m.style.zIndex = '9999';
+    }
+};
+
+window.handleAuthSubmit = async function (e) {
+    if (e && e.preventDefault) e.preventDefault();
     const authErrorMsg = document.getElementById('authErrorMsg');
-    const logoutBtn = document.getElementById('logoutBtn');
+    const authSubmitBtn = document.getElementById('authSubmitBtn');
+    const modal = document.getElementById('authModal');
 
-    let currentAuthMode = 'login';
+    if (authErrorMsg) authErrorMsg.style.display = 'none';
+    const emailEl = document.getElementById('authEmailInput');
+    const email = emailEl ? emailEl.value.trim() : '';
+    const passEl = document.getElementById('authPassInput');
+    const password = passEl ? passEl.value.trim() : '';
+    const confirmPassEl = document.getElementById('authConfirmPassInput');
+    const confirmPassword = confirmPassEl ? confirmPassEl.value.trim() : '';
 
-    window.switchAuthTab = function (mode) {
-        currentAuthMode = mode;
-        const authErrorMsg = document.getElementById('authErrorMsg');
-        const tabLoginBtn = document.getElementById('tabLoginBtn');
-        const tabRegBtn = document.getElementById('tabRegBtn');
-        const confirmPassGroup = document.getElementById('confirmPassGroup');
-        const authModalTitle = document.getElementById('authModalTitle');
-        const authSubmitBtn = document.getElementById('authSubmitBtn');
-
-        if (authErrorMsg) authErrorMsg.style.display = 'none';
-        if (mode === 'login') {
-            if (tabLoginBtn) tabLoginBtn.classList.add('active');
-            if (tabRegBtn) tabRegBtn.classList.remove('active');
-            if (confirmPassGroup) confirmPassGroup.style.display = 'none';
-            if (authModalTitle) authModalTitle.textContent = 'PLAYER LOGIN';
-            if (authSubmitBtn) authSubmitBtn.textContent = 'LOG IN NOW';
-        } else {
-            if (tabRegBtn) tabRegBtn.classList.add('active');
-            if (tabLoginBtn) tabLoginBtn.classList.remove('active');
-            if (confirmPassGroup) confirmPassGroup.style.display = 'block';
-            if (authModalTitle) authModalTitle.textContent = 'CREATE PLAYER ACCOUNT';
-            if (authSubmitBtn) authSubmitBtn.textContent = 'REGISTER & PLAY';
-        }
-    };
-
-    window.openAuthModal = function (mode = 'login') {
-        window.switchAuthTab(mode);
-        const m = document.getElementById('authModal');
-        if (m) {
-            m.style.display = 'flex';
-            m.style.zIndex = '9999';
-        }
-    };
-
-    window.handleAuthSubmit = async function (e) {
-        if (e && e.preventDefault) e.preventDefault();
-        const authErrorMsg = document.getElementById('authErrorMsg');
-        const authSubmitBtn = document.getElementById('authSubmitBtn');
-        const modal = document.getElementById('authModal');
-
-        if (authErrorMsg) authErrorMsg.style.display = 'none';
-        const emailEl = document.getElementById('authEmailInput');
-        const email = emailEl ? emailEl.value.trim() : '';
-        const passEl = document.getElementById('authPassInput');
-        const password = passEl ? passEl.value.trim() : '';
-        const confirmPassEl = document.getElementById('authConfirmPassInput');
-        const confirmPassword = confirmPassEl ? confirmPassEl.value.trim() : '';
-
-        if (!email || !password) {
-            if (authErrorMsg) {
-                authErrorMsg.textContent = 'Please enter email address and password.';
-                authErrorMsg.style.display = 'block';
-            }
-            return false;
-        }
-
-        if (currentAuthMode === 'register' && password !== confirmPassword) {
-            if (authErrorMsg) {
-                authErrorMsg.textContent = 'Passwords do not match! Please check again.';
-                authErrorMsg.style.display = 'block';
-            }
-            return false;
-        }
-
-        const endpoint = currentAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
-        const body = currentAuthMode === 'register' ? { email, password, confirmPassword } : { email, password };
-
-        try {
-            if (authSubmitBtn) {
-                authSubmitBtn.disabled = true;
-                authSubmitBtn.textContent = 'VERIFYING...';
-            }
-            const res = await apiPost(endpoint, body);
-            if (authSubmitBtn) {
-                authSubmitBtn.disabled = false;
-                authSubmitBtn.textContent = currentAuthMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
-            }
-
-            if (res.success && res.token) {
-                setAuthenticatedUser(res.user, res.token);
-                if (modal) modal.style.display = 'none';
-                showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! Account verified 🎉`);
-            } else {
-                if (authErrorMsg) {
-                    authErrorMsg.textContent = res.error || 'Authentication failed.';
-                    authErrorMsg.style.display = 'block';
-                }
-            }
-        } catch (err) {
-            if (authSubmitBtn) {
-                authSubmitBtn.disabled = false;
-                authSubmitBtn.textContent = currentAuthMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
-            }
-            if (authErrorMsg) {
-                authErrorMsg.textContent = err.message || 'Connection error. Please try again.';
-                authErrorMsg.style.display = 'block';
-            }
+    if (!email || !password) {
+        if (authErrorMsg) {
+            authErrorMsg.textContent = 'Please enter email address and password.';
+            authErrorMsg.style.display = 'block';
         }
         return false;
-    };
-
-    function bindAuthEvents() {
-        const modal = document.getElementById('authModal');
-        const closeBtn = document.getElementById('closeAuthModalBtn');
-        const tabLoginBtn = document.getElementById('tabLoginBtn');
-        const tabRegBtn = document.getElementById('tabRegBtn');
-        const authForm = document.getElementById('authForm');
-        const logoutBtn = document.getElementById('logoutBtn');
-
-        document.querySelectorAll('#openLoginBtn, #chatLockLoginBtn, .open-login-trigger').forEach(btn => {
-            btn.addEventListener('click', (e) => { e.preventDefault(); window.openAuthModal('login'); });
-        });
-
-        document.querySelectorAll('#openRegisterBtn, #chatLockRegBtn, .open-reg-trigger').forEach(btn => {
-            btn.addEventListener('click', (e) => { e.preventDefault(); window.openAuthModal('register'); });
-        });
-
-        if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => window.switchAuthTab('login'));
-        if (tabRegBtn) tabRegBtn.addEventListener('click', () => window.switchAuthTab('register'));
-        if (closeBtn) closeBtn.addEventListener('click', () => modal && (modal.style.display = 'none'));
-
-        if (authForm) {
-            authForm.addEventListener('submit', window.handleAuthSubmit);
-        }
-
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                setUnauthenticatedState();
-                showToast('Logged out successfully.');
-            });
-        }
     }
 
-    // ─── TAB NAVIGATION ────────────────────────────────────────────────────────
-    function initTabNavigation() {
-        // 3D Game Tile Triggers -> Open Modal Overlays
-        document.querySelectorAll('.game-tile-trigger').forEach(tile => {
-            tile.addEventListener('click', () => {
-                if (!APP_STATE.isAuthenticated) {
-                    showToast('Please Register or Log In first to play!', 'warning');
-                    if (window.openAuthModal) window.openAuthModal('register');
-                    return;
-                }
-                const target = tile.dataset.target;
-                const modal = document.getElementById(`modal-${target}`);
-                if (modal) {
-                    modal.style.display = 'flex';
-                    if (target === 'challenges' && typeof loadChallenges === 'function') loadChallenges();
-                    if (target === 'vip' && typeof loadVIPData === 'function') loadVIPData();
-                }
-            });
-        });
-
-        // Close Modal Buttons
-        document.querySelectorAll('.close-modal-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const modal = btn.closest('.game-modal-overlay');
-                if (modal) modal.style.display = 'none';
-            });
-        });
-
-        // Close modal on background click
-        document.querySelectorAll('.game-modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) overlay.style.display = 'none';
-            });
-        });
+    if (currentAuthMode === 'register' && password !== confirmPassword) {
+        if (authErrorMsg) {
+            authErrorMsg.textContent = 'Passwords do not match! Please check again.';
+            authErrorMsg.style.display = 'block';
+        }
+        return false;
     }
 
-    // ─── USER PROFILE SYNC ─────────────────────────────────────────────────────
-    async function loadUserProfile() {
-        try {
-            const user = await apiFetch(`/api/user/${APP_STATE.userId}`);
-            if (user && !user.error) {
-                updateUserState(user);
-                if (user.tierInfo && typeof updateVIPDisplay === 'function') {
-                    updateVIPDisplay(user.xp, user.tierInfo, null, 1);
-                }
+    const endpoint = currentAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const body = currentAuthMode === 'register' ? { email, password, confirmPassword } : { email, password };
+
+    try {
+        if (authSubmitBtn) {
+            authSubmitBtn.disabled = true;
+            authSubmitBtn.textContent = 'VERIFYING...';
+        }
+        const res = await apiPost(endpoint, body);
+        if (authSubmitBtn) {
+            authSubmitBtn.disabled = false;
+            authSubmitBtn.textContent = currentAuthMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
+        }
+
+        if (res.success && res.token) {
+            setAuthenticatedUser(res.user, res.token);
+            if (modal) modal.style.display = 'none';
+            showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! Account verified 🎉`);
+        } else {
+            if (authErrorMsg) {
+                authErrorMsg.textContent = res.error || 'Authentication failed.';
+                authErrorMsg.style.display = 'block';
             }
-        } catch (err) {
-            console.warn('Could not load profile:', err.message);
+        }
+    } catch (err) {
+        if (authSubmitBtn) {
+            authSubmitBtn.disabled = false;
+            authSubmitBtn.textContent = currentAuthMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
+        }
+        if (authErrorMsg) {
+            authErrorMsg.textContent = err.message || 'Connection error. Please try again.';
+            authErrorMsg.style.display = 'block';
         }
     }
+    return false;
+};
 
-    let currentDisplayedCoins = 50000;
+function bindAuthEvents() {
+    const modal = document.getElementById('authModal');
+    const closeBtn = document.getElementById('closeAuthModalBtn');
+    const tabLoginBtn = document.getElementById('tabLoginBtn');
+    const tabRegBtn = document.getElementById('tabRegBtn');
+    const authForm = document.getElementById('authForm');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-    function animateCoinCount(targetValue) {
-        const el = document.getElementById('userCoinsText');
-        if (!el) return;
-        const startValue = currentDisplayedCoins;
-        const diff = targetValue - startValue;
-        if (diff === 0) {
-            el.textContent = `${targetValue.toLocaleString()} Coins`;
+    document.querySelectorAll('#openLoginBtn, #chatLockLoginBtn, .open-login-trigger').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.preventDefault(); window.openAuthModal('login'); });
+    });
+
+    document.querySelectorAll('#openRegisterBtn, #chatLockRegBtn, .open-reg-trigger').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.preventDefault(); window.openAuthModal('register'); });
+    });
+
+    if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => window.switchAuthTab('login'));
+    if (tabRegBtn) tabRegBtn.addEventListener('click', () => window.switchAuthTab('register'));
+    if (closeBtn) closeBtn.addEventListener('click', () => modal && (modal.style.display = 'none'));
+
+    if (authForm) {
+        authForm.addEventListener('submit', window.handleAuthSubmit);
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', window.handleLogout);
+    }
+}
+
+// ─── GLOBAL MODAL MANAGEMENT (OPEN, CLOSE, ESC, BACKDROP) ─────────────────
+window.closeAllModals = function () {
+    document.querySelectorAll('.game-modal-overlay, .modal-overlay, [id^="modal-"]').forEach(m => {
+        if (m.id !== 'authModal' && m.id !== 'regBonusModal') {
+            m.style.display = 'none';
+            m.classList.remove('open', 'active');
+            m.setAttribute('style', 'display: none !important');
+        }
+    });
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = 'auto';
+};
+
+window.closeModal = function (elementOrId) {
+    if (!elementOrId) {
+        window.closeAllModals();
+        return;
+    }
+    if (typeof elementOrId === 'string') {
+        const modal = document.getElementById(elementOrId);
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('open', 'active');
+            modal.setAttribute('style', 'display: none !important');
+        } else {
+            window.closeAllModals();
+        }
+        return;
+    }
+    if (elementOrId && elementOrId.nodeType === 1) {
+        const modal = elementOrId.closest('.game-modal-overlay, .modal-overlay, [id^="modal-"], [id$="Modal"]');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('open', 'active');
+            modal.setAttribute('style', 'display: none !important');
+        } else {
+            window.closeAllModals();
+        }
+    }
+};
+
+window.openModal = function (modalId) {
+    window.closeAllModals();
+    const modal = document.getElementById(modalId) || document.getElementById(`modal-${modalId}`);
+    if (modal) {
+        modal.classList.add('open', 'active');
+        modal.setAttribute('style', 'display: flex !important; z-index: 999999;');
+    }
+};
+
+window.handleLogout = function () {
+    try {
+        localStorage.removeItem('spin_jwt_token');
+        localStorage.removeItem('spin_user_data');
+        if (window.APP_STATE) {
+            window.APP_STATE.token = null;
+            window.APP_STATE.userId = null;
+            window.APP_STATE.isAuthenticated = false;
+        }
+        if (window.closeAllModals) window.closeAllModals();
+
+        var unauthHeader = document.getElementById('unauthHeader');
+        var authHeader = document.getElementById('authHeader');
+        var chatLockOverlay = document.getElementById('chatLockOverlay');
+        var chatContentWrap = document.getElementById('chatContentWrap');
+
+        if (unauthHeader) unauthHeader.style.display = 'flex';
+        if (authHeader) authHeader.style.display = 'none';
+        if (chatLockOverlay) chatLockOverlay.style.display = 'flex';
+        if (chatContentWrap) chatContentWrap.style.display = 'none';
+
+        if (window.showToast) window.showToast('Logged out successfully.', 'info');
+    } catch (e) {
+        localStorage.clear();
+        location.reload();
+    }
+};
+
+// Global Event Delegation for Modals
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('click', (e) => {
+        const closeBtn = e.target.closest('.close-modal-btn, .close-btn, .modal-close');
+        if (closeBtn) {
+            e.stopPropagation();
+            window.closeModal(closeBtn);
             return;
         }
-        const duration = 1200;
-        const startTime = performance.now();
+        if (e.target.classList.contains('game-modal-overlay') || e.target.classList.contains('modal-overlay')) {
+            window.closeModal(e.target);
+        }
+    });
 
-        function step(now) {
-            const elapsed = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const ease = 1 - Math.pow(1 - progress, 3);
-            const current = Math.floor(startValue + (diff * ease));
-            el.textContent = `${current.toLocaleString()} Coins`;
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            } else {
-                currentDisplayedCoins = targetValue;
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            window.closeAllModals();
+        }
+    });
+});
+
+// ─── USER PROFILE SYNC ─────────────────────────────────────────────────────
+async function loadUserProfile() {
+    try {
+        const user = await apiFetch(`/api/user/${APP_STATE.userId}`);
+        if (user && !user.error) {
+            updateUserState(user);
+            if (user.tierInfo && typeof updateVIPDisplay === 'function') {
+                updateVIPDisplay(user.xp, user.tierInfo, null, 1);
             }
+        }
+    } catch (err) {
+        console.warn('Could not load profile:', err.message);
+    }
+}
+
+let currentDisplayedCoins = 50000;
+
+function animateCoinCount(targetValue) {
+    const el = document.getElementById('userCoinsText');
+    if (!el) return;
+    const startValue = currentDisplayedCoins;
+    const diff = targetValue - startValue;
+    if (diff === 0) {
+        el.textContent = `${targetValue.toLocaleString()} Coins`;
+        return;
+    }
+    const duration = 1200;
+    const startTime = performance.now();
+
+    function step(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(startValue + (diff * ease));
+        el.textContent = `${current.toLocaleString()} Coins`;
+        if (progress < 1) {
             requestAnimationFrame(step);
+        } else {
+            currentDisplayedCoins = targetValue;
         }
+        requestAnimationFrame(step);
+    }
+}
 
-        function updateBalanceUI(balance, coins) {
-            if (coins !== undefined) {
-                animateCoinCount(coins);
-            } else if (balance !== undefined) {
-                const el = document.getElementById('userCoinsText');
-                if (el) el.textContent = `KSh ${Number(balance).toLocaleString()}`;
-            }
+function updateBalanceUI(balance, coins) {
+    if (coins !== undefined) {
+        animateCoinCount(coins);
+    } else if (balance !== undefined) {
+        const el = document.getElementById('userCoinsText');
+        if (el) el.textContent = `KSh ${Number(balance).toLocaleString()}`;
+    }
+}
+
+function showCoinsGainedBadge(amount) {
+    const badge = document.getElementById('coinsGainedBadge');
+    const valEl = document.getElementById('coinsGainedVal');
+    if (!badge || !valEl || !amount) return;
+
+    valEl.textContent = Number(amount).toLocaleString();
+    badge.style.display = 'inline-flex';
+    badge.classList.remove('coins-pop');
+    void badge.offsetWidth; // trigger reflow
+    badge.classList.add('coins-pop');
+
+    setTimeout(() => {
+        badge.style.display = 'none';
+    }, 2500);
+}
+
+function updateUserState(user, coinsGained = 0) {
+    if (!user) return;
+    if (user.balance !== undefined) APP_STATE.balance = user.balance;
+    if (user.coins !== undefined) {
+        APP_STATE.coins = user.coins;
+        animateCoinCount(user.coins);
+    }
+    if (user.freeSpins !== undefined) APP_STATE.freeSpins = user.freeSpins;
+    if (user.doubleNextWin !== undefined) APP_STATE.doubleNextWin = user.doubleNextWin;
+    if (user.mysteryKeys !== undefined) APP_STATE.mysteryKeys = user.mysteryKeys;
+    if (user.xp !== undefined) APP_STATE.xp = user.xp;
+    if (user.vipTier !== undefined) APP_STATE.vipTier = user.vipTier;
+
+    if (coinsGained > 0 || (user.coinsGained && user.coinsGained > 0)) {
+        showCoinsGainedBadge(coinsGained || user.coinsGained);
+    }
+
+    const freeSpinBadge = document.getElementById('freeSpinBadge');
+    const freeSpinCount = document.getElementById('freeSpinCount');
+    if (freeSpinBadge) {
+        if (APP_STATE.freeSpins > 0) {
+            freeSpinBadge.style.display = 'inline-flex';
+            if (freeSpinCount) freeSpinCount.textContent = APP_STATE.freeSpins;
+        } else {
+            freeSpinBadge.style.display = 'none';
         }
+    }
 
-        function showCoinsGainedBadge(amount) {
-            const badge = document.getElementById('coinsGainedBadge');
-            const valEl = document.getElementById('coinsGainedVal');
-            if (!badge || !valEl || !amount) return;
+    const doubleBadge = document.getElementById('doubleWinBadge');
+    if (doubleBadge) {
+        doubleBadge.style.display = APP_STATE.doubleNextWin ? 'inline-flex' : 'none';
+    }
 
-            valEl.textContent = Number(amount).toLocaleString();
-            badge.style.display = 'inline-flex';
-            badge.classList.remove('coins-pop');
-            void badge.offsetWidth; // trigger reflow
-            badge.classList.add('coins-pop');
-
-            setTimeout(() => {
-                badge.style.display = 'none';
-            }, 2500);
+    const keyBadge = document.getElementById('mysteryKeyBadge');
+    const keyCount = document.getElementById('keyCount');
+    if (keyBadge) {
+        if (APP_STATE.mysteryKeys > 0) {
+            keyBadge.style.display = 'inline-flex';
+            if (keyCount) keyCount.textContent = APP_STATE.mysteryKeys;
+        } else {
+            keyBadge.style.display = 'none';
         }
+    }
 
-        function updateUserState(user, coinsGained = 0) {
-            if (!user) return;
-            if (user.balance !== undefined) APP_STATE.balance = user.balance;
-            if (user.coins !== undefined) {
-                APP_STATE.coins = user.coins;
-                animateCoinCount(user.coins);
-            }
-            if (user.freeSpins !== undefined) APP_STATE.freeSpins = user.freeSpins;
-            if (user.doubleNextWin !== undefined) APP_STATE.doubleNextWin = user.doubleNextWin;
-            if (user.mysteryKeys !== undefined) APP_STATE.mysteryKeys = user.mysteryKeys;
-            if (user.xp !== undefined) APP_STATE.xp = user.xp;
-            if (user.vipTier !== undefined) APP_STATE.vipTier = user.vipTier;
+    updateSpinButtonState();
+}
 
-            if (coinsGained > 0 || (user.coinsGained && user.coinsGained > 0)) {
-                showCoinsGainedBadge(coinsGained || user.coinsGained);
-            }
+function updateSpinButtonState() {
+    const costEl = document.getElementById('spinBtnCost');
+    const labelEl = document.getElementById('spinBtnLabel');
+    if (APP_STATE.freeSpins > 0) {
+        if (labelEl) labelEl.textContent = 'FREE SPIN!';
+        if (costEl) costEl.textContent = `🎁 ${APP_STATE.freeSpins} Left`;
+    } else {
+        if (labelEl) labelEl.textContent = 'SPIN NOW';
+        if (costEl) costEl.textContent = `KSh ${APP_STATE.betAmount}`;
+    }
+}
 
-            const freeSpinBadge = document.getElementById('freeSpinBadge');
-            const freeSpinCount = document.getElementById('freeSpinCount');
-            if (freeSpinBadge) {
-                if (APP_STATE.freeSpins > 0) {
-                    freeSpinBadge.style.display = 'inline-flex';
-                    if (freeSpinCount) freeSpinCount.textContent = APP_STATE.freeSpins;
-                } else {
-                    freeSpinBadge.style.display = 'none';
-                }
-            }
+// ─── WHEEL CONTROLS ────────────────────────────────────────────────────────
+function bindWheelControls() {
+    const spinBtn = document.getElementById('spinNowBtn');
+    if (spinBtn) {
+        spinBtn.addEventListener('click', performSpin);
+    }
 
-            const doubleBadge = document.getElementById('doubleWinBadge');
-            if (doubleBadge) {
-                doubleBadge.style.display = APP_STATE.doubleNextWin ? 'inline-flex' : 'none';
-            }
-
-            const keyBadge = document.getElementById('mysteryKeyBadge');
-            const keyCount = document.getElementById('keyCount');
-            if (keyBadge) {
-                if (APP_STATE.mysteryKeys > 0) {
-                    keyBadge.style.display = 'inline-flex';
-                    if (keyCount) keyCount.textContent = APP_STATE.mysteryKeys;
-                } else {
-                    keyBadge.style.display = 'none';
-                }
-            }
-
+    document.querySelectorAll('.controls-bar .bet-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.controls-bar .bet-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            APP_STATE.betAmount = Number(chip.dataset.amount);
             updateSpinButtonState();
-        }
+        });
+    });
+}
 
-        function updateSpinButtonState() {
-            const costEl = document.getElementById('spinBtnCost');
-            const labelEl = document.getElementById('spinBtnLabel');
-            if (APP_STATE.freeSpins > 0) {
-                if (labelEl) labelEl.textContent = 'FREE SPIN!';
-                if (costEl) costEl.textContent = `🎁 ${APP_STATE.freeSpins} Left`;
-            } else {
-                if (labelEl) labelEl.textContent = 'SPIN NOW';
-                if (costEl) costEl.textContent = `KSh ${APP_STATE.betAmount}`;
-            }
-        }
+async function performSpin() {
+    if (!APP_STATE.isAuthenticated) {
+        showToast('Please Register or Log In first to Spin & Win!', 'warning');
+        if (window.openAuthModal) window.openAuthModal('register');
+        return;
+    }
 
-        // ─── WHEEL CONTROLS ────────────────────────────────────────────────────────
-        function bindWheelControls() {
-            const spinBtn = document.getElementById('spinNowBtn');
-            if (spinBtn) {
-                spinBtn.addEventListener('click', performSpin);
-            }
+    if (APP_STATE.isSpinning) return;
 
-            document.querySelectorAll('.controls-bar .bet-chip').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    document.querySelectorAll('.controls-bar .bet-chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    APP_STATE.betAmount = Number(chip.dataset.amount);
-                    updateSpinButtonState();
-                });
+    const spinBtn = document.getElementById('spinNowBtn');
+
+    APP_STATE.isSpinning = true;
+    if (spinBtn) spinBtn.disabled = true;
+
+    try {
+        const res = await apiPost('/api/spin', {
+            userId: APP_STATE.userId,
+            betAmount: APP_STATE.betAmount
+        });
+
+        if (!res.success) throw new Error(res.error || 'Spin failed');
+
+        // Spin the 3D wheel to target slice index
+        if (window.WheelEngine) {
+            window.WheelEngine.spinToSlice(res.sliceIndex, () => {
+                // Spin finished
+                APP_STATE.isSpinning = false;
+                if (spinBtn) spinBtn.disabled = false;
+
+                if (res.winAmount > 0) {
+                    showWinModal(`KSh ${res.winAmount.toLocaleString()}`, res.wonSlice.label, res.xpGained);
+                    triggerConfetti();
+                } else if (res.wonSlice.type === 'free_spin') {
+                    showToast(`You won ${res.freeSpinsGranted} Free Spin(s)!`, 'success');
+                } else if (res.wonSlice.type === 'double_next') {
+                    showToast('Double Next Win Activated!', 'warning');
+                } else {
+                    showToast('TRY AGAIN! Good luck next spin.', 'info');
+                }
+
+                updateUserState(res.user, res.coinsGained);
+                if (typeof handleChallengesCompleted === 'function') handleChallengesCompleted(res.completedChallenges);
+                if (typeof handleTierUp === 'function') handleTierUp(res);
             });
         }
 
-        async function performSpin() {
-            if (!APP_STATE.isAuthenticated) {
-                showToast('Please Register or Log In first to Spin & Win!', 'warning');
-                if (window.openAuthModal) window.openAuthModal('register');
+    } catch (err) {
+        APP_STATE.isSpinning = false;
+        if (spinBtn) spinBtn.disabled = false;
+        showToast(err.message, 'error');
+    }
+}
+window.performSpin = performSpin;
+
+// ─── MODALS & DEPOSITS ─────────────────────────────────────────────────────
+function bindDepositModal() {
+    const modal = document.getElementById('depositModal');
+    const openBtn = document.getElementById('openDepositBtn');
+    const closeBtn = document.getElementById('closeDepositBtn');
+    const confirmBtn = document.getElementById('confirmDepositBtn');
+
+    if (openBtn) openBtn.addEventListener('click', () => modal.style.display = 'flex');
+    if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('depositAmountInput').value = btn.dataset.amt;
+        });
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+            const amount = Number(document.getElementById('depositAmountInput').value);
+            const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'M-Pesa';
+            const phone = document.getElementById('depositPhoneInput').value;
+
+            if (!amount || amount < 10) {
+                showToast('Minimum deposit is KSh 10', 'error');
                 return;
             }
 
-            if (APP_STATE.isSpinning) return;
-
-            const spinBtn = document.getElementById('spinNowBtn');
-
-            APP_STATE.isSpinning = true;
-            if (spinBtn) spinBtn.disabled = true;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Processing Deposit...';
 
             try {
-                const res = await apiPost('/api/spin', {
+                const res = await apiPost('/api/deposit', {
                     userId: APP_STATE.userId,
-                    betAmount: APP_STATE.betAmount
+                    amount, method, phone
                 });
 
-                if (!res.success) throw new Error(res.error || 'Spin failed');
+                if (!res.success) throw new Error(res.error || 'Deposit failed');
 
-                // Spin the 3D wheel to target slice index
-                if (window.WheelEngine) {
-                    window.WheelEngine.spinToSlice(res.sliceIndex, () => {
-                        // Spin finished
-                        APP_STATE.isSpinning = false;
-                        if (spinBtn) spinBtn.disabled = false;
-
-                        if (res.winAmount > 0) {
-                            showWinModal(`KSh ${res.winAmount.toLocaleString()}`, res.wonSlice.label, res.xpGained);
-                            triggerConfetti();
-                        } else if (res.wonSlice.type === 'free_spin') {
-                            showToast(`You won ${res.freeSpinsGranted} Free Spin(s)!`, 'success');
-                        } else if (res.wonSlice.type === 'double_next') {
-                            showToast('Double Next Win Activated!', 'warning');
-                        } else {
-                            showToast('TRY AGAIN! Good luck next spin.', 'info');
-                        }
-
-                        updateUserState(res.user, res.coinsGained);
-                        if (typeof handleChallengesCompleted === 'function') handleChallengesCompleted(res.completedChallenges);
-                        if (typeof handleTierUp === 'function') handleTierUp(res);
-                    });
-                }
+                showToast(`KSh ${amount.toLocaleString()} deposited via ${method}!`, 'success');
+                updateUserState({ balance: res.newBalance });
+                modal.style.display = 'none';
+                triggerConfetti();
 
             } catch (err) {
-                APP_STATE.isSpinning = false;
-                if (spinBtn) spinBtn.disabled = false;
                 showToast(err.message, 'error');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'CONFIRM & PROCESS DEPOSIT';
             }
-        }
-        window.performSpin = performSpin;
+        });
+    }
+}
 
-        // ─── MODALS & DEPOSITS ─────────────────────────────────────────────────────
-        function bindDepositModal() {
-            const modal = document.getElementById('depositModal');
-            const openBtn = document.getElementById('openDepositBtn');
-            const closeBtn = document.getElementById('closeDepositBtn');
-            const confirmBtn = document.getElementById('confirmDepositBtn');
+function bindWinModal() {
+    const modal = document.getElementById('winModal');
+    const claimBtn = document.getElementById('claimWinBtn');
+    if (claimBtn) {
+        claimBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
 
-            if (openBtn) openBtn.addEventListener('click', () => modal.style.display = 'flex');
-            if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
+    const tierUpModal = document.getElementById('tierUpModal');
+    const closeTierUp = document.getElementById('closeTierUpBtn');
+    if (closeTierUp) {
+        closeTierUp.addEventListener('click', () => {
+            tierUpModal.style.display = 'none';
+        });
+    }
+}
 
-            // Preset buttons
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.getElementById('depositAmountInput').value = btn.dataset.amt;
-                });
-            });
+function showWinModal(prizeText, descText, xpAmount = 0) {
+    const modal = document.getElementById('winModal');
+    const prizeEl = document.getElementById('winModalPrize');
+    const descEl = document.getElementById('winModalDesc');
+    const xpEl = document.getElementById('victoryXP');
+    const xpAmtEl = document.getElementById('victoryXPAmount');
 
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', async () => {
-                    const amount = Number(document.getElementById('depositAmountInput').value);
-                    const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'M-Pesa';
-                    const phone = document.getElementById('depositPhoneInput').value;
+    if (prizeEl) prizeEl.textContent = prizeText;
+    if (descEl) descEl.textContent = descText;
+    if (xpEl && xpAmount > 0) {
+        xpEl.style.display = 'block';
+        if (xpAmtEl) xpAmtEl.textContent = xpAmount;
+    } else if (xpEl) {
+        xpEl.style.display = 'none';
+    }
 
-                    if (!amount || amount < 10) {
-                        showToast('Minimum deposit is KSh 10', 'error');
-                        return;
-                    }
+    modal.style.display = 'flex';
+}
 
-                    confirmBtn.disabled = true;
-                    confirmBtn.textContent = 'Processing Deposit...';
+window.handleSendChat = function () {
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
 
-                    try {
-                        const res = await apiPost('/api/deposit', {
-                            userId: APP_STATE.userId,
-                            amount, method, phone
-                        });
+    const userLabel = APP_STATE.userId || 'YOU';
+    addChatMessage({
+        user: userLabel,
+        text: text,
+        emoji: '💬',
+        isWin: false
+    });
 
-                        if (!res.success) throw new Error(res.error || 'Deposit failed');
+    input.value = '';
 
-                        showToast(`KSh ${amount.toLocaleString()} deposited via ${method}!`, 'success');
-                        updateUserState({ balance: res.newBalance });
-                        modal.style.display = 'none';
-                        triggerConfetti();
+    try { apiPost('/api/chat/send', { user: userLabel, text, emoji: '💬' }); } catch (e) { }
+    if (window.socket && window.socket.connected) {
+        try { window.socket.emit('chat_message', { user: userLabel, text }); } catch (e) { }
+    }
+};
 
-                    } catch (err) {
-                        showToast(err.message, 'error');
-                    } finally {
-                        confirmBtn.disabled = false;
-                        confirmBtn.textContent = 'CONFIRM & PROCESS DEPOSIT';
-                    }
-                });
+window.handleEmojiClick = function (emoji) {
+    if (window.spawnFloatingReaction) window.spawnFloatingReaction(emoji);
+    const userLabel = APP_STATE.userId || 'YOU';
+    addChatMessage({
+        user: userLabel,
+        text: `${emoji} ${emoji} ${emoji}`,
+        emoji: emoji,
+        isWin: false
+    });
+
+    try { apiPost('/api/chat/send', { user: userLabel, text: `${emoji} ${emoji} ${emoji}`, emoji }); } catch (e) { }
+    if (window.socket && window.socket.connected) {
+        try { window.socket.emit('send_reaction', emoji); } catch (e) { }
+    }
+};
+
+// ─── SOUND & CHAT & REACTIONS ──────────────────────────────────────────────
+function bindSoundAndChat() {
+    const sendBtn = document.getElementById('sendChatBtn');
+    const chatInput = document.getElementById('chatInput');
+    if (sendBtn && chatInput) {
+        sendBtn.addEventListener('click', window.handleSendChat);
+    }
+
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const emoji = btn.dataset.emoji || btn.textContent.trim();
+            window.handleEmojiClick(emoji);
+        });
+    });
+
+    // Sound toggle
+    const soundBtn = document.getElementById('soundToggleBtn');
+    if (soundBtn) {
+        soundBtn.addEventListener('click', () => {
+            APP_STATE.soundEnabled = !APP_STATE.soundEnabled;
+            document.getElementById('soundIcon').textContent = APP_STATE.soundEnabled ? '🔊' : '🔇';
+        });
+    }
+}
+
+// ─── SOCKET.IO EVENT HANDLERS ──────────────────────────────────────────────
+function initSocketIO() {
+    try {
+        window.socket = io(API_BASE);
+
+        window.socket.on('live_winner', (winner) => {
+            updateSingleWinnerShowcase(winner);
+        });
+
+        window.socket.on('recent_winners', (list) => {
+            if (Array.isArray(list) && list.length > 0) {
+                updateSingleWinnerShowcase(list[0]);
             }
-        }
+        });
 
-        function bindWinModal() {
-            const modal = document.getElementById('winModal');
-            const claimBtn = document.getElementById('claimWinBtn');
-            if (claimBtn) {
-                claimBtn.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                });
-            }
-
-            const tierUpModal = document.getElementById('tierUpModal');
-            const closeTierUp = document.getElementById('closeTierUpBtn');
-            if (closeTierUp) {
-                closeTierUp.addEventListener('click', () => {
-                    tierUpModal.style.display = 'none';
-                });
-            }
-        }
-
-        function showWinModal(prizeText, descText, xpAmount = 0) {
-            const modal = document.getElementById('winModal');
-            const prizeEl = document.getElementById('winModalPrize');
-            const descEl = document.getElementById('winModalDesc');
-            const xpEl = document.getElementById('victoryXP');
-            const xpAmtEl = document.getElementById('victoryXPAmount');
-
-            if (prizeEl) prizeEl.textContent = prizeText;
-            if (descEl) descEl.textContent = descText;
-            if (xpEl && xpAmount > 0) {
-                xpEl.style.display = 'block';
-                if (xpAmtEl) xpAmtEl.textContent = xpAmount;
-            } else if (xpEl) {
-                xpEl.style.display = 'none';
-            }
-
-            modal.style.display = 'flex';
-        }
-
-        // ─── SOUND & CHAT & REACTIONS ──────────────────────────────────────────────
-        function bindSoundAndChat() {
-            // Chat send
-            const chatInput = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendChatBtn');
-            if (sendBtn && chatInput) {
-                const sendMsg = () => {
-                    const text = chatInput.value.trim();
-                    if (text && window.socket) {
-                        window.socket.emit('chat_message', { user: APP_STATE.userId, text });
-                        chatInput.value = '';
-                    }
-                };
-                sendBtn.addEventListener('click', sendMsg);
-                chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMsg(); });
-            }
-
-            // Emoji reactions
-            document.querySelectorAll('.emoji-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const emoji = btn.dataset.emoji;
-                    if (window.socket) window.socket.emit('send_reaction', emoji);
-                });
-            });
-
-            // Sound toggle
-            const soundBtn = document.getElementById('soundToggleBtn');
-            if (soundBtn) {
-                soundBtn.addEventListener('click', () => {
-                    APP_STATE.soundEnabled = !APP_STATE.soundEnabled;
-                    document.getElementById('soundIcon').textContent = APP_STATE.soundEnabled ? '🔊' : '🔇';
-                });
-            }
-        }
-
-        // ─── SOCKET.IO EVENT HANDLERS ──────────────────────────────────────────────
-        function initSocketIO() {
-            try {
-                window.socket = io(API_BASE);
-
-                window.socket.on('live_winner', (winner) => {
-                    updateSingleWinnerShowcase(winner);
-                });
-
-                window.socket.on('recent_winners', (list) => {
-                    if (Array.isArray(list) && list.length > 0) {
-                        updateSingleWinnerShowcase(list[0]);
-                    }
-                });
-
-                window.socket.on('chat_history', (history) => {
-                    const container = document.getElementById('chatContainer');
-                    if (container && Array.isArray(history)) {
-                        container.innerHTML = '';
-                        history.slice(-5).forEach(msg => addChatMessage(msg));
-                    }
-                });
-
-                window.socket.on('chat_message', (msg) => {
-                    addChatMessage(msg);
-                });
-
-                window.socket.on('live_winner', (winner) => {
-                    updateSingleWinnerShowcase(winner);
-                });
-
-                window.socket.on('floating_reaction', (data) => {
-                    spawnFloatingReaction(data.emoji);
-                });
-
-                window.socket.on('slices_info', (slices) => {
-                    if (window.WheelEngine) {
-                        window.WheelEngine.setSlices(slices);
-                    }
-                });
-
-            } catch (e) {
-                console.warn('Socket connection error:', e.message);
-            }
-        }
-
-        function updateSingleWinnerShowcase(winner) {
-            if (!winner) return;
-            const card = document.getElementById('singleWinnerShowcase');
-            const prizeEl = document.getElementById('showcasePrize');
-            const userEl = document.getElementById('showcaseUser');
-            const metaEl = document.getElementById('showcaseMeta');
-
-            if (prizeEl) prizeEl.textContent = winner.prize || 'KSh 10,000';
-            if (userEl) userEl.textContent = winner.user || 'USER 0714***342';
-            if (metaEl) metaEl.textContent = `${(winner.game || 'WHEEL SPIN').toUpperCase()} • ${winner.mult || 'WIN'}`;
-
-            if (card) {
-                card.classList.remove('pop-anim');
-                void card.offsetWidth; // trigger reflow
-                card.classList.add('pop-anim');
-            }
-
-            // Top Live Pop Banner update
-            const topText = document.getElementById('topLiveBannerText');
-            const topBanner = document.getElementById('topLivePopBanner');
-            if (topText) {
-                topText.textContent = `${winner.user} just won ${winner.prize} on ${winner.game || 'Wheel Spin'} (${winner.mult || 'WIN'})! 🔥`;
-            }
-            if (topBanner) {
-                topBanner.style.animation = 'none';
-                void topBanner.offsetWidth;
-                topBanner.style.animation = 'topBannerSlide 0.5s ease-out';
-            }
-        }
-
-        function startSeededLiveLoop() {
-            const communityFeed = [
-                { user: 'USER 0714***342', text: 'Wueh! KSh 10,000 won on x20 multiplier! Clean payout 🔥', emoji: '🏆', isWin: true },
-                { user: 'USER 0722***891', text: 'Mystery Box platinum chest just dropped 20,000 coins + KSh 25,000! 📦👑', emoji: '🎁', isWin: true },
-                { user: 'USER 0798***104', text: 'Lucky 7 triple 7s hit! KSh 50,000 straight to M-Pesa 💥', emoji: '🎉', isWin: true },
-                { user: 'USER 0701***552', text: '3D Dice Roll triple 6s! Game is super smooth 🎲⚡', emoji: '🎲', isWin: true },
-                { user: 'USER 0788***440', text: 'Received 200 free Web3 coins at registration! Nimeanza na hizo 💰', emoji: '🤑', isWin: false },
-                { user: 'USER 0711***223', text: 'Pick a Card aces up! KSh 3,000 clean 🃏💰', emoji: '🃏', isWin: true },
-                { user: 'USER 0752***889', text: 'M-Pesa deposit 400200 processed in 2 seconds! Round 2 ready 📱', emoji: '📱', isWin: false },
-                { user: 'USER 0726***117', text: 'Free spins granted! Free spin #1 just paid 500 coins 🎁', emoji: '🎁', isWin: true },
-                { user: 'USER 0773***552', text: 'God is good! KSh 15,000 won on Wheel Spin tonight 🙏✨', emoji: '🏆', isWin: true },
-                { user: 'USER 0719***988', text: 'Who else is climbing the VIP tiers? Level 3 Bronze unlocked 👑', emoji: '🚀', isWin: false },
-                { user: 'USER 0762***304', text: 'Double Next Win feature is insane! Next win multiplied by 2x 💥', emoji: '⚡', isWin: true },
-                { user: 'USER 0741***992', text: 'Just redeemed 1,000 Web3 reward coins for free spins! 🚀', emoji: '💰', isWin: false },
-                { user: 'USER 0705***123', text: 'Jackpot entry key unlocked from Prize Ladder level 4! 🔑', emoji: '🗝️', isWin: true },
-                { user: 'USER 0791***774', text: 'Wheel spin x50 jackpot slice came so close! Still won x10 🎰', emoji: '✨', isWin: true },
-                { user: 'USER 0733***812', text: 'Fastest cashout platform in Kenya hands down 💸', emoji: '💎', isWin: false }
-            ];
-
-            const winnerFeed = [
-                { prize: 'KSh 10,000', user: 'USER 0714***342', mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN' },
-                { prize: 'KSh 25,000', user: 'USER 0722***891', mult: 'GOLD CHEST', game: 'MYSTERY BOX' },
-                { prize: 'KSh 50,000', user: 'USER 0798***104', mult: 'TRIPLE 7s', game: 'LUCKY 7 SLOTS' },
-                { prize: 'KSh 15,000', user: 'USER 0701***552', mult: 'TRIPLE 6s', game: '3D DICE ROLL' },
-                { prize: 'KSh 100,000', user: 'USER 0788***440', mult: 'x50 JACKPOT', game: 'WHEEL SPIN' },
-                { prize: 'KSh 8,500', user: 'USER 0711***223', mult: 'ACE FAN', game: 'PICK A CARD' },
-                { prize: 'KSh 35,000', user: 'USER 0773***552', mult: 'PLATINUM KEY', game: 'MYSTERY BOX' },
-                { prize: 'KSh 20,000', user: 'USER 0762***304', mult: 'DOUBLE WIN', game: 'WHEEL SPIN' }
-            ];
-
-            let chatIdx = 0;
-            let winnerIdx = 0;
-
-            for (let i = 0; i < 5; i++) {
-                addChatMessage(communityFeed[i]);
-            }
-
-            setInterval(() => {
-                chatIdx = (chatIdx + 1) % communityFeed.length;
-                addChatMessage(communityFeed[chatIdx]);
-            }, 3000);
-
-            setInterval(() => {
-                winnerIdx = (winnerIdx + 1) % winnerFeed.length;
-                updateSingleWinnerShowcase(winnerFeed[winnerIdx]);
-            }, 3500);
-        }
-
-        function addChatMessage(msg) {
+        window.socket.on('chat_history', (history) => {
             const container = document.getElementById('chatContainer');
-            if (!container) return;
-
-            // Enforce max 6 visible comments to keep feed filled & scrolling smoothly
-            while (container.children.length >= 6) {
-                container.removeChild(container.children[0]);
+            if (container && Array.isArray(history)) {
+                container.innerHTML = '';
+                history.slice(-5).forEach(msg => addChatMessage(msg));
             }
+        });
 
-            const item = document.createElement('div');
-            item.className = 'chat-msg' + (msg.isWin ? ' win-msg' : '');
-            item.innerHTML = `
-        <div class="chat-msg-user">
-            ${msg.emoji || '💬'} ${msg.user} 
-            ${msg.isWin ? '<span class="chat-win-tag">🏆 WINNER</span>' : ''}
-        </div>
-        <div class="chat-msg-text">${msg.text}</div>
-    `;
-            container.appendChild(item);
-            container.scrollTop = container.scrollHeight;
+        window.socket.on('chat_message', (msg) => {
+            addChatMessage(msg);
+        });
+
+        window.socket.on('live_winner', (winner) => {
+            updateSingleWinnerShowcase(winner);
+        });
+
+        window.socket.on('floating_reaction', (data) => {
+            spawnFloatingReaction(data.emoji);
+        });
+
+        window.socket.on('slices_info', (slices) => {
+            if (window.WheelEngine) {
+                window.WheelEngine.setSlices(slices);
+            }
+        });
+
+    } catch (e) {
+        console.warn('Socket connection error:', e.message);
+    }
+}
+
+function updateSingleWinnerShowcase(winner) {
+    if (!winner) return;
+    const card = document.getElementById('singleWinnerShowcase');
+    const prizeEl = document.getElementById('showcasePrize');
+    const userEl = document.getElementById('showcaseUser');
+    const metaEl = document.getElementById('showcaseMeta');
+
+    if (prizeEl) prizeEl.textContent = winner.prize || 'KSh 10,000';
+    if (userEl) userEl.textContent = winner.user || 'USER 0714***342';
+    if (metaEl) metaEl.textContent = `${(winner.game || 'WHEEL SPIN').toUpperCase()} • ${winner.mult || 'WIN'}`;
+
+    if (card) {
+        card.classList.remove('pop-anim');
+        void card.offsetWidth; // trigger reflow
+        card.classList.add('pop-anim');
+    }
+
+    // Top Live Pop Banner update
+    const topText = document.getElementById('topLiveBannerText');
+    const topBanner = document.getElementById('topLivePopBanner');
+    if (topText) {
+        topText.textContent = `${winner.user} just won ${winner.prize} on ${winner.game || 'Wheel Spin'} (${winner.mult || 'WIN'})! 🔥`;
+    }
+    if (topBanner) {
+        topBanner.style.animation = 'none';
+        void topBanner.offsetWidth;
+        topBanner.style.animation = 'topBannerSlide 0.5s ease-out';
+    }
+}
+
+function startSeededLiveLoop() {
+    const communityFeed = [
+        { user: 'USER 0714***342', text: 'Wueh! KSh 10,000 won on x20 multiplier! Clean payout 🔥', emoji: '🏆', isWin: true },
+        { user: 'USER 0722***891', text: 'Mystery Box platinum chest just dropped 20,000 coins + KSh 25,000! 📦👑', emoji: '🎁', isWin: true },
+        { user: 'USER 0798***104', text: 'Lucky 7 triple 7s hit! KSh 50,000 straight to M-Pesa 💥', emoji: '🎉', isWin: true },
+        { user: 'USER 0701***552', text: '3D Dice Roll triple 6s! Game is super smooth 🎲⚡', emoji: '🎲', isWin: true },
+        { user: 'USER 0788***440', text: 'Received 200 free Web3 coins at registration! Nimeanza na hizo 💰', emoji: '🤑', isWin: false },
+        { user: 'USER 0711***223', text: 'Pick a Card aces up! KSh 3,000 clean 🃏💰', emoji: '🃏', isWin: true },
+        { user: 'USER 0752***889', text: 'M-Pesa deposit 400200 processed in 2 seconds! Round 2 ready 📱', emoji: '📱', isWin: false },
+        { user: 'USER 0726***117', text: 'Free spins granted! Free spin #1 just paid 500 coins 🎁', emoji: '🎁', isWin: true },
+        { user: 'USER 0773***552', text: 'God is good! KSh 15,000 won on Wheel Spin tonight 🙏✨', emoji: '🏆', isWin: true },
+        { user: 'USER 0719***988', text: 'Who else is climbing the VIP tiers? Level 3 Bronze unlocked 👑', emoji: '🚀', isWin: false },
+        { user: 'USER 0762***304', text: 'Double Next Win feature is insane! Next win multiplied by 2x 💥', emoji: '⚡', isWin: true },
+        { user: 'USER 0741***992', text: 'Just redeemed 1,000 Web3 reward coins for free spins! 🚀', emoji: '💰', isWin: false },
+        { user: 'USER 0705***123', text: 'Jackpot entry key unlocked from Prize Ladder level 4! 🔑', emoji: '🗝️', isWin: true },
+        { user: 'USER 0791***774', text: 'Wheel spin x50 jackpot slice came so close! Still won x10 🎰', emoji: '✨', isWin: true },
+        { user: 'USER 0733***812', text: 'Fastest cashout platform in Kenya hands down 💸', emoji: '💎', isWin: false }
+    ];
+
+    const winnerFeed = [
+        { prize: 'KSh 10,000', user: 'USER 0714***342', mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN' },
+        { prize: 'KSh 25,000', user: 'USER 0722***891', mult: 'GOLD CHEST', game: 'MYSTERY BOX' },
+        { prize: 'KSh 50,000', user: 'USER 0798***104', mult: 'TRIPLE 7s', game: 'LUCKY 7 SLOTS' },
+        { prize: 'KSh 15,000', user: 'USER 0701***552', mult: 'TRIPLE 6s', game: '3D DICE ROLL' },
+        { prize: 'KSh 100,000', user: 'USER 0788***440', mult: 'x50 JACKPOT', game: 'WHEEL SPIN' },
+        { prize: 'KSh 8,500', user: 'USER 0711***223', mult: 'ACE FAN', game: 'PICK A CARD' },
+        { prize: 'KSh 35,000', user: 'USER 0773***552', mult: 'PLATINUM KEY', game: 'MYSTERY BOX' },
+        { prize: 'KSh 20,000', user: 'USER 0762***304', mult: 'DOUBLE WIN', game: 'WHEEL SPIN' }
+    ];
+
+    let chatIdx = 0;
+    let winnerIdx = 0;
+
+    for (let i = 0; i < 5; i++) {
+        addChatMessage(communityFeed[i]);
+    }
+
+    setInterval(() => {
+        chatIdx = (chatIdx + 1) % communityFeed.length;
+        addChatMessage(communityFeed[chatIdx]);
+    }, 3000);
+
+    setInterval(() => {
+        winnerIdx = (winnerIdx + 1) % winnerFeed.length;
+        updateSingleWinnerShowcase(winnerFeed[winnerIdx]);
+    }, 3500);
+}
+
+function addChatMessage(msg) {
+    const container = document.getElementById('chatContainer');
+    if (!container) return;
+
+    // Enforce max 6 visible comments to keep feed filled & scrolling smoothly
+    while (container.children.length >= 6) {
+        container.removeChild(container.children[0]);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'chat-msg' + (msg.isWin ? ' win-msg' : '');
+    item.innerHTML = `
+<div class="chat-msg-user">
+    ${msg.emoji || '💬'} ${msg.user} 
+    ${msg.isWin ? '<span class="chat-win-tag">🏆 WINNER</span>' : ''}
+</div>
+<div class="chat-msg-text">${msg.text}</div>
+`;
+    container.appendChild(item);
+    container.scrollTop = container.scrollHeight;
+}
+
+function spawnFloatingReaction(emoji) {
+    const overlay = document.getElementById('reactionOverlay');
+    if (!overlay) return;
+    const el = document.createElement('div');
+    el.className = 'float-react';
+    el.textContent = emoji;
+    el.style.left = `${10 + Math.random() * 80}%`;
+    el.style.setProperty('--dx', `${(Math.random() - 0.5) * 200}px`);
+    overlay.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+// ─── TOASTS & CONFETTI ─────────────────────────────────────────────────────
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span class="toast-text">${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+function triggerConfetti() {
+    if (window.confetti) {
+        window.confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+    }
+}
+
+function triggerCoinDropAnimation() {
+    if (window.confetti) {
+        window.confetti({
+            particleCount: 120,
+            spread: 90,
+            origin: { y: 0.4 },
+            colors: ['#FFE066', '#FFD700', '#DAA520', '#FFFFFF', '#FFA500']
+        });
+    }
+
+    const container = document.body;
+    for (let i = 0; i < 35; i++) {
+        const coin = document.createElement('div');
+        coin.className = 'falling-coin-particle';
+        coin.textContent = Math.random() > 0.3 ? '🪙' : '💰';
+        coin.style.cssText = `
+    position: fixed;
+    top: -50px;
+    left: ${Math.random() * 100}vw;
+    font-size: ${24 + Math.random() * 28}px;
+    z-index: 999999;
+    pointer-events: none;
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.8));
+    animation: coinDropFall ${1.5 + Math.random() * 1.5}s ease-in forwards;
+    animation-delay: ${Math.random() * 0.4}s;
+`;
+        container.appendChild(coin);
+        setTimeout(() => coin.remove(), 3200);
+    }
+}
+
+window.triggerCoinDropAnimation = triggerCoinDropAnimation;
+
+window.showRegBonusModal = function () {
+    const modal = document.getElementById('regBonusModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        triggerCoinDropAnimation();
+    }
+};
+
+window.closeRegBonusModal = function () {
+    const modal = document.getElementById('regBonusModal');
+    if (modal) modal.style.display = 'none';
+};
+
+// ─── BACKGROUND FALLING DOLLARS & 3D GOLD RAIN CANVAS ───────────────────────
+function initBackgroundParticles() {
+    const canvas = document.getElementById('bgParticleCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    });
+
+    const isMobile = window.innerWidth < 768;
+    const particleCount = isMobile ? 40 : 85;
+    const particles = [];
+    const particleTypes = ['dollar_bill', 'gold_coin', 'cash_emoji', 'diamond_sparkle'];
+
+    for (let i = 0; i < particleCount; i++) {
+        const type = particleTypes[Math.floor(Math.random() * particleTypes.length)];
+        particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height * 1.5 - height * 0.5,
+            type: type,
+            size: type === 'dollar_bill' ? (18 + Math.random() * 16) : (12 + Math.random() * 14),
+            speedY: 1.2 + Math.random() * 2.2,
+            swayAmp: 0.8 + Math.random() * 2.2,
+            swayFreq: 0.012 + Math.random() * 0.025,
+            rotZ: Math.random() * Math.PI * 2,
+            rotZSpeed: (Math.random() - 0.5) * 0.04,
+            rot3D: Math.random() * Math.PI * 2,
+            rot3DSpeed: 0.02 + Math.random() * 0.04,
+            coinRot: Math.random() * Math.PI * 2,
+            coinRotSpeed: 0.04 + Math.random() * 0.06,
+            opacity: 0.45 + Math.random() * 0.45,
+            emoji: Math.random() > 0.5 ? '💵' : (Math.random() > 0.5 ? '💸' : '💰')
+        });
+    }
+
+    // Render 3D Emerald & Gold Banknote Bill
+    function drawDollarBill(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotZ);
+
+        // 3D Pitch/Yaw Flip Perspective Scale
+        const scaleY = Math.cos(p.rot3D);
+        ctx.scale(1, Math.max(0.15, Math.abs(scaleY)));
+        ctx.globalAlpha = p.opacity;
+
+        const w = p.size * 2.0;
+        const h = p.size * 1.1;
+
+        // Bill Body: Metallic Emerald Green & Gold Foil Gradient
+        const grad = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+        grad.addColorStop(0, '#0a3a1d');
+        grad.addColorStop(0.3, '#1fa85a');
+        grad.addColorStop(0.7, '#136034');
+        grad.addColorStop(1, '#082914');
+
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = 'rgba(0, 230, 118, 0.4)';
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-w / 2, -h / 2, w, h, 4);
+        } else {
+            ctx.rect(-w / 2, -h / 2, w, h);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner Filigree Border & Currency Mark
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6);
+
+        // Center Seal Emblem
+        ctx.fillStyle = '#ffd700';
+        ctx.font = `900 ${Math.floor(p.size * 0.5)}px Orbitron, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$100', 0, 0);
+
+        ctx.restore();
+    }
+
+    // Render 3D Rotating Gold Coin
+    function drawGoldCoin(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotZ);
+        ctx.globalAlpha = p.opacity;
+
+        const scaleX = Math.cos(p.coinRot);
+        const radius = p.size * 0.5;
+
+        // 3D Coin Edge & Gold Shine
+        ctx.scale(Math.max(0.2, Math.abs(scaleX)), 1);
+
+        const coinGrad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
+        coinGrad.addColorStop(0, '#fff5b8');
+        coinGrad.addColorStop(0.4, '#ffd700');
+        coinGrad.addColorStop(0.8, '#d4af37');
+        coinGrad.addColorStop(1, '#7a5f12');
+
+        ctx.fillStyle = coinGrad;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 12;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#4a3705';
+        ctx.font = `900 ${Math.floor(radius * 0.9)}px Orbitron, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('KSh', 0, 0);
+
+        ctx.restore();
+    }
+
+    // Render Floating Cash Emoji & Diamond Sparkles
+    function drawSparkleParticle(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.globalAlpha = p.opacity;
+
+        if (p.type === 'cash_emoji') {
+            ctx.font = `${Math.floor(p.size * 1.2)}px Outfit, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(p.emoji, 0, 0);
+        } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * 0.25, 0, Math.PI * 2);
+            ctx.fillStyle = p.opacity > 0.7 ? '#00f0ff' : '#ffd700';
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 14;
+            ctx.fill();
         }
 
-        function spawnFloatingReaction(emoji) {
-            const overlay = document.getElementById('reactionOverlay');
-            if (!overlay) return;
-            const el = document.createElement('div');
-            el.className = 'float-react';
-            el.textContent = emoji;
-            el.style.left = `${10 + Math.random() * 80}%`;
-            el.style.setProperty('--dx', `${(Math.random() - 0.5) * 200}px`);
-            overlay.appendChild(el);
-            setTimeout(() => el.remove(), 3500);
-        }
+        ctx.restore();
+    }
 
-        // ─── TOASTS & CONFETTI ─────────────────────────────────────────────────────
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span class="toast-text">${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
-        }
+    let time = 0;
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        time += 1;
 
-        function triggerConfetti() {
-            if (window.confetti) {
-                window.confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        // Draw Ambient Pulsating Backdrop Light Halo
+        const centerX = width / 2;
+        const centerY = height * 0.35;
+        const auraGrad = ctx.createRadialGradient(centerX, centerY, 50, centerX, centerY, Math.max(width, height) * 0.5);
+        const pulse = 0.18 + Math.sin(time * 0.02) * 0.06;
+        auraGrad.addColorStop(0, `rgba(255, 215, 0, ${pulse})`);
+        auraGrad.addColorStop(0.4, `rgba(0, 240, 255, ${pulse * 0.5})`);
+        auraGrad.addColorStop(1, 'rgba(3, 6, 18, 0)');
+
+        ctx.fillStyle = auraGrad;
+        ctx.fillRect(0, 0, width, height);
+
+        // Update and Render All Money Rain Particles
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            p.y += p.speedY;
+            p.x += Math.sin(time * p.swayFreq + i) * p.swayAmp;
+            p.rotZ += p.rotZSpeed;
+            p.rot3D += p.rot3DSpeed;
+            p.coinRot += p.coinRotSpeed;
+
+            if (p.y > height + 60) {
+                p.y = -60;
+                p.x = Math.random() * width;
+            }
+
+            if (p.type === 'dollar_bill') {
+                drawDollarBill(p);
+            } else if (p.type === 'gold_coin') {
+                drawGoldCoin(p);
+            } else {
+                drawSparkleParticle(p);
             }
         }
 
-        // ─── BACKGROUND FALLING DOLLARS & 3D GOLD RAIN CANVAS ───────────────────────
-        function initBackgroundParticles() {
-            const canvas = document.getElementById('bgParticleCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
+        requestAnimationFrame(animate);
+    }
 
-            let width = (canvas.width = window.innerWidth);
-            let height = (canvas.height = window.innerHeight);
+    requestAnimationFrame(animate);
+}
 
-            window.addEventListener('resize', () => {
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            });
+// ─── LIVE MINI COMPONENT ANIMATORS ─────────────────────────────────────────
+function initLiveMiniComponents() {
+    // Mini Slot Reel Rotator Animation (0-7 numbers / symbols)
+    const r1 = document.getElementById('r1Val');
+    const r2 = document.getElementById('r2Val');
+    const r3 = document.getElementById('r3Val');
 
-            const isMobile = window.innerWidth < 768;
-            const particleCount = isMobile ? 40 : 85;
-            const particles = [];
-            const particleTypes = ['dollar_bill', 'gold_coin', 'cash_emoji', 'diamond_sparkle'];
+    if (r1 && r2 && r3) {
+        const slotSymbols = ['7', '7', '7', '💎', '7', '🎰', '7', '7'];
+        let idx = 0;
+        setInterval(() => {
+            idx = (idx + 1) % slotSymbols.length;
+            r1.textContent = slotSymbols[idx];
+            r2.textContent = slotSymbols[(idx + 2) % slotSymbols.length];
+            r3.textContent = slotSymbols[(idx + 4) % slotSymbols.length];
+        }, 1200);
+    }
+}
 
-            for (let i = 0; i < particleCount; i++) {
-                const type = particleTypes[Math.floor(Math.random() * particleTypes.length)];
-                particles.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height * 1.5 - height * 0.5,
-                    type: type,
-                    size: type === 'dollar_bill' ? (18 + Math.random() * 16) : (12 + Math.random() * 14),
-                    speedY: 1.2 + Math.random() * 2.2,
-                    swayAmp: 0.8 + Math.random() * 2.2,
-                    swayFreq: 0.012 + Math.random() * 0.025,
-                    rotZ: Math.random() * Math.PI * 2,
-                    rotZSpeed: (Math.random() - 0.5) * 0.04,
-                    rot3D: Math.random() * Math.PI * 2,
-                    rot3DSpeed: 0.02 + Math.random() * 0.04,
-                    coinRot: Math.random() * Math.PI * 2,
-                    coinRotSpeed: 0.04 + Math.random() * 0.06,
-                    opacity: 0.45 + Math.random() * 0.45,
-                    emoji: Math.random() > 0.5 ? '💵' : (Math.random() > 0.5 ? '💸' : '💰')
-                });
-            }
-
-            // Render 3D Emerald & Gold Banknote Bill
-            function drawDollarBill(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotZ);
-
-                // 3D Pitch/Yaw Flip Perspective Scale
-                const scaleY = Math.cos(p.rot3D);
-                ctx.scale(1, Math.max(0.15, Math.abs(scaleY)));
-                ctx.globalAlpha = p.opacity;
-
-                const w = p.size * 2.0;
-                const h = p.size * 1.1;
-
-                // Bill Body: Metallic Emerald Green & Gold Foil Gradient
-                const grad = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
-                grad.addColorStop(0, '#0a3a1d');
-                grad.addColorStop(0.3, '#1fa85a');
-                grad.addColorStop(0.7, '#136034');
-                grad.addColorStop(1, '#082914');
-
-                ctx.fillStyle = grad;
-                ctx.strokeStyle = '#ffd700';
-                ctx.lineWidth = 1.5;
-                ctx.shadowColor = 'rgba(0, 230, 118, 0.4)';
-                ctx.shadowBlur = 10;
-
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(-w / 2, -h / 2, w, h, 4);
-                } else {
-                    ctx.rect(-w / 2, -h / 2, w, h);
-                }
-                ctx.fill();
-                ctx.stroke();
-
-                // Inner Filigree Border & Currency Mark
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6);
-
-                // Center Seal Emblem
-                ctx.fillStyle = '#ffd700';
-                ctx.font = `900 ${Math.floor(p.size * 0.5)}px Orbitron, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('$100', 0, 0);
-
-                ctx.restore();
-            }
-
-            // Render 3D Rotating Gold Coin
-            function drawGoldCoin(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotZ);
-                ctx.globalAlpha = p.opacity;
-
-                const scaleX = Math.cos(p.coinRot);
-                const radius = p.size * 0.5;
-
-                // 3D Coin Edge & Gold Shine
-                ctx.scale(Math.max(0.2, Math.abs(scaleX)), 1);
-
-                const coinGrad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
-                coinGrad.addColorStop(0, '#fff5b8');
-                coinGrad.addColorStop(0.4, '#ffd700');
-                coinGrad.addColorStop(0.8, '#d4af37');
-                coinGrad.addColorStop(1, '#7a5f12');
-
-                ctx.fillStyle = coinGrad;
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1.2;
-                ctx.shadowColor = '#ffd700';
-                ctx.shadowBlur = 12;
-
-                ctx.beginPath();
-                ctx.arc(0, 0, radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#4a3705';
-                ctx.font = `900 ${Math.floor(radius * 0.9)}px Orbitron, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('KSh', 0, 0);
-
-                ctx.restore();
-            }
-
-            // Render Floating Cash Emoji & Diamond Sparkles
-            function drawSparkleParticle(p) {
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.globalAlpha = p.opacity;
-
-                if (p.type === 'cash_emoji') {
-                    ctx.font = `${Math.floor(p.size * 1.2)}px Outfit, sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(p.emoji, 0, 0);
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(0, 0, p.size * 0.25, 0, Math.PI * 2);
-                    ctx.fillStyle = p.opacity > 0.7 ? '#00f0ff' : '#ffd700';
-                    ctx.shadowColor = ctx.fillStyle;
-                    ctx.shadowBlur = 14;
-                    ctx.fill();
-                }
-
-                ctx.restore();
-            }
-
-            let time = 0;
-            function animate() {
-                ctx.clearRect(0, 0, width, height);
-                time += 1;
-
-                // Draw Ambient Pulsating Backdrop Light Halo
-                const centerX = width / 2;
-                const centerY = height * 0.35;
-                const auraGrad = ctx.createRadialGradient(centerX, centerY, 50, centerX, centerY, Math.max(width, height) * 0.5);
-                const pulse = 0.18 + Math.sin(time * 0.02) * 0.06;
-                auraGrad.addColorStop(0, `rgba(255, 215, 0, ${pulse})`);
-                auraGrad.addColorStop(0.4, `rgba(0, 240, 255, ${pulse * 0.5})`);
-                auraGrad.addColorStop(1, 'rgba(3, 6, 18, 0)');
-
-                ctx.fillStyle = auraGrad;
-                ctx.fillRect(0, 0, width, height);
-
-                // Update and Render All Money Rain Particles
-                for (let i = 0; i < particles.length; i++) {
-                    const p = particles[i];
-                    p.y += p.speedY;
-                    p.x += Math.sin(time * p.swayFreq + i) * p.swayAmp;
-                    p.rotZ += p.rotZSpeed;
-                    p.rot3D += p.rot3DSpeed;
-                    p.coinRot += p.coinRotSpeed;
-
-                    if (p.y > height + 60) {
-                        p.y = -60;
-                        p.x = Math.random() * width;
-                    }
-
-                    if (p.type === 'dollar_bill') {
-                        drawDollarBill(p);
-                    } else if (p.type === 'gold_coin') {
-                        drawGoldCoin(p);
-                    } else {
-                        drawSparkleParticle(p);
-                    }
-                }
-
-                requestAnimationFrame(animate);
-            }
-
-            requestAnimationFrame(animate);
-        }
-
-        // ─── LIVE MINI COMPONENT ANIMATORS ─────────────────────────────────────────
-        function initLiveMiniComponents() {
-            // Mini Slot Reel Rotator Animation (0-7 numbers / symbols)
-            const r1 = document.getElementById('r1Val');
-            const r2 = document.getElementById('r2Val');
-            const r3 = document.getElementById('r3Val');
-
-            if (r1 && r2 && r3) {
-                const slotSymbols = ['7', '7', '7', '💎', '7', '🎰', '7', '7'];
-                let idx = 0;
-                setInterval(() => {
-                    idx = (idx + 1) % slotSymbols.length;
-                    r1.textContent = slotSymbols[idx];
-                    r2.textContent = slotSymbols[(idx + 2) % slotSymbols.length];
-                    r3.textContent = slotSymbols[(idx + 4) % slotSymbols.length];
-                }, 1200);
-            }
-        }
-
-        // ─── DARAJA M-PESA STK PUSH PROMPT MODAL ───────────────────────────────────
-        function openMpesaStkModal(gameName, amount, onConfirmCallback) {
-            const modal = document.getElementById('mpesaStkModal');
-            const amountEl = document.getElementById('mpesaModalAmount');
-            const statusEl = document.getElementById('stkStatusMessage');
-            const confirmBtn = document.getElementById('confirmStkPushBtn');
-
-            if (amountEl) amountEl.textContent = `KSh ${amount}`;
-            if (statusEl) statusEl.style.display = 'none';
-
-            if (confirmBtn) {
-                confirmBtn.onclick = async () => {
-                    const phone = document.getElementById('mpesaPhoneInput').value || '0712345678';
-                    confirmBtn.disabled = true;
-                    confirmBtn.textContent = 'Initiating STK Push...';
-                    if (statusEl) {
-                        statusEl.style.display = 'block';
-                        statusEl.textContent = `⏳ Sending STK Push to ${phone}... Enter your PIN on your phone.`;
-                    }
-
-                    try {
-                        const res = await apiPost('/api/mpesa/stkpush', { phone, amount, game: gameName });
-                        if (res.success) {
-                            if (statusEl) statusEl.textContent = `✅ Payment Authorized! STK Push Successful.`;
-                            updateUserState(res.user, res.coinsGained);
-                            setTimeout(() => {
-                                modal.style.display = 'none';
-                                confirmBtn.disabled = false;
-                                confirmBtn.textContent = 'AUTHORIZE PAYMENT & PLAY';
-                                if (onConfirmCallback) onConfirmCallback();
-                            }, 1200);
-                        } else {
-                            throw new Error(res.error || 'STK Push failed');
-                        }
-                    } catch (err) {
-                        if (statusEl) statusEl.textContent = `❌ ${err.message}`;
-                        confirmBtn.disabled = false;
-                        confirmBtn.textContent = 'AUTHORIZE PAYMENT & PLAY';
-                    }
-                };
-            }
-
-            if (modal) modal.style.display = 'flex';
-        }
+// ─── DARAJA M-PESA STK PUSH PROMPT MODAL (BYPASSED / HIDDEN) ───────────────
+function openMpesaStkModal(gameName, amount, onConfirmCallback) {
+    const modal = document.getElementById('mpesaStkModal');
+    if (modal) modal.style.display = 'none';
+    if (typeof onConfirmCallback === 'function') {
+        onConfirmCallback();
+    }
+}
+window.openMpesaStkModal = openMpesaStkModal;
