@@ -163,9 +163,11 @@ window.setUnauthenticatedState = function () {
 };
 
 let currentAuthMode = 'login';
+window._authMode = 'login';
 
 window.switchAuthTab = function (mode) {
-    currentAuthMode = mode;
+    currentAuthMode = mode || 'login';
+    window._authMode = mode || 'login';
     const authErrorMsg = document.getElementById('authErrorMsg');
     const tabLoginBtn = document.getElementById('tabLoginBtn');
     const tabRegBtn = document.getElementById('tabRegBtn');
@@ -175,14 +177,14 @@ window.switchAuthTab = function (mode) {
 
     if (authErrorMsg) authErrorMsg.style.display = 'none';
     if (mode === 'login') {
-        if (tabLoginBtn) tabLoginBtn.classList.add('active');
-        if (tabRegBtn) tabRegBtn.classList.remove('active');
+        if (tabLoginBtn) tabLoginBtn.className = 'auth-tab active';
+        if (tabRegBtn) tabRegBtn.className = 'auth-tab';
         if (confirmPassGroup) confirmPassGroup.style.display = 'none';
         if (authModalTitle) authModalTitle.textContent = 'PLAYER LOGIN';
         if (authSubmitBtn) authSubmitBtn.textContent = 'LOG IN NOW';
     } else {
-        if (tabRegBtn) tabRegBtn.classList.add('active');
-        if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+        if (tabRegBtn) tabRegBtn.className = 'auth-tab active';
+        if (tabLoginBtn) tabLoginBtn.className = 'auth-tab';
         if (confirmPassGroup) confirmPassGroup.style.display = 'block';
         if (authModalTitle) authModalTitle.textContent = 'CREATE PLAYER ACCOUNT';
         if (authSubmitBtn) authSubmitBtn.textContent = 'REGISTER & PLAY';
@@ -194,12 +196,20 @@ window.openAuthModal = function (mode = 'login') {
     const m = document.getElementById('authModal');
     if (m) {
         m.style.display = 'flex';
-        m.style.zIndex = '9999';
+        m.style.zIndex = '999999';
+        m.style.visibility = 'visible';
+        m.style.opacity = '1';
     }
+};
+
+window.closeAuthModal = function () {
+    const m = document.getElementById('authModal');
+    if (m) m.style.display = 'none';
 };
 
 window.handleAuthSubmit = async function (e) {
     if (e && e.preventDefault) e.preventDefault();
+    const activeMode = window._authMode || currentAuthMode || 'login';
     const authErrorMsg = document.getElementById('authErrorMsg');
     const authSubmitBtn = document.getElementById('authSubmitBtn');
     const modal = document.getElementById('authModal');
@@ -220,7 +230,7 @@ window.handleAuthSubmit = async function (e) {
         return false;
     }
 
-    if (currentAuthMode === 'register' && password !== confirmPassword) {
+    if (activeMode === 'register' && password && confirmPassword && password !== confirmPassword) {
         if (authErrorMsg) {
             authErrorMsg.textContent = 'Passwords do not match! Please check again.';
             authErrorMsg.style.display = 'block';
@@ -228,8 +238,8 @@ window.handleAuthSubmit = async function (e) {
         return false;
     }
 
-    const endpoint = currentAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
-    const body = currentAuthMode === 'register' ? { email, password, confirmPassword } : { email, password };
+    const endpoint = activeMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const body = activeMode === 'register' ? { email, password, confirmPassword } : { email, password };
 
     try {
         if (authSubmitBtn) {
@@ -239,13 +249,20 @@ window.handleAuthSubmit = async function (e) {
         const res = await apiPost(endpoint, body);
         if (authSubmitBtn) {
             authSubmitBtn.disabled = false;
-            authSubmitBtn.textContent = currentAuthMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
+            authSubmitBtn.textContent = activeMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
         }
 
         if (res.success && res.token) {
-            setAuthenticatedUser(res.user, res.token);
+            localStorage.setItem('spin_jwt_token', res.token);
+            localStorage.setItem('spin_user_data', JSON.stringify(res.user));
+            window.setAuthenticatedUser(res.user, res.token);
             if (modal) modal.style.display = 'none';
-            showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! Account verified 🎉`);
+            if (activeMode === 'register') {
+                if (window.showRegBonusModal) window.showRegBonusModal();
+                else showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! 200 Free Coins credited 🎉`, 'success');
+            } else {
+                showToast(`Welcome back ${res.user.name || res.user.email || 'Player'}! 🎉`, 'success');
+            }
         } else {
             if (authErrorMsg) {
                 authErrorMsg.textContent = res.error || 'Authentication failed.';
@@ -255,7 +272,7 @@ window.handleAuthSubmit = async function (e) {
     } catch (err) {
         if (authSubmitBtn) {
             authSubmitBtn.disabled = false;
-            authSubmitBtn.textContent = currentAuthMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
+            authSubmitBtn.textContent = activeMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
         }
         if (authErrorMsg) {
             authErrorMsg.textContent = err.message || 'Connection error. Please try again.';
