@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "spin-api/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "spin-client/public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/spin-api/server.js"
+    },
+    {
+      "source": "/health",
+      "destination": "/spin-api/server.js"
+    },
+    {
+      "source": "/api-docs",
+      "destination": "/spin-api/server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/spin-client/public/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "PORT": "8080",
+    "SUPABASE_URL": "https://tyznjnbpsobrapbamtbn.supabase.co",
+    "SUPABASE_PROJECT_REF": "tyznjnbpsobrapbamtbn",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_8i5lE6rUTJR2q-lw3tWmrA_6AsG2b23"
+  }
+}

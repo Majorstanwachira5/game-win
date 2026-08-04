@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: spin-win-api
+    env: node
+    region: oregon
+    buildCommand: npm install
+    startCommand: node server.js
+    rootDir: spin-api
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+
+  - type: web
+    name: spin-win-client
+    env: node
+    region: oregon
+    buildCommand: npm install
+    startCommand: node server.js
+    rootDir: spin-client
+    envVars:
+      - key: PORT
+        value: 3000

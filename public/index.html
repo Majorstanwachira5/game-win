@@ -1,255 +1,260 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPIN & WIN — Premium Gaming Hub</title>
-    <meta name="description" content="Luxury casino gaming platform featuring the Spin Wheel, Mystery Box, Dice Roll, Pick a Card, Prize Ladder, and Lucky 7.">
+    <meta name="description"
+        content="Luxury casino gaming platform featuring the Spin Wheel, Mystery Box, Dice Roll, Pick a Card, Prize Ladder, and Lucky 7.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <script>
-    (function() {
-        window._authMode = 'login';
+        (function () {
+            window._authMode = 'login';
 
-        window.switchAuthTab = function(mode) {
-            window._authMode = mode || 'login';
-            var authErrorMsg = document.getElementById('authErrorMsg');
-            var tabLoginBtn = document.getElementById('tabLoginBtn');
-            var tabRegBtn = document.getElementById('tabRegBtn');
-            var confirmPassGroup = document.getElementById('confirmPassGroup');
-            var authModalTitle = document.getElementById('authModalTitle');
-            var authSubmitBtn = document.getElementById('authSubmitBtn');
+            window.switchAuthTab = function (mode) {
+                window._authMode = mode || 'login';
+                var authErrorMsg = document.getElementById('authErrorMsg');
+                var tabLoginBtn = document.getElementById('tabLoginBtn');
+                var tabRegBtn = document.getElementById('tabRegBtn');
+                var confirmPassGroup = document.getElementById('confirmPassGroup');
+                var authModalTitle = document.getElementById('authModalTitle');
+                var authSubmitBtn = document.getElementById('authSubmitBtn');
 
-            if (authErrorMsg) authErrorMsg.style.display = 'none';
-            if (mode === 'register') {
-                if (tabRegBtn) tabRegBtn.className = 'auth-tab active';
-                if (tabLoginBtn) tabLoginBtn.className = 'auth-tab';
-                if (confirmPassGroup) confirmPassGroup.style.display = 'block';
-                if (authModalTitle) authModalTitle.textContent = 'CREATE PLAYER ACCOUNT';
-                if (authSubmitBtn) authSubmitBtn.textContent = 'REGISTER & PLAY';
-            } else {
-                if (tabLoginBtn) tabLoginBtn.className = 'auth-tab active';
-                if (tabRegBtn) tabRegBtn.className = 'auth-tab';
-                if (confirmPassGroup) confirmPassGroup.style.display = 'none';
-                if (authModalTitle) authModalTitle.textContent = 'PLAYER LOGIN';
-                if (authSubmitBtn) authSubmitBtn.textContent = 'LOG IN NOW';
-            }
-        };
-
-        window.closeModal = function(btn) {
-            if (!btn) return;
-            var overlay = typeof btn === 'string' ? document.getElementById(btn) : (btn.closest ? (btn.closest('.game-modal-overlay') || btn.closest('#authModal') || btn.closest('#depositModal') || btn.closest('#winModal') || btn.closest('#mpesaStkModal')) : null);
-            if (overlay) overlay.style.display = 'none';
-        };
-
-        window.setAuthenticatedUser = function(user, token) {
-            if (window.APP_STATE) {
-                window.APP_STATE.token = token;
-                window.APP_STATE.userId = user.id;
-                window.APP_STATE.isAuthenticated = true;
-            }
-            localStorage.setItem('spin_jwt_token', token);
-            if (user) {
-                try { localStorage.setItem('spin_user_data', JSON.stringify(user)); } catch(e) {}
-            }
-
-            var unauthHeader = document.getElementById('unauthHeader');
-            var authHeader = document.getElementById('authHeader');
-            var userNameEl = document.getElementById('hdrUserName');
-            var userVipEl = document.getElementById('hdrVipTier');
-            var userCoinsText = document.getElementById('userCoinsText');
-            var chatLockOverlay = document.getElementById('chatLockOverlay');
-            var chatContentWrap = document.getElementById('chatContentWrap');
-            var authModal = document.getElementById('authModal');
-
-            if (unauthHeader) unauthHeader.style.display = 'none';
-            if (authHeader) authHeader.style.display = 'flex';
-            if (chatLockOverlay) chatLockOverlay.style.display = 'none';
-            if (chatContentWrap) {
-                chatContentWrap.style.display = 'flex';
-                chatContentWrap.style.visibility = 'visible';
-                chatContentWrap.style.opacity = '1';
-            }
-            if (authModal) authModal.style.display = 'none';
-
-            if (userNameEl) userNameEl.textContent = user.name || user.email || 'USER';
-            if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + ' VIP';
-            if (userCoinsText) userCoinsText.textContent = (user.coins || 200).toLocaleString() + ' Coins';
-        };
-
-        window.openGameModal = function(target) {
-            var token = localStorage.getItem('spin_jwt_token');
-            if (!token && (!window.APP_STATE || !window.APP_STATE.isAuthenticated)) {
-                if (window.showToast) window.showToast('Please Register or Log In first to play!', 'warning');
-                if (window.openAuthModal) window.openAuthModal('register');
-                return;
-            }
-            var modalId = 'modal-' + target;
-            var modal = document.getElementById(modalId) || document.getElementById(target === 'cards' ? 'modal-card' : 'modal-cards');
-            if (modal) {
-                modal.style.display = 'flex';
-                modal.style.zIndex = '99999';
-            }
-        };
-
-        window.openAuthModal = function(mode) {
-            window.switchAuthTab(mode || 'login');
-            var modal = document.getElementById('authModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                modal.style.zIndex = '999999';
-                modal.style.visibility = 'visible';
-                modal.style.opacity = '1';
-            }
-        };
-
-        window.closeAuthModal = function() {
-            var modal = document.getElementById('authModal');
-            if (modal) modal.style.display = 'none';
-        };
-
-        // Instant session auto-restore on page reload/refresh
-        (function() {
-            function restoreSession() {
-                try {
-                    var token = localStorage.getItem('spin_jwt_token');
-                    var rawUser = localStorage.getItem('spin_user_data');
-                    if (token && rawUser) {
-                        var user = JSON.parse(rawUser);
-                        window.setAuthenticatedUser(user, token);
-                    }
-                } catch(e) {}
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', restoreSession);
-            } else {
-                restoreSession();
-            }
-        })();        // Continuous Live Winner Broadcast Looper
-        (function() {
-            var winners = [
-                { prize: 'KSh 10,000', user: 'USER 0714***342', mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN' },
-                { prize: 'KSh 25,000', user: 'USER 0722***891', mult: 'GOLD CHEST', game: 'MYSTERY BOX' },
-                { prize: 'KSh 50,000', user: 'USER 0798***104', mult: 'TRIPLE 7s', game: 'LUCKY 7 SLOTS' },
-                { prize: 'KSh 15,000', user: 'USER 0701***552', mult: 'TRIPLE 6s', game: '3D DICE ROLL' },
-                { prize: 'KSh 100,000', user: 'USER 0788***440', mult: 'x50 JACKPOT', game: 'WHEEL SPIN' },
-                { prize: 'KSh 8,500', user: 'USER 0711***223', mult: 'ACE FAN', game: 'PICK A CARD' },
-                { prize: 'KSh 35,000', user: 'USER 0773***552', mult: 'PLATINUM KEY', game: 'MYSTERY BOX' },
-                { prize: 'KSh 20,000', user: 'USER 0762***304', mult: 'DOUBLE WIN', game: 'WHEEL SPIN' },
-                { prize: 'KSh 250,000', user: 'USER 0705***992', mult: 'x100 MEGA JACKPOT', game: 'WHEEL SPIN' },
-                { prize: 'KSh 45,000', user: 'USER 0741***120', mult: 'ROYAL FLUSH', game: 'PICK A CARD' }
-            ];
-            var idx = 0;
-            window.updateWinnerCard = function(w) {
-                if (!w) return;
-                var prizeEl = document.getElementById('showcasePrize');
-                var userEl = document.getElementById('showcaseUser');
-                var metaEl = document.getElementById('showcaseMeta');
-                var card = document.getElementById('singleWinnerShowcase');
-
-                if (prizeEl) prizeEl.textContent = w.prize || 'KSh 10,000';
-                if (userEl) userEl.textContent = w.user || 'USER 0714***342';
-                if (metaEl) metaEl.textContent = ((w.game || 'WHEEL SPIN').toUpperCase()) + ' • ' + (w.mult || 'WIN');
-
-                if (card) {
-                    card.classList.remove('pop-anim');
-                    void card.offsetWidth;
-                    card.classList.add('pop-anim');
-                }
-
-                var topText = document.getElementById('topLiveBannerText');
-                var topBanner = document.getElementById('topLivePopBanner');
-                if (topText) {
-                    topText.textContent = w.user + ' just won ' + w.prize + ' on ' + (w.game || 'Wheel Spin') + ' (' + (w.mult || 'WIN') + ')! 🔥';
-                }
-                if (topBanner) {
-                    topBanner.style.animation = 'none';
-                    void topBanner.offsetWidth;
-                    topBanner.style.animation = 'topBannerSlide 0.5s ease-out';
+                if (authErrorMsg) authErrorMsg.style.display = 'none';
+                if (mode === 'register') {
+                    if (tabRegBtn) tabRegBtn.className = 'auth-tab active';
+                    if (tabLoginBtn) tabLoginBtn.className = 'auth-tab';
+                    if (confirmPassGroup) confirmPassGroup.style.display = 'block';
+                    if (authModalTitle) authModalTitle.textContent = 'CREATE PLAYER ACCOUNT';
+                    if (authSubmitBtn) authSubmitBtn.textContent = 'REGISTER & PLAY';
+                } else {
+                    if (tabLoginBtn) tabLoginBtn.className = 'auth-tab active';
+                    if (tabRegBtn) tabRegBtn.className = 'auth-tab';
+                    if (confirmPassGroup) confirmPassGroup.style.display = 'none';
+                    if (authModalTitle) authModalTitle.textContent = 'PLAYER LOGIN';
+                    if (authSubmitBtn) authSubmitBtn.textContent = 'LOG IN NOW';
                 }
             };
 
-            function runLoop() {
-                idx = (idx + 1) % winners.length;
-                window.updateWinnerCard(winners[idx]);
-            }
+            window.closeModal = function (btn) {
+                if (!btn) return;
+                var overlay = typeof btn === 'string' ? document.getElementById(btn) : (btn.closest ? (btn.closest('.game-modal-overlay') || btn.closest('#authModal') || btn.closest('#depositModal') || btn.closest('#winModal') || btn.closest('#mpesaStkModal')) : null);
+                if (overlay) overlay.style.display = 'none';
+            };
 
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
+            window.setAuthenticatedUser = function (user, token) {
+                if (window.APP_STATE) {
+                    window.APP_STATE.token = token;
+                    window.APP_STATE.userId = user.id;
+                    window.APP_STATE.isAuthenticated = true;
+                }
+                localStorage.setItem('spin_jwt_token', token);
+                if (user) {
+                    try { localStorage.setItem('spin_user_data', JSON.stringify(user)); } catch (e) { }
+                }
+
+                var unauthHeader = document.getElementById('unauthHeader');
+                var authHeader = document.getElementById('authHeader');
+                var userNameEl = document.getElementById('hdrUserName');
+                var userVipEl = document.getElementById('hdrVipTier');
+                var userCoinsText = document.getElementById('userCoinsText');
+                var chatLockOverlay = document.getElementById('chatLockOverlay');
+                var chatContentWrap = document.getElementById('chatContentWrap');
+                var authModal = document.getElementById('authModal');
+
+                if (unauthHeader) unauthHeader.style.display = 'none';
+                if (authHeader) authHeader.style.display = 'flex';
+                if (chatLockOverlay) chatLockOverlay.style.display = 'none';
+                if (chatContentWrap) {
+                    chatContentWrap.style.display = 'flex';
+                    chatContentWrap.style.visibility = 'visible';
+                    chatContentWrap.style.opacity = '1';
+                }
+                if (authModal) authModal.style.display = 'none';
+
+                if (userNameEl) userNameEl.textContent = user.name || user.email || 'USER';
+                if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + ' VIP';
+                if (userCoinsText) userCoinsText.textContent = (user.coins || 200).toLocaleString() + ' Coins';
+            };
+
+            window.openGameModal = function (target) {
+                var token = localStorage.getItem('spin_jwt_token');
+                if (!token && (!window.APP_STATE || !window.APP_STATE.isAuthenticated)) {
+                    if (window.showToast) window.showToast('Please Register or Log In first to play!', 'warning');
+                    if (window.openAuthModal) window.openAuthModal('register');
+                    return;
+                }
+                var modalId = 'modal-' + target;
+                var modal = document.getElementById(modalId) || document.getElementById(target === 'cards' ? 'modal-card' : 'modal-cards');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.style.zIndex = '99999';
+                }
+            };
+
+            window.openAuthModal = function (mode) {
+                window.switchAuthTab(mode || 'login');
+                var modal = document.getElementById('authModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.style.zIndex = '999999';
+                    modal.style.visibility = 'visible';
+                    modal.style.opacity = '1';
+                }
+            };
+
+            window.closeAuthModal = function () {
+                var modal = document.getElementById('authModal');
+                if (modal) modal.style.display = 'none';
+            };
+
+            // Instant session auto-restore on page reload/refresh
+            (function () {
+                function restoreSession() {
+                    try {
+                        var token = localStorage.getItem('spin_jwt_token');
+                        var rawUser = localStorage.getItem('spin_user_data');
+                        if (token && rawUser) {
+                            var user = JSON.parse(rawUser);
+                            window.setAuthenticatedUser(user, token);
+                        }
+                    } catch (e) { }
+                }
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', restoreSession);
+                } else {
+                    restoreSession();
+                }
+            })();        // Continuous Live Winner Broadcast Looper
+            (function () {
+                var winners = [
+                    { prize: 'KSh 10,000', user: 'USER 0714***342', mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN' },
+                    { prize: 'KSh 25,000', user: 'USER 0722***891', mult: 'GOLD CHEST', game: 'MYSTERY BOX' },
+                    { prize: 'KSh 50,000', user: 'USER 0798***104', mult: 'TRIPLE 7s', game: 'LUCKY 7 SLOTS' },
+                    { prize: 'KSh 15,000', user: 'USER 0701***552', mult: 'TRIPLE 6s', game: '3D DICE ROLL' },
+                    { prize: 'KSh 100,000', user: 'USER 0788***440', mult: 'x50 JACKPOT', game: 'WHEEL SPIN' },
+                    { prize: 'KSh 8,500', user: 'USER 0711***223', mult: 'ACE FAN', game: 'PICK A CARD' },
+                    { prize: 'KSh 35,000', user: 'USER 0773***552', mult: 'PLATINUM KEY', game: 'MYSTERY BOX' },
+                    { prize: 'KSh 20,000', user: 'USER 0762***304', mult: 'DOUBLE WIN', game: 'WHEEL SPIN' },
+                    { prize: 'KSh 250,000', user: 'USER 0705***992', mult: 'x100 MEGA JACKPOT', game: 'WHEEL SPIN' },
+                    { prize: 'KSh 45,000', user: 'USER 0741***120', mult: 'ROYAL FLUSH', game: 'PICK A CARD' }
+                ];
+                var idx = 0;
+                window.updateWinnerCard = function (w) {
+                    if (!w) return;
+                    var prizeEl = document.getElementById('showcasePrize');
+                    var userEl = document.getElementById('showcaseUser');
+                    var metaEl = document.getElementById('showcaseMeta');
+                    var card = document.getElementById('singleWinnerShowcase');
+
+                    if (prizeEl) prizeEl.textContent = w.prize || 'KSh 10,000';
+                    if (userEl) userEl.textContent = w.user || 'USER 0714***342';
+                    if (metaEl) metaEl.textContent = ((w.game || 'WHEEL SPIN').toUpperCase()) + ' • ' + (w.mult || 'WIN');
+
+                    if (card) {
+                        card.classList.remove('pop-anim');
+                        void card.offsetWidth;
+                        card.classList.add('pop-anim');
+                    }
+
+                    var topText = document.getElementById('topLiveBannerText');
+                    var topBanner = document.getElementById('topLivePopBanner');
+                    if (topText) {
+                        topText.textContent = w.user + ' just won ' + w.prize + ' on ' + (w.game || 'Wheel Spin') + ' (' + (w.mult || 'WIN') + ')! 🔥';
+                    }
+                    if (topBanner) {
+                        topBanner.style.animation = 'none';
+                        void topBanner.offsetWidth;
+                        topBanner.style.animation = 'topBannerSlide 0.5s ease-out';
+                    }
+                };
+
+                function runLoop() {
+                    idx = (idx + 1) % winners.length;
+                    window.updateWinnerCard(winners[idx]);
+                }
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', function () {
+                        window.updateWinnerCard(winners[0]);
+                        setInterval(runLoop, 2500);
+                    });
+                } else {
                     window.updateWinnerCard(winners[0]);
                     setInterval(runLoop, 2500);
-                });
-            } else {
-                window.updateWinnerCard(winners[0]);
-                setInterval(runLoop, 2500);
-            }
-        })();
-
-        window.handleAuthSubmit = async function(e) {
-            if (e && e.preventDefault) e.preventDefault();
-            var mode = window._authMode || 'login';
-            var errEl = document.getElementById('authErrorMsg');
-            var btn = document.getElementById('authSubmitBtn');
-            var modal = document.getElementById('authModal');
-
-            if (errEl) errEl.style.display = 'none';
-            var emailInput = document.getElementById('authEmailInput');
-            var passInput = document.getElementById('authPassInput');
-            var confirmInput = document.getElementById('authConfirmPassInput');
-
-            var email = emailInput ? emailInput.value.trim() : '';
-            var password = passInput ? passInput.value.trim() : '';
-            var confirmPassword = confirmInput ? confirmInput.value.trim() : '';
-
-            if (!email || !password) {
-                if (errEl) { errEl.textContent = 'Please enter email address and password.'; errEl.style.display = 'block'; }
-                return false;
-            }
-
-            if (mode === 'register' && password !== confirmPassword) {
-                if (errEl) { errEl.textContent = 'Passwords do not match! Please check again.'; errEl.style.display = 'block'; }
-                return false;
-            }
-
-            var apiBase = 'http://localhost:8080';
-            if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-                apiBase = window.location.protocol + '//' + window.location.hostname + ':8080';
-            }
-            var endpoint = mode === 'register' ? apiBase + '/api/auth/register' : apiBase + '/api/auth/login';
-            var body = mode === 'register' ? { email: email, password: password, confirmPassword: confirmPassword } : { email: email, password: password };
-
-            try {
-                if (btn) { btn.disabled = true; btn.textContent = 'VERIFYING...'; }
-                var response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                var res = await response.json();
-                if (btn) { btn.disabled = false; btn.textContent = mode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW'; }
-
-                if (res.success && res.token) {
-                    localStorage.setItem('spin_jwt_token', res.token);
-                    if (window.setAuthenticatedUser) {
-                        window.setAuthenticatedUser(res.user, res.token);
-                    } else {
-                        location.reload();
-                    }
-                    if (modal) modal.style.display = 'none';
-                } else {
-                    if (errEl) { errEl.textContent = res.error || 'Authentication failed.'; errEl.style.display = 'block'; }
                 }
-            } catch (err) {
-                if (btn) { btn.disabled = false; btn.textContent = mode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW'; }
-                if (errEl) { errEl.textContent = err.message || 'Connection error. Please try again.'; errEl.style.display = 'block'; }
-            }
-            return false;
-        };
-    })();
+            })();
+
+            window.handleAuthSubmit = async function (e) {
+                if (e && e.preventDefault) e.preventDefault();
+                var mode = window._authMode || 'login';
+                var errEl = document.getElementById('authErrorMsg');
+                var btn = document.getElementById('authSubmitBtn');
+                var modal = document.getElementById('authModal');
+
+                if (errEl) errEl.style.display = 'none';
+                var emailInput = document.getElementById('authEmailInput');
+                var passInput = document.getElementById('authPassInput');
+                var confirmInput = document.getElementById('authConfirmPassInput');
+
+                var email = emailInput ? emailInput.value.trim() : '';
+                var password = passInput ? passInput.value.trim() : '';
+                var confirmPassword = confirmInput ? confirmInput.value.trim() : '';
+
+                if (!email || !password) {
+                    if (errEl) { errEl.textContent = 'Please enter email address and password.'; errEl.style.display = 'block'; }
+                    return false;
+                }
+
+                if (mode === 'register' && password !== confirmPassword) {
+                    if (errEl) { errEl.textContent = 'Passwords do not match! Please check again.'; errEl.style.display = 'block'; }
+                    return false;
+                }
+
+                var apiBase = 'http://localhost:8080';
+                if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+                    apiBase = window.location.protocol + '//' + window.location.hostname + ':8080';
+                }
+                var endpoint = mode === 'register' ? apiBase + '/api/auth/register' : apiBase + '/api/auth/login';
+                var body = mode === 'register' ? { email: email, password: password, confirmPassword: confirmPassword } : { email: email, password: password };
+
+                try {
+                    if (btn) { btn.disabled = true; btn.textContent = 'VERIFYING...'; }
+                    var response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                    var res = await response.json();
+                    if (btn) { btn.disabled = false; btn.textContent = mode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW'; }
+
+                    if (res.success && res.token) {
+                        localStorage.setItem('spin_jwt_token', res.token);
+                        if (window.setAuthenticatedUser) {
+                            window.setAuthenticatedUser(res.user, res.token);
+                        } else {
+                            location.reload();
+                        }
+                        if (modal) modal.style.display = 'none';
+                    } else {
+                        if (errEl) { errEl.textContent = res.error || 'Authentication failed.'; errEl.style.display = 'block'; }
+                    }
+                } catch (err) {
+                    if (btn) { btn.disabled = false; btn.textContent = mode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW'; }
+                    if (errEl) { errEl.textContent = err.message || 'Connection error. Please try again.'; errEl.style.display = 'block'; }
+                }
+                return false;
+            };
+        })();
     </script>
 </head>
+
 <body>
     <canvas id="bgParticleCanvas" class="bg-particle-canvas"></canvas>
     <div id="reactionOverlay" class="reaction-overlay"></div>
@@ -274,8 +279,10 @@
         <div class="header-right-auth">
             <!-- UNAUTHENTICATED GUEST STATE -->
             <div id="unauthHeader" class="auth-btn-row">
-                <button id="openLoginBtn" class="hdr-auth-btn login-hdr-btn" onclick="openAuthModal('login')">🔑 LOGIN</button>
-                <button id="openRegisterBtn" class="hdr-auth-btn reg-hdr-btn" onclick="openAuthModal('register')">📝 REGISTER</button>
+                <button id="openLoginBtn" class="hdr-auth-btn login-hdr-btn" onclick="openAuthModal('login')">🔑
+                    LOGIN</button>
+                <button id="openRegisterBtn" class="hdr-auth-btn reg-hdr-btn" onclick="openAuthModal('register')">📝
+                    REGISTER</button>
             </div>
             <!-- AUTHENTICATED USER STATE -->
             <div id="authHeader" class="user-profile-row" style="display:none">
@@ -287,7 +294,8 @@
                     <div class="coins-card">
                         <div class="coins-top">
                             <span class="coins-label">COINS BALANCE</span>
-                            <span class="coins-gained-badge" id="coinsGainedBadge" style="display:none">+<span id="coinsGainedVal">0</span> Coins</span>
+                            <span class="coins-gained-badge" id="coinsGainedBadge" style="display:none">+<span
+                                    id="coinsGainedVal">0</span> Coins</span>
                         </div>
                         <div class="coins-value" id="userCoinsText">50,000 Coins</div>
                     </div>
@@ -323,10 +331,13 @@
                     <div class="lock-glow-box">
                         <span class="lock-icon-animated">🔒</span>
                         <h3 class="lock-title">LIVE CHAT & OFFERS LOCKED</h3>
-                        <p class="lock-desc">Register or Log In to access live player discussions, claim <strong>KSh 250,000 Jackpot</strong> offers, and chat with top winners!</p>
+                        <p class="lock-desc">Register or Log In to access live player discussions, claim <strong>KSh
+                                250,000 Jackpot</strong> offers, and chat with top winners!</p>
                         <div class="lock-btn-group">
-                            <button class="lock-action-btn open-reg-trigger" id="chatLockRegBtn" onclick="openAuthModal('register')">📝 REGISTER TO UNLOCK</button>
-                            <button class="lock-sub-btn open-login-trigger" id="chatLockLoginBtn" onclick="openAuthModal('login')">🔑 LOGIN</button>
+                            <button class="lock-action-btn open-reg-trigger" id="chatLockRegBtn"
+                                onclick="openAuthModal('register')">📝 REGISTER TO UNLOCK</button>
+                            <button class="lock-sub-btn open-login-trigger" id="chatLockLoginBtn"
+                                onclick="openAuthModal('login')">🔑 LOGIN</button>
                         </div>
                         <div class="lock-offer-badge">🔥 KSh 50,000 SIGNUP BONUS WAITING!</div>
                     </div>
@@ -356,11 +367,13 @@
             <div class="top-live-pop-banner" id="topLivePopBanner">
                 <span class="live-pulse-badge">LIVE ⚡</span>
                 <span class="top-banner-icon">🏆</span>
-                <span class="top-banner-text" id="topLiveBannerText">USER 0714***342 just won KSh 25,000 on Wheel Spin! 🔥</span>
+                <span class="top-banner-text" id="topLiveBannerText">USER 0714***342 just won KSh 25,000 on Wheel Spin!
+                    🔥</span>
             </div>
 
             <!-- LEFT FEATURE GAME CARD: MYSTERY BOX -->
-            <div class="feature-game-card game-tile-trigger" data-target="mystery" onclick="if(window.openGameModal) window.openGameModal('mystery');">
+            <div class="feature-game-card game-tile-trigger" data-target="mystery"
+                onclick="if(window.openGameModal) window.openGameModal('mystery');">
                 <div class="card-glow-aura"></div>
                 <div class="sparkles-overlay">
                     <span class="sparkle sp-1">✨</span>
@@ -387,15 +400,21 @@
                 <div class="wheel-wrap">
                     <div class="wheel-pointer">
                         <svg width="48" height="54" viewBox="0 0 48 54" fill="none">
-                            <path d="M24 54L3.215 12L44.785 12L24 54Z" fill="url(#pg)" stroke="#FFF" stroke-width="2"/>
-                            <circle cx="24" cy="16" r="6" fill="#00f0ff"/>
-                            <defs><linearGradient id="pg" x1="24" y1="12" x2="24" y2="54" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#FFE066"/><stop offset=".5" stop-color="#D4AF37"/><stop offset="1" stop-color="#8A6D1C"/>
-                            </linearGradient></defs>
+                            <path d="M24 54L3.215 12L44.785 12L24 54Z" fill="url(#pg)" stroke="#FFF" stroke-width="2" />
+                            <circle cx="24" cy="16" r="6" fill="#00f0ff" />
+                            <defs>
+                                <linearGradient id="pg" x1="24" y1="12" x2="24" y2="54" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#FFE066" />
+                                    <stop offset=".5" stop-color="#D4AF37" />
+                                    <stop offset="1" stop-color="#8A6D1C" />
+                                </linearGradient>
+                            </defs>
                         </svg>
                     </div>
-                    <canvas id="wheelCanvas" width="500" height="500" onclick="if(window.performSpin) window.performSpin();" style="cursor:pointer;"></canvas>
-                    <div class="center-hub" onclick="if(window.performSpin) window.performSpin();" style="cursor:pointer;">
+                    <canvas id="wheelCanvas" width="500" height="500"
+                        onclick="if(window.performSpin) window.performSpin();" style="cursor:pointer;"></canvas>
+                    <div class="center-hub" onclick="if(window.performSpin) window.performSpin();"
+                        style="cursor:pointer;">
                         <div class="hub-inner">
                             <span class="hub-text">SPIN<span class="hub-amp">&amp;</span>WIN</span>
                         </div>
@@ -403,7 +422,8 @@
                 </div>
 
                 <div class="controls-bar">
-                    <button id="spinNowBtn" class="spin-gold-btn" onclick="if(window.performSpin) window.performSpin();">
+                    <button id="spinNowBtn" class="spin-gold-btn"
+                        onclick="if(window.performSpin) window.performSpin();">
                         <span class="spin-btn-title" id="spinBtnLabel">SPIN NOW</span>
                         <span class="spin-btn-sub" id="spinBtnCost">KSh 100</span>
                     </button>
@@ -423,9 +443,10 @@
 
             <!-- RIGHT SIDE GAME CARDS COLUMN -->
             <div class="right-games-column">
-                
+
                 <!-- VIP CLUB ONLY SHOWCASE TILE -->
-                <div class="game-side-tile game-tile-trigger vip-side-tile" data-target="vip" onclick="if(window.openGameModal) window.openGameModal('vip');">
+                <div class="game-side-tile game-tile-trigger vip-side-tile" data-target="vip"
+                    onclick="if(window.openGameModal) window.openGameModal('vip');">
                     <span class="tile-live-badge vip-badge">VIP CLUB 👑</span>
                     <div class="tile-thumb vip-thumb">
                         <div class="mini-crown-icon">👑</div>
@@ -437,7 +458,8 @@
                 </div>
 
                 <!-- TILE 1: DICE ROLL (LIVE ANIMATED 3D DICE) -->
-                <div class="game-side-tile game-tile-trigger" data-target="dice" onclick="if(window.openGameModal) window.openGameModal('dice');">
+                <div class="game-side-tile game-tile-trigger" data-target="dice"
+                    onclick="if(window.openGameModal) window.openGameModal('dice');">
                     <span class="tile-live-badge">3D DICE</span>
                     <div class="tile-thumb dice-thumb">
                         <div class="mini-3d-dice">🎲</div>
@@ -449,7 +471,8 @@
                 </div>
 
                 <!-- TILE 2: PICK A CARD JACKPOT -->
-                <div class="game-side-tile game-tile-trigger" data-target="cards" onclick="if(window.openGameModal) window.openGameModal('cards');">
+                <div class="game-side-tile game-tile-trigger" data-target="cards"
+                    onclick="if(window.openGameModal) window.openGameModal('cards');">
                     <span class="tile-live-badge card-badge">JACKPOT</span>
                     <div class="tile-thumb card-thumb">
                         <div class="mini-card-fan">🃏🎴</div>
@@ -461,7 +484,8 @@
                 </div>
 
                 <!-- TILE 3: LUCKY 7 SLOTS -->
-                <div class="game-side-tile game-tile-trigger" data-target="lucky7" onclick="if(window.openGameModal) window.openGameModal('lucky7');">
+                <div class="game-side-tile game-tile-trigger" data-target="lucky7"
+                    onclick="if(window.openGameModal) window.openGameModal('lucky7');">
                     <span class="tile-live-badge slot-badge">SLOTS</span>
                     <div class="tile-thumb slot-thumb">
                         <div class="mini-slot-reels">7️⃣7️⃣7️⃣</div>
@@ -483,7 +507,8 @@
         <div class="game-modal-card glass-modal auth-modal-card">
             <div class="modal-header">
                 <h2 id="authModalTitle">PLAYER LOGIN</h2>
-                <button class="close-modal-btn" id="closeAuthModalBtn" onclick="window.closeModal(this)">&times;</button>
+                <button class="close-modal-btn" id="closeAuthModalBtn"
+                    onclick="window.closeModal(this)">&times;</button>
             </div>
             <div class="modal-body text-center">
                 <div class="auth-tabs">
@@ -494,7 +519,8 @@
                 <form id="authForm" onsubmit="handleAuthSubmit(event); return false;">
                     <div class="form-group margin-top">
                         <label>EMAIL ADDRESS:</label>
-                        <input type="email" id="authEmailInput" placeholder="player@example.com" class="mpesa-input" required>
+                        <input type="email" id="authEmailInput" placeholder="player@example.com" class="mpesa-input"
+                            required>
                     </div>
                     <div class="form-group margin-top">
                         <label>ACCOUNT PASSWORD:</label>
@@ -504,7 +530,8 @@
                         <label>CONFIRM PASSWORD:</label>
                         <input type="password" id="authConfirmPassInput" placeholder="••••••••" class="mpesa-input">
                     </div>
-                    <button type="button" id="authSubmitBtn" onclick="handleAuthSubmit(event)" class="spin-gold-btn margin-top full-width">LOG IN NOW</button>
+                    <button type="button" id="authSubmitBtn" onclick="handleAuthSubmit(event)"
+                        class="spin-gold-btn margin-top full-width">LOG IN NOW</button>
                 </form>
                 <div id="authErrorMsg" class="auth-error-text" style="display:none"></div>
             </div>
@@ -524,22 +551,26 @@
                     <div class="tier-card bronze-tier" data-tier="bronze">
                         <div class="tier-name">BRONZE BOX</div>
                         <div class="tier-price">KSh 50</div>
-                        <button class="tier-open-btn neon-btn" data-tier="bronze" onclick="if(window.openMysteryBox) window.openMysteryBox('bronze');">OPEN BOX</button>
+                        <button class="tier-open-btn neon-btn" data-tier="bronze"
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('bronze');">OPEN BOX</button>
                     </div>
                     <div class="tier-card silver-tier" data-tier="silver">
                         <div class="tier-name">SILVER BOX</div>
                         <div class="tier-price">KSh 150</div>
-                        <button class="tier-open-btn neon-btn" data-tier="silver" onclick="if(window.openMysteryBox) window.openMysteryBox('silver');">OPEN BOX</button>
+                        <button class="tier-open-btn neon-btn" data-tier="silver"
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('silver');">OPEN BOX</button>
                     </div>
                     <div class="tier-card gold-tier" data-tier="gold">
                         <div class="tier-name">GOLD BOX</div>
                         <div class="tier-price">KSh 500</div>
-                        <button class="tier-open-btn neon-btn" data-tier="gold" onclick="if(window.openMysteryBox) window.openMysteryBox('gold');">OPEN BOX</button>
+                        <button class="tier-open-btn neon-btn" data-tier="gold"
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('gold');">OPEN BOX</button>
                     </div>
                     <div class="tier-card platinum-tier" data-tier="platinum">
                         <div class="tier-name">PLATINUM BOX</div>
                         <div class="tier-price">KSh 2,000</div>
-                        <button class="tier-open-btn neon-btn" data-tier="platinum" onclick="if(window.openMysteryBox) window.openMysteryBox('platinum');">OPEN BOX</button>
+                        <button class="tier-open-btn neon-btn" data-tier="platinum"
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('platinum');">OPEN BOX</button>
                     </div>
                 </div>
                 <div id="mysteryBoxAnimArea" class="box-anim-area" style="display:none">
@@ -574,7 +605,8 @@
                     <button class="bet-chip active" data-amount="100">KSh 100</button>
                     <button class="bet-chip" data-amount="500">KSh 500</button>
                 </div>
-                <button id="rollDiceBtn" class="spin-action-btn neon-btn margin-top" onclick="if(window.rollDice) window.rollDice();">ROLL DICE</button>
+                <button id="rollDiceBtn" class="spin-action-btn neon-btn margin-top"
+                    onclick="if(window.rollDice) window.rollDice();">ROLL DICE</button>
             </div>
         </div>
     </div>
@@ -588,15 +620,41 @@
             </div>
             <div class="modal-body text-center">
                 <div class="cards-row" id="cardsRow">
-                    <div class="play-card face-down" data-index="0" onclick="if(window.pickCard) window.pickCard(0);"><div class="card-inner"><div class="card-front">?</div><div class="card-back"></div></div></div>
-                    <div class="play-card face-down" data-index="1" onclick="if(window.pickCard) window.pickCard(1);"><div class="card-inner"><div class="card-front">?</div><div class="card-back"></div></div></div>
-                    <div class="play-card face-down" data-index="2" onclick="if(window.pickCard) window.pickCard(2);"><div class="card-inner"><div class="card-front">?</div><div class="card-back"></div></div></div>
-                    <div class="play-card face-down" data-index="3" onclick="if(window.pickCard) window.pickCard(3);"><div class="card-inner"><div class="card-front">?</div><div class="card-back"></div></div></div>
-                    <div class="play-card face-down" data-index="4" onclick="if(window.pickCard) window.pickCard(4);"><div class="card-inner"><div class="card-front">?</div><div class="card-back"></div></div></div>
+                    <div class="play-card face-down" data-index="0" onclick="if(window.pickCard) window.pickCard(0);">
+                        <div class="card-inner">
+                            <div class="card-front">?</div>
+                            <div class="card-back"></div>
+                        </div>
+                    </div>
+                    <div class="play-card face-down" data-index="1" onclick="if(window.pickCard) window.pickCard(1);">
+                        <div class="card-inner">
+                            <div class="card-front">?</div>
+                            <div class="card-back"></div>
+                        </div>
+                    </div>
+                    <div class="play-card face-down" data-index="2" onclick="if(window.pickCard) window.pickCard(2);">
+                        <div class="card-inner">
+                            <div class="card-front">?</div>
+                            <div class="card-back"></div>
+                        </div>
+                    </div>
+                    <div class="play-card face-down" data-index="3" onclick="if(window.pickCard) window.pickCard(3);">
+                        <div class="card-inner">
+                            <div class="card-front">?</div>
+                            <div class="card-back"></div>
+                        </div>
+                    </div>
+                    <div class="play-card face-down" data-index="4" onclick="if(window.pickCard) window.pickCard(4);">
+                        <div class="card-inner">
+                            <div class="card-front">?</div>
+                            <div class="card-back"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-result" id="cardResult"></div>
                 <p class="card-hint" id="cardHint">Click a card to reveal your prize!</p>
-                <button id="resetCardsBtn" class="reset-btn" style="display:none" onclick="if(window.resetCards) window.resetCards();">New Game</button>
+                <button id="resetCardsBtn" class="reset-btn" style="display:none"
+                    onclick="if(window.resetCards) window.resetCards();">New Game</button>
             </div>
         </div>
     </div>
@@ -610,17 +668,32 @@
             </div>
             <div class="modal-body text-center">
                 <div class="lucky7-grid" id="lucky7Grid">
-                    <div class="lucky-box" data-index="0" onclick="if(window.playLucky7) window.playLucky7(0);"><div class="box-num">BOX 1</div></div>
-                    <div class="lucky-box" data-index="1" onclick="if(window.playLucky7) window.playLucky7(1);"><div class="box-num">BOX 2</div></div>
-                    <div class="lucky-box" data-index="2" onclick="if(window.playLucky7) window.playLucky7(2);"><div class="box-num">BOX 3</div></div>
-                    <div class="lucky-box" data-index="3" onclick="if(window.playLucky7) window.playLucky7(3);"><div class="box-num">BOX 4</div></div>
-                    <div class="lucky-box" data-index="4" onclick="if(window.playLucky7) window.playLucky7(4);"><div class="box-num">BOX 5</div></div>
-                    <div class="lucky-box" data-index="5" onclick="if(window.playLucky7) window.playLucky7(5);"><div class="box-num">BOX 6</div></div>
-                    <div class="lucky-box" data-index="6" onclick="if(window.playLucky7) window.playLucky7(6);"><div class="box-num">BOX 7</div></div>
+                    <div class="lucky-box" data-index="0" onclick="if(window.playLucky7) window.playLucky7(0);">
+                        <div class="box-num">BOX 1</div>
+                    </div>
+                    <div class="lucky-box" data-index="1" onclick="if(window.playLucky7) window.playLucky7(1);">
+                        <div class="box-num">BOX 2</div>
+                    </div>
+                    <div class="lucky-box" data-index="2" onclick="if(window.playLucky7) window.playLucky7(2);">
+                        <div class="box-num">BOX 3</div>
+                    </div>
+                    <div class="lucky-box" data-index="3" onclick="if(window.playLucky7) window.playLucky7(3);">
+                        <div class="box-num">BOX 4</div>
+                    </div>
+                    <div class="lucky-box" data-index="4" onclick="if(window.playLucky7) window.playLucky7(4);">
+                        <div class="box-num">BOX 5</div>
+                    </div>
+                    <div class="lucky-box" data-index="5" onclick="if(window.playLucky7) window.playLucky7(5);">
+                        <div class="box-num">BOX 6</div>
+                    </div>
+                    <div class="lucky-box" data-index="6" onclick="if(window.playLucky7) window.playLucky7(6);">
+                        <div class="box-num">BOX 7</div>
+                    </div>
                 </div>
                 <div class="lucky7-result" id="lucky7Result"></div>
                 <p class="card-hint" id="lucky7Hint">Pick a box to reveal your prize!</p>
-                <button id="resetLucky7Btn" class="reset-btn" style="display:none" onclick="if(window.resetLucky7) window.resetLucky7();">New Game</button>
+                <button id="resetLucky7Btn" class="reset-btn" style="display:none"
+                    onclick="if(window.resetLucky7) window.resetLucky7();">New Game</button>
             </div>
         </div>
     </div>
@@ -676,7 +749,7 @@
         <div class="game-modal-card glass-modal mpesa-modal-card">
             <div class="modal-header">
                 <h2>M-PESA DARAJA CHECKOUT</h2>
-                <button class="close-modal-btn">&times;</button>
+                <button class="close-modal-btn" onclick="window.closeModal(this)">&times;</button>
             </div>
             <div class="modal-body text-center">
                 <div class="mpesa-brand-badge">
@@ -685,13 +758,15 @@
                 <p class="modal-subtitle">Enter your Safaricom M-Pesa phone number to authorize game play:</p>
                 <div class="form-group margin-top">
                     <label>M-PESA PHONE NUMBER:</label>
-                    <input type="text" id="mpesaPhoneInput" value="0712345678" placeholder="07XXXXXXXX" class="mpesa-input">
+                    <input type="text" id="mpesaPhoneInput" value="0712345678" placeholder="07XXXXXXXX"
+                        class="mpesa-input">
                 </div>
                 <div class="form-group">
                     <label>AMOUNT TO PAY:</label>
                     <div class="mpesa-amount-display" id="mpesaModalAmount">KSh 100</div>
                 </div>
-                <button id="confirmStkPushBtn" class="confirm-pay-btn neon-green-btn full-width">AUTHORIZE PAYMENT & PLAY</button>
+                <button id="confirmStkPushBtn" class="confirm-pay-btn neon-green-btn full-width">AUTHORIZE PAYMENT &
+                    PLAY</button>
                 <div id="stkStatusMessage" class="stk-status-text" style="display:none"></div>
             </div>
         </div>
@@ -703,8 +778,9 @@
             <h1 class="victory-title" id="winModalTitle">WINNER!</h1>
             <div class="victory-prize" id="winModalPrize">KSh 5,000</div>
             <p class="victory-desc" id="winModalDesc">You won a prize!</p>
-            <div class="victory-xp" id="victoryXP" style="display:none">+<span id="victoryXPAmount">10</span> XP earned</div>
-            <button id="claimWinBtn" class="claim-btn neon-btn">COLLECT PRIZE</button>
+            <div class="victory-xp" id="victoryXP" style="display:none">+<span id="victoryXPAmount">10</span> XP earned
+            </div>
+            <button id="claimWinBtn" class="claim-btn neon-btn" onclick="window.closeModal(this)">COLLECT PRIZE</button>
         </div>
     </div>
 
@@ -714,7 +790,7 @@
             <h2 class="tier-up-title">VIP TIER UP!</h2>
             <p class="tier-up-name" id="tierUpName">Silver</p>
             <p class="tier-up-desc">You've been upgraded! Enjoy your new VIP perks.</p>
-            <button id="closeTierUpBtn" class="neon-btn">AWESOME!</button>
+            <button id="closeTierUpBtn" class="neon-btn" onclick="window.closeModal(this)">AWESOME!</button>
         </div>
     </div>
 
@@ -727,4 +803,5 @@
     <script src="js/vip.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>

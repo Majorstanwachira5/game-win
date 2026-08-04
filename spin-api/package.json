@@ -4,6 +4,7 @@
   "description": "Backend API & Game Engine Microservice for Spin & Win Platform (Port 8080)",
   "main": "server.js",
   "scripts": {
+    "build": "echo Build completed successfully",
     "start": "node server.js",
     "dev": "node server.js"
   },
