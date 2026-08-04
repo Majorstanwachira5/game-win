@@ -573,15 +573,13 @@ function initPrizeLadder() {
     });
   });
 
-  document
-    .getElementById("startLadderBtn")
-    .addEventListener("click", startLadder);
-  document
-    .getElementById("cashoutLadderBtn")
-    .addEventListener("click", () => doLadderAction("cashout"));
-  document
-    .getElementById("continueLadderBtn")
-    .addEventListener("click", () => doLadderAction("continue"));
+  const startBtn = document.getElementById("startLadderBtn");
+  const cashoutBtn = document.getElementById("cashoutLadderBtn");
+  const continueBtn = document.getElementById("continueLadderBtn");
+
+  if (startBtn) startBtn.addEventListener("click", startLadder);
+  if (cashoutBtn) cashoutBtn.addEventListener("click", () => doLadderAction("cashout"));
+  if (continueBtn) continueBtn.addEventListener("click", () => doLadderAction("continue"));
 }
 
 function renderLadderLevels(currentLevel = 0) {

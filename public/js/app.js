@@ -917,12 +917,19 @@ function spawnFloatingReaction(emoji) {
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
+
+    // Prevent duplicate toast messages from stacking
+    const existingToasts = container.querySelectorAll('.toast-text');
+    for (let i = 0; i < existingToasts.length; i++) {
+        if (existingToasts[i].textContent === message) return;
+    }
+
     const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span class="toast-text">${message}</span>`;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
+    setTimeout(() => toast.remove(), 3500);
 }
 
 function triggerConfetti() {
