@@ -48,6 +48,15 @@ async function apiPost(endpoint, body = {}) {
     return await res.json();
 }
 
+function initTabNavigation() {
+    document.querySelectorAll('.game-nav-tab, .nav-item').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            document.querySelectorAll('.game-nav-tab, .nav-item').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+        });
+    });
+}
+
 // ─── INITIALIZATION ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Bind Auth Modal & Header Login/Register Events
@@ -740,11 +749,15 @@ function bindSoundAndChat() {
 // ─── SOCKET.IO EVENT HANDLERS ──────────────────────────────────────────────
 function initSocketIO() {
     if (typeof io === 'undefined') return;
+    // On static production host, disable socket polling to prevent 404 network errors
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return;
+    }
     try {
         window.socket = io(API_BASE, {
-            transports: ['polling', 'websocket'],
-            reconnectionAttempts: 3,
-            timeout: 5000
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 1,
+            timeout: 2000
         });
 
         window.socket.on('connect_error', (err) => {
