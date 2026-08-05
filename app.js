@@ -778,22 +778,8 @@ function bindWinModal() {
 }
 
 function showWinModal(prizeText, descText, xpAmount = 0) {
-    const modal = document.getElementById('winModal');
-    const prizeEl = document.getElementById('winModalPrize');
-    const descEl = document.getElementById('winModalDesc');
-    const xpEl = document.getElementById('victoryXP');
-    const xpAmtEl = document.getElementById('victoryXPAmount');
-
-    if (prizeEl) prizeEl.textContent = prizeText;
-    if (descEl) descEl.textContent = descText;
-    if (xpEl && xpAmount > 0) {
-        xpEl.style.display = 'block';
-        if (xpAmtEl) xpAmtEl.textContent = xpAmount;
-    } else if (xpEl) {
-        xpEl.style.display = 'none';
-    }
-
-    modal.style.display = 'flex';
+    // Disabled for now as requested - Victory popup modal completely hidden
+    return;
 }
 
 window.handleSendChat = function () {
