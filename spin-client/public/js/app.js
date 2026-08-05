@@ -211,29 +211,12 @@ window.setUnauthenticatedState = function () {
     if (chatLockOverlay) chatLockOverlay.style.display = 'flex';
 };
 
-window.showRegBonusModal = function (force = false) {
-    if (!force && localStorage.getItem('spin_bonus_claimed') === 'true') {
-        return;
-    }
-    const modal = document.getElementById('regBonusModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.zIndex = '9999999';
-        modal.style.visibility = 'visible';
-        modal.style.opacity = '1';
-        if (window.triggerCoinDropAnimation) window.triggerCoinDropAnimation();
-    }
+window.showRegBonusModal = function () {
+    // Disabled as requested - 200 Play Coins are credited directly to user balance
 };
 
 window.closeRegBonusModal = function () {
-    localStorage.setItem('spin_bonus_claimed', 'true');
-    const modal = document.getElementById('regBonusModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-    if (APP_STATE && APP_STATE.isAuthenticated) {
-        updateBalanceUI(APP_STATE.balance ?? 0.00, APP_STATE.coins || 200);
-    }
+    // Disabled
 };
 
 window.clearAppCache = function () {
