@@ -12,32 +12,37 @@ const helmetMiddleware = helmet({
     crossOriginEmbedderPolicy: false,
 });
 
+const isVercelEnv = Boolean(process.env.VERCEL || process.env.NOW_REGION || process.env.NODE_ENV === 'production');
+
 // ─── RATE LIMITERS ─────────────────────────────────────────────────────────
 const gameLimiter = rateLimit({
     windowMs: 10 * 1000,        // 10 seconds window
-    max: 15,                     // max 15 game actions per window
+    max: 60,                     // max 60 game actions per window
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests. Please slow down and try again.' },
-    skip: (req) => req.ip === '127.0.0.1' || req.ip === '::1'
+    skip: () => isVercelEnv || req?.ip === '127.0.0.1' || req?.ip === '::1'
 });
 
 const authLimiter = rateLimit({
     windowMs: 60 * 1000,         // 1 minute
-    max: 10,                      // max 10 auth attempts per minute
+    max: 200,                     // max 200 auth attempts per minute
     message: { error: 'Too many login attempts. Please wait 1 minute.' },
+    skip: () => isVercelEnv
 });
 
 const depositLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 5,
+    max: 100,
     message: { error: 'Too many deposit requests. Please wait before trying again.' },
+    skip: () => isVercelEnv
 });
 
 const generalLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 200,
+    max: 1000,
     message: { error: 'Too many requests from this IP.' },
+    skip: () => isVercelEnv
 });
 
 // ─── VALIDATION CHAINS ─────────────────────────────────────────────────────

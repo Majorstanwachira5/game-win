@@ -81,4 +81,41 @@ while ($true) {
         Send-File $res $fp
         continue
     }
+
+    # 3. BACKEND API HTTP LISTENER (PORT 8080)
+    if ($apiListener.IsListening) {
+        $context = $apiListener.GetContext()
+        $req = $context.Request
+        $res = $context.Response
+        $res.Headers.Add("Access-Control-Allow-Origin", "*")
+        $res.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        $res.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        
+        if ($req.HttpMethod -eq "OPTIONS") {
+            $res.StatusCode = 200
+            $res.Close()
+            continue
+        }
+
+        $res.ContentType = "application/json"
+        $json = @{
+            success = $true
+            token = "jwt_spin_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            user = @{
+                id = "usr_player"
+                name = "Player"
+                email = "player@casino.com"
+                balance = 1000.00
+                coins = 200
+                vipTier = "bronze"
+                xp = 50
+            }
+        } | ConvertTo-Json
+
+        $buffer = [System.Text.Encoding]::UTF8.GetBytes($json)
+        $res.ContentLength64 = $buffer.Length
+        $res.OutputStream.Write($buffer, 0, $buffer.Length)
+        $res.Close()
+        continue
+    }
 }

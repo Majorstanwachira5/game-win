@@ -115,6 +115,7 @@ const {
 
 // ─── EXPRESS SETUP ─────────────────────────────────────────────────────────
 const app    = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const PORT   = process.env.PORT || 8080;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:3000';
@@ -128,6 +129,7 @@ const io = new Server(server, {
 // ─── SECURITY STACK ────────────────────────────────────────────────────────
 app.use(helmetMiddleware);
 app.use(cors({ origin: true, credentials: true }));
+app.options('*', cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10kb' }));  // Limit body size to prevent DoS
 app.use(generalLimiter);
 app.use(securityLog);
