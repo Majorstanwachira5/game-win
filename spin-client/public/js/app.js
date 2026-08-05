@@ -67,7 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Initialize Spin Wheel Canvas
     if (window.WheelEngine) {
-        try { window.WheelEngine.init('wheelCanvas'); } catch (e) { console.warn('wheelEngine err:', e); }
+        try {
+            if (document.getElementById('wheelCanvas')) window.WheelEngine.init('wheelCanvas');
+            if (document.getElementById('mobileWheelCanvas')) new SpinWheelEngine('mobileWheelCanvas');
+        } catch (e) { console.warn('wheelEngine err:', e); }
     }
 
     // 4. Initialize Mini Games and VIP
