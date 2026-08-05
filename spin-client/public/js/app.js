@@ -15,11 +15,11 @@ const getApiBase = () => {
 const API_BASE = getApiBase();
 
 const APP_STATE = {
-    userId: '0712***840',
+    userId: 'GUEST',
     token: null,
     isAuthenticated: false,
-    balance: 12500.00,
-    freeSpins: 1,
+    balance: 0.00,
+    freeSpins: 0,
     doubleNextWin: false,
     mysteryKeys: 0,
     xp: 0,
@@ -150,6 +150,15 @@ window.setAuthenticatedUser = function (user, token) {
     if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + ' VIP';
 
     updateBalanceUI(user.balance, user.coins);
+};
+
+window.updateBalanceUI = function (balance = 0, coins = 0) {
+    const mobWalletEl = document.getElementById('mobWalletBalance');
+    const userCoinsEl = document.getElementById('userCoinsText');
+    const fmtBal = Number(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtCoins = Number(coins || 0).toLocaleString('en-US');
+    if (mobWalletEl) mobWalletEl.textContent = `KSh ${fmtBal}`;
+    if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Coins`;
 };
 
 window.toggleCategory = function (id) {
