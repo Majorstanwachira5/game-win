@@ -107,8 +107,42 @@ function renderVIPTiersLadder(currentTierId) {
     }).join('');
 }
 
+function getEastAfricaDateString(timestamp = Date.now()) {
+    const eatOffsetMs = 3 * 60 * 60 * 1000;
+    const eatDate = new Date(timestamp + eatOffsetMs);
+    return eatDate.toISOString().split('T')[0];
+}
+
+function getConsecutiveLoginsEAT() {
+    const todayEAT = getEastAfricaDateString();
+    const lastLoginDate = localStorage.getItem('spin_last_login_eat');
+    let consecutiveDays = parseInt(localStorage.getItem('spin_consecutive_days_eat') || '0', 10);
+
+    if (!lastLoginDate) {
+        consecutiveDays = 1;
+    } else if (lastLoginDate === todayEAT) {
+        // Keep current streak
+    } else {
+        const lastDateObj = new Date(lastLoginDate);
+        const todayDateObj = new Date(todayEAT);
+        const diffTime = Math.abs(todayDateObj - lastDateObj);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+            consecutiveDays += 1;
+        } else if (diffDays > 1) {
+            consecutiveDays = 1;
+        }
+    }
+    localStorage.setItem('spin_last_login_eat', todayEAT);
+    localStorage.setItem('spin_consecutive_days_eat', consecutiveDays.toString());
+    return consecutiveDays;
+}
+
 function handleTierUp(res) {
-    if (!res.tierUp) return;
+    if (!res || !res.tierUp) return;
+    const streak = getConsecutiveLoginsEAT();
+    if (streak < 4) return;
+
     const tier = res.newTier;
     if (!tier) return;
     const modal  = document.getElementById('tierUpModal');
@@ -116,8 +150,11 @@ function handleTierUp(res) {
     const name   = document.getElementById('tierUpName');
     if (icon) icon.textContent = tier.icon || '⬆️';
     if (name) name.textContent = tier.name || 'Silver';
-    if (modal) modal.style.display = 'flex';
-    triggerConfetti();
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999999';
+    }
+    if (typeof triggerConfetti === 'function') triggerConfetti();
 }
 
 window.closeVIPModal = function() {
