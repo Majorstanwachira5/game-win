@@ -1,25 +1,35 @@
 {
   "version": 2,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
+      "src": "spin-api/server.js",
+      "use": "@vercel/node"
     },
     {
-      "source": "/socket.io/(.*)",
-      "destination": "/api/index"
+      "src": "spin-client/public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/spin-api/server.js"
     },
     {
-      "source": "/health",
-      "destination": "/api/index"
+      "src": "/socket.io/(.*)",
+      "dest": "/spin-api/server.js"
     },
     {
-      "source": "/api-docs",
-      "destination": "/api/index"
+      "src": "/health",
+      "dest": "/spin-api/server.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "/spin-client/public/$1"
+      "src": "/api-docs",
+      "dest": "/spin-api/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/spin-client/public/$1"
     }
   ],
   "env": {
