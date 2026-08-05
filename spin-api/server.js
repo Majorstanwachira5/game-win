@@ -427,7 +427,7 @@ async function supabaseFetch(table, options = {}) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  AUTH ROUTES & JWT AUTHENTICATION
 // ═══════════════════════════════════════════════════════════════════════════
-app.post(['/api/auth/register', '/auth/register'], async (req, res) => {
+app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'], async (req, res) => {
     try {
         const { email, phone, password, name } = req.body;
         const identity = email || phone;
@@ -492,7 +492,7 @@ app.post(['/api/auth/register', '/auth/register'], async (req, res) => {
     }
 });
 
-app.post(['/api/auth/login', '/auth/login'], async (req, res) => {
+app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req, res) => {
     try {
         const { email, phone, password } = req.body;
         const identity = email || phone;
@@ -567,7 +567,7 @@ app.post(['/api/auth/login', '/auth/login'], async (req, res) => {
     }
 });
 
-app.get(['/api/auth/me', '/auth/me'], requirePlayerAuth, (req, res) => {
+app.get(['/api/auth/me', '/auth/me', '/me', '/api/me'], requirePlayerAuth, (req, res) => {
     try {
         const user = getOrCreateUser(req.userId);
         res.json({
