@@ -272,16 +272,17 @@ window.openAuthModal = function (mode = 'login') {
     window.switchAuthTab(mode);
     const m = document.getElementById('authModal');
     if (m) {
-        m.style.display = 'flex';
-        m.style.zIndex = '999999';
-        m.style.visibility = 'visible';
-        m.style.opacity = '1';
+        m.classList.add('open', 'active');
+        m.setAttribute('style', 'display: flex !important; z-index: 999999; visibility: visible !important; opacity: 1 !important;');
     }
 };
 
 window.closeAuthModal = function () {
     const m = document.getElementById('authModal');
-    if (m) m.style.display = 'none';
+    if (m) {
+        m.classList.remove('open', 'active');
+        m.setAttribute('style', 'display: none !important');
+    }
 };
 
 window.handleAuthSubmit = async function (e) {
