@@ -152,6 +152,16 @@ window.setAuthenticatedUser = function (user, token) {
     updateBalanceUI(user.balance, user.coins);
 };
 
+window.toggleCategory = function (id) {
+    const el = document.getElementById(id);
+    const arrow = document.getElementById(id + '-arrow');
+    if (el) {
+        const isHidden = el.style.display === 'none' || getComputedStyle(el).display === 'none';
+        el.style.display = isHidden ? 'flex' : 'none';
+        if (arrow) arrow.textContent = isHidden ? '▲' : '▼';
+    }
+};
+
 window.setUnauthenticatedState = function () {
     APP_STATE.token = null;
     APP_STATE.isAuthenticated = false;

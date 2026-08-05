@@ -594,93 +594,103 @@
 
     <!-- ══════════════ PURPOSE-BUILT ANDROID MOBILE LAYOUT (< 768px) ══════════════ -->
     <main class="mobile-android-layout">
-        <!-- 1. WALLET CARD & QUICK BALANCE BAR -->
-        <div class="mobile-card mobile-wallet-card" style="background:linear-gradient(135deg, #101c33, #0a1120); padding:12px 16px; border-radius:16px; border:1px solid rgba(255,215,0,0.25);">
+        <!-- 1. WALLET BALANCE CARD AT THE TOP -->
+        <div class="mobile-card mobile-wallet-card" style="background:linear-gradient(135deg, #101c33, #0a1120); padding:10px 14px; border-radius:12px; border:1px solid rgba(255,215,0,0.25);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <span style="font-size:10px; color:#ffd700; font-weight:800; letter-spacing:1px;">WALLET BALANCE</span>
-                    <div style="font-size:20px; font-weight:900; color:#fff;" id="mobWalletBalance">KSh 12,500.00</div>
+                    <span style="font-size:10px; color:#ffd700; font-weight:800; letter-spacing:0.5px;">WALLET BALANCE</span>
+                    <div style="font-size:18px; font-weight:900; color:#fff;" id="mobWalletBalance">KSh 12,500.00</div>
                 </div>
-                <button class="spin-gold-btn" style="min-height:38px; height:38px; font-size:11px; padding:0 14px;" onclick="if(window.openModal) window.openModal('depositModal');">+ DEPOSIT</button>
+                <button class="spin-gold-btn" style="min-height:36px; height:36px; font-size:11px; padding:0 12px; border-radius:10px;" onclick="if(window.openModal) window.openModal('depositModal');">+ DEPOSIT</button>
             </div>
         </div>
 
-        <!-- 2. SPIN WHEEL HERO SECTION -->
-        <div class="mobile-card mobile-wheel-hero" style="text-align:center; background:linear-gradient(135deg, #0e172a, #080f1d); padding:14px; border-radius:16px; border:1px solid rgba(255,215,0,0.25);">
-            <div style="font-size:12px; font-weight:900; color:#ffd700; margin-bottom:8px; letter-spacing:1px;">🎰 SPIN & WIN WHEEL</div>
+        <!-- 2. SINGLE HERO SPIN WHEEL SECTION -->
+        <div class="mobile-card mobile-wheel-hero" style="text-align:center; background:linear-gradient(135deg, #0e172a, #080f1d); padding:12px; border-radius:14px; border:1px solid rgba(255,215,0,0.25);">
+            <div style="font-size:12px; font-weight:900; color:#ffd700; margin-bottom:6px; letter-spacing:1px;">🎰 SPIN & WIN WHEEL</div>
             <div style="position:relative; display:inline-block; margin:0 auto;">
                 <div class="wheel-pointer-hero" style="top:-8px;"></div>
-                <canvas id="mobileWheelCanvas" width="280" height="280" style="max-width:280px; height:auto;"></canvas>
+                <canvas id="mobileWheelCanvas" width="280" height="280" style="max-width:260px; height:auto;"></canvas>
             </div>
-            <div style="display:flex; justify-content:center; gap:8px; margin-top:10px;">
-                <button class="chip-btn active" data-amount="100" style="min-height:36px; height:36px; font-size:11px;">KSh 100</button>
-                <button class="chip-btn" data-amount="250" style="min-height:36px; height:36px; font-size:11px;">KSh 250</button>
-                <button class="chip-btn" data-amount="500" style="min-height:36px; height:36px; font-size:11px;">KSh 500</button>
+            <div style="display:flex; justify-content:center; gap:8px; margin-top:8px;">
+                <button class="chip-btn active" data-amount="100" style="min-height:34px; height:34px; font-size:11px;">KSh 100</button>
+                <button class="chip-btn" data-amount="250" style="min-height:34px; height:34px; font-size:11px;">KSh 250</button>
+                <button class="chip-btn" data-amount="500" style="min-height:34px; height:34px; font-size:11px;">KSh 500</button>
             </div>
-            <button class="spin-gold-btn hero-spin-btn" style="margin-top:10px; width:100%; min-height:48px;" onclick="if(window.performSpin) window.performSpin();">SPIN NOW (KSh 100)</button>
+            <button class="spin-gold-btn hero-spin-btn" style="margin-top:8px; width:100%; min-height:44px;" onclick="if(window.performSpin) window.performSpin();">SPIN NOW (KSh 100)</button>
         </div>
 
-        <!-- 3. FEATURED GAMES LIST (GOOGLE PLAY STORE STYLE CARDS: 90-110px) -->
-        <div style="font-size:13px; font-weight:900; color:#ffd700; letter-spacing:1px; margin-top:4px;">🎮 FEATURED CASINO GAMES</div>
-        
-        <!-- Lucky 7 Slots Card -->
-        <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('lucky7');">
-            <div class="game-card-icon">🎰</div>
-            <div class="game-card-details">
-                <h4 class="game-card-title">LUCKY 7 SLOTS</h4>
-                <p class="game-card-desc">3-Reel Luxury Slot Machine • Up to 30x Multiplier</p>
+        <!-- 3. COLLAPSIBLE CATEGORY: 🎮 FEATURED CASINO GAMES -->
+        <div class="mobile-category-accordion" style="background:#0c1422; border:1px solid rgba(255,215,0,0.2); border-radius:12px; overflow:hidden;">
+            <div class="category-header" onclick="window.toggleCategory('cat-casino')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:rgba(255,215,0,0.06);">
+                <div style="font-size:13px; font-weight:900; color:#ffd700; letter-spacing:0.5px;">🎮 CASINO GAMES (5)</div>
+                <span id="cat-casino-arrow" style="color:#ffd700; font-size:12px;">▲</span>
             </div>
-            <button class="spin-gold-btn game-play-btn">PLAY</button>
+            <div id="cat-casino" style="display:flex; flex-direction:column; gap:8px; padding:10px;">
+                <!-- Lucky 7 Slots Card -->
+                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('lucky7');">
+                    <div class="game-card-icon">🎰</div>
+                    <div class="game-card-details">
+                        <h4 class="game-card-title">LUCKY 7 SLOTS</h4>
+                        <p class="game-card-desc">3-Reel Luxury Slot Machine</p>
+                    </div>
+                    <button class="spin-gold-btn game-play-btn">PLAY</button>
+                </div>
+                <!-- 3D Dice Roll Card -->
+                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('dice');">
+                    <div class="game-card-icon">🎲</div>
+                    <div class="game-card-details">
+                        <h4 class="game-card-title">3D DICE ROLL</h4>
+                        <p class="game-card-desc">Real-Money Craps Experience</p>
+                    </div>
+                    <button class="spin-gold-btn game-play-btn">PLAY</button>
+                </div>
+                <!-- Pick A Card Card -->
+                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('cards');">
+                    <div class="game-card-icon">🃏</div>
+                    <div class="game-card-details">
+                        <h4 class="game-card-title">PICK A CARD</h4>
+                        <p class="game-card-desc">Casino Felt Dealer Table</p>
+                    </div>
+                    <button class="spin-gold-btn game-play-btn">PLAY</button>
+                </div>
+                <!-- Mystery Box Card -->
+                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('mystery');">
+                    <div class="game-card-icon">📦</div>
+                    <div class="game-card-details">
+                        <h4 class="game-card-title">MYSTERY BOX</h4>
+                        <p class="game-card-desc">Platinum & Gold Multiplier Chests</p>
+                    </div>
+                    <button class="spin-gold-btn game-play-btn">PLAY</button>
+                </div>
+                <!-- Prize Ladder Card -->
+                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('ladder');">
+                    <div class="game-card-icon">🧗</div>
+                    <div class="game-card-details">
+                        <h4 class="game-card-title">PRIZE LADDER</h4>
+                        <p class="game-card-desc">Risk & Cashout Multiplier Tower</p>
+                    </div>
+                    <button class="spin-gold-btn game-play-btn">PLAY</button>
+                </div>
+            </div>
         </div>
 
-        <!-- 3D Dice Roll Card -->
-        <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('dice');">
-            <div class="game-card-icon">🎲</div>
-            <div class="game-card-details">
-                <h4 class="game-card-title">3D DICE ROLL</h4>
-                <p class="game-card-desc">Real-Money Craps Experience • Double Dice Mode</p>
+        <!-- 4. COLLAPSIBLE CATEGORY: 🎁 REWARDS & VIP PERKS -->
+        <div class="mobile-category-accordion" style="background:#0c1422; border:1px solid rgba(255,215,0,0.2); border-radius:12px; overflow:hidden;">
+            <div class="category-header" onclick="window.toggleCategory('cat-rewards')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:rgba(255,215,0,0.06);">
+                <div style="font-size:13px; font-weight:900; color:#ffd700; letter-spacing:0.5px;">🎁 REWARDS & VIP PERKS</div>
+                <span id="cat-rewards-arrow" style="color:#ffd700; font-size:12px;">▼</span>
             </div>
-            <button class="spin-gold-btn game-play-btn">PLAY</button>
-        </div>
-
-        <!-- Pick A Card Card -->
-        <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('cards');">
-            <div class="game-card-icon">🃏</div>
-            <div class="game-card-details">
-                <h4 class="game-card-title">PICK A CARD</h4>
-                <p class="game-card-desc">Casino Felt Dealer Table • Ace Multiplier Hunt</p>
+            <div id="cat-rewards" style="display:none; flex-direction:column; gap:8px; padding:10px;">
+                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('vip');">
+                    <div class="game-card-icon">👑</div>
+                    <div class="game-card-details">
+                        <h4 class="game-card-title">VIP CLUB & STREAK</h4>
+                        <p class="game-card-desc">Bronze Tier Active • Level Up XP Perks</p>
+                    </div>
+                    <button class="spin-gold-btn game-play-btn">VIEW</button>
+                </div>
             </div>
-            <button class="spin-gold-btn game-play-btn">PLAY</button>
-        </div>
-
-        <!-- Mystery Box Card -->
-        <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('mystery');">
-            <div class="game-card-icon">📦</div>
-            <div class="game-card-details">
-                <h4 class="game-card-title">MYSTERY BOX</h4>
-                <p class="game-card-desc">Platinum & Gold Chests • Instant Coin Drop</p>
-            </div>
-            <button class="spin-gold-btn game-play-btn">PLAY</button>
-        </div>
-
-        <!-- Prize Ladder Card -->
-        <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('ladder');">
-            <div class="game-card-icon">🧗</div>
-            <div class="game-card-details">
-                <h4 class="game-card-title">PRIZE LADDER</h4>
-                <p class="game-card-desc">Risk & Cashout Tower • 50x Multiplier Top Level</p>
-            </div>
-            <button class="spin-gold-btn game-play-btn">PLAY</button>
-        </div>
-
-        <!-- 4. PROMOTIONS & VIP PROGRESS CARD -->
-        <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('vip');">
-            <div class="game-card-icon">👑</div>
-            <div class="game-card-details">
-                <h4 class="game-card-title">VIP CLUB & STREAK</h4>
-                <p class="game-card-desc">Bronze Tier Active • Level Up XP Perks</p>
-            </div>
-            <button class="spin-gold-btn game-play-btn">VIEW</button>
         </div>
     </main>
 
