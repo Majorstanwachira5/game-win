@@ -175,7 +175,7 @@ window.setAuthenticatedUser = function (user, token) {
     if (userNameEl) userNameEl.textContent = user.name || user.email || user.phone || 'USER';
     if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + ' VIP';
 
-    updateBalanceUI(user.balance || 1000.00, user.coins || 200);
+    updateBalanceUI(user.balance ?? 0.00, user.coins || 200);
 };
 
 window.updateBalanceUI = function (balance = 0, coins = 0) {
@@ -184,7 +184,7 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     const fmtBal = Number(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const fmtCoins = Number(coins || 0).toLocaleString('en-US');
     if (mobWalletEl) mobWalletEl.textContent = `KSh ${fmtBal}`;
-    if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Coins`;
+    if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Play Coins`;
 };
 
 window.toggleCategory = function (id) {
@@ -211,29 +211,35 @@ window.setUnauthenticatedState = function () {
     if (chatLockOverlay) chatLockOverlay.style.display = 'flex';
 };
 
-window.showRegBonusModal = function () {
+window.showRegBonusModal = function (force = false) {
+    if (!force && localStorage.getItem('spin_bonus_claimed') === 'true') {
+        return;
+    }
     const modal = document.getElementById('regBonusModal');
     if (modal) {
         modal.style.display = 'flex';
         modal.style.zIndex = '9999999';
         modal.style.visibility = 'visible';
         modal.style.opacity = '1';
+        if (window.triggerCoinDropAnimation) window.triggerCoinDropAnimation();
     }
 };
 
 window.closeRegBonusModal = function () {
+    localStorage.setItem('spin_bonus_claimed', 'true');
     const modal = document.getElementById('regBonusModal');
     if (modal) {
         modal.style.display = 'none';
     }
     if (APP_STATE && APP_STATE.isAuthenticated) {
-        updateBalanceUI(APP_STATE.balance || 1000.00, APP_STATE.coins || 200);
+        updateBalanceUI(APP_STATE.balance ?? 0.00, APP_STATE.coins || 200);
     }
 };
 
 window.clearAppCache = function () {
     localStorage.removeItem('spin_jwt_token');
     localStorage.removeItem('spin_user_data');
+    localStorage.removeItem('spin_bonus_claimed');
     sessionStorage.clear();
     setUnauthenticatedState();
     if (window.showToast) window.showToast('Cache memory cleared cleanly! 🧹', 'info');
@@ -336,8 +342,8 @@ window.handleAuthSubmit = async function (e) {
             window.setAuthenticatedUser(res.user, res.token);
             if (modal) modal.style.display = 'none';
             if (activeMode === 'register') {
-                if (window.showRegBonusModal) window.showRegBonusModal();
-                else showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! 200 Free Coins credited 🎉`, 'success');
+                if (window.showRegBonusModal) window.showRegBonusModal(true);
+                else showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! 200 Free Play Coins credited 🎉`, 'success');
             } else {
                 showToast(`Welcome back ${res.user.name || res.user.email || 'Player'}! 🎉`, 'success');
             }
@@ -348,7 +354,7 @@ window.handleAuthSubmit = async function (e) {
                 id: 'usr_' + Date.now(),
                 name: email.split('@')[0] || 'Player',
                 email: email,
-                balance: 1000.00,
+                balance: 0.00,
                 coins: 200,
                 vipTier: 'bronze',
                 xp: 50
@@ -358,8 +364,8 @@ window.handleAuthSubmit = async function (e) {
             window.setAuthenticatedUser(fallbackUser, fallbackToken);
             if (modal) modal.style.display = 'none';
             if (activeMode === 'register') {
-                if (window.showRegBonusModal) window.showRegBonusModal();
-                else showToast(`Welcome ${fallbackUser.name}! 200 Free Coins credited 🎉`, 'success');
+                if (window.showRegBonusModal) window.showRegBonusModal(true);
+                else showToast(`Welcome ${fallbackUser.name}! 200 Free Play Coins credited 🎉`, 'success');
             } else {
                 showToast(`Welcome back ${fallbackUser.name}! 🎉`, 'success');
             }
@@ -375,7 +381,7 @@ window.handleAuthSubmit = async function (e) {
             id: 'usr_' + Date.now(),
             name: email.split('@')[0] || 'Player',
             email: email,
-            balance: 1000.00,
+            balance: 0.00,
             coins: 200,
             vipTier: 'bronze',
             xp: 50

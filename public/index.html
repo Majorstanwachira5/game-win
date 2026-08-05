@@ -265,7 +265,7 @@
                             id: 'usr_' + Date.now(),
                             name: email.split('@')[0] || 'Player',
                             email: email,
-                            balance: 1000.00,
+                            balance: 0.00,
                             coins: 200,
                             vipTier: 'bronze',
                             xp: 50
@@ -273,7 +273,7 @@
                         localStorage.setItem('spin_jwt_token', fbToken);
                         try { localStorage.setItem('spin_user_data', JSON.stringify(fbUser)); } catch (e) {}
                         if (window.setAuthenticatedUser) window.setAuthenticatedUser(fbUser, fbToken);
-                        if (window.showToast) window.showToast('Welcome ' + fbUser.name + '! 200 Free Coins credited 🎉', 'success');
+                        if (window.showToast) window.showToast('Welcome ' + fbUser.name + '! 200 Free Play Coins credited 🎉', 'success');
                         if (modal) modal.style.display = 'none';
                     }
                 } catch (err) {
@@ -282,7 +282,7 @@
                         id: 'usr_' + Date.now(),
                         name: email.split('@')[0] || 'Player',
                         email: email,
-                        balance: 1000.00,
+                        balance: 0.00,
                         coins: 200,
                         vipTier: 'bronze',
                         xp: 50
@@ -1216,7 +1216,7 @@
         </div>
     </div>
 
-    <!-- REGISTRATION & LOGIN 200 $SPIN COINS BONUS CELEBRATION MODAL -->
+    <!-- REGISTRATION & LOGIN 200 PLAY COINS BONUS CELEBRATION MODAL -->
     <div id="regBonusModal" class="modal-overlay victory-overlay" style="display:none">
         <div class="victory-card reg-bonus-card glass-modal text-center glow-gold-border">
             <div class="bonus-badge-header"
@@ -1231,13 +1231,15 @@
             </div>
             <div class="victory-prize gold-pulse-text"
                 style="font-size:2.4rem; font-weight:900; color:#FFD700; text-shadow:0 0 25px rgba(255,215,0,0.9); margin-bottom:10px;">
-                +200 $SPIN COINS</div>
+                +200 PLAY COINS</div>
             <p class="victory-desc" style="color:#e0e0e0; font-size:1rem; line-height:1.5; margin-bottom:20px;">You have
-                successfully received <strong>200 Free Web3 $SPIN Reward Coins</strong> credited to your account!</p>
+                successfully received <strong>200 Free Play Coins</strong> credited to your account!</p>
             <button id="claimRegBonusBtn" class="claim-btn neon-gold-btn full-width"
                 onclick="window.closeRegBonusModal()"
                 style="background:linear-gradient(135deg, #FFE066, #FFB700); color:#000; font-weight:900; font-size:1.1rem; padding:14px; border:none; border-radius:12px; cursor:pointer; width:100%; box-shadow:0 0 25px rgba(255,215,0,0.6);">CLAIM
-                200 COINS & PLAY NOW 🚀</button>
+                200 PLAY COINS & PLAY NOW 🚀</button>
+        </div>
+    </div>
 
     <!-- NATIVE ANDROID FLOATING CHAT BUTTON -->
     <button class="mobile-chat-fab" onclick="var s = document.getElementById('mobileBottomSheet'); if(s) s.classList.toggle('open');" title="Open Live Chat">💬</button>

@@ -105,7 +105,7 @@ while ($true) {
                 id = "usr_player"
                 name = "Player"
                 email = "player@casino.com"
-                balance = 1000.00
+                balance = 0.00
                 coins = 200
                 vipTier = "bronze"
                 xp = 50

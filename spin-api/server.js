@@ -149,8 +149,8 @@ function createUser(overrides = {}) {
     return {
         id: overrides.id || 'demo-user-1',
         phone: overrides.phone || 'USER ' + Math.floor(1000 + Math.random() * 9000) + '***',
-        balance: overrides.balance ?? 1000.00,
-        coins: overrides.coins ?? 200, // 200 Free Reward Coins Granted on Registration!
+        balance: overrides.balance ?? 0.00,
+        coins: overrides.coins ?? 200, // 200 Free Play Coins Granted on Registration!
         currency: 'KSh',
         freeSpins: overrides.freeSpins ?? 1,
         mysteryKeys: 0,
@@ -174,7 +174,7 @@ function createUser(overrides = {}) {
 }
 
 const users = {
-    'demo-user-1': createUser({ id: 'demo-user-1', phone: 'USER 0712***891', balance: 12500, coins: 50000, xp: 150 })
+    'demo-user-1': createUser({ id: 'demo-user-1', phone: 'USER 0712***891', balance: 0.00, coins: 200, xp: 50 })
 };
 
 const financialStats = {
@@ -471,7 +471,7 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
                     id: existingUser.id,
                     name: existingUser.name || formattedEmail.split('@')[0],
                     email: existingUser.email || formattedEmail,
-                    balance: existingUser.balance || 1000.00,
+                    balance: existingUser.balance ?? 0.00,
                     coins: existingUser.coins || 200,
                     vipTier: existingUser.vipTier || 'bronze',
                     xp: existingUser.xp || 50
@@ -487,8 +487,8 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             phoneRaw: formattedEmail,
             phone: formattedEmail,
             password: password,
-            balance: 1000.00,
-            coins: 200, // 200 Free Reward Coins Granted on Registration!
+            balance: 0.00,
+            coins: 200, // 200 Free Play Coins Granted on Registration!
             xp: 50
         });
 
@@ -522,7 +522,7 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
         });
     } catch (err) {
         const userId = 'usr_' + Date.now();
-        const fallbackUser = createUser({ id: userId, email: 'player@casino.com', balance: 1000.00, coins: 200 });
+        const fallbackUser = createUser({ id: userId, email: 'player@casino.com', balance: 0.00, coins: 200 });
         const token = generatePlayerToken(userId);
         res.json({ success: true, token, user: fallbackUser });
     }
@@ -555,7 +555,7 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
                         phoneRaw: dbUser.phone_number || formattedEmail,
                         phone: dbUser.phone_number || formattedEmail,
                         password: password,
-                        balance: 1000.00,
+                        balance: 0.00,
                         coins: 200,
                         xp: dbUser.xp_points || 50
                     });
@@ -574,7 +574,7 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
                 phoneRaw: formattedEmail,
                 phone: formattedEmail,
                 password: password,
-                balance: 1000.00,
+                balance: 0.00,
                 coins: 200,
                 xp: 50
             });
@@ -598,7 +598,7 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
         });
     } catch (err) {
         const userId = 'usr_' + Date.now();
-        const fallbackUser = createUser({ id: userId, email: 'player@casino.com', balance: 1000.00, coins: 200 });
+        const fallbackUser = createUser({ id: userId, email: 'player@casino.com', balance: 0.00, coins: 200 });
         const token = generatePlayerToken(userId);
         res.json({ success: true, token, user: fallbackUser });
     }
