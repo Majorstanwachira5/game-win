@@ -3048,9 +3048,25 @@ body {
     margin: 8px auto !important;
     padding: 14px !important;
   }
+
+  .desktop-web-layout {
+    display: none !important;
+  }
+  .mobile-android-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 8px 10px 80px !important;
+  }
 }
 
 @media (min-width: 769px) {
+  .mobile-android-layout {
+    display: none !important;
+  }
+  .desktop-web-layout {
+    display: grid !important;
+  }
   .android-bottom-nav, .mobile-chat-fab {
     display: none !important;
   }
