@@ -139,22 +139,8 @@ function getConsecutiveLoginsEAT() {
 }
 
 function handleTierUp(res) {
-    if (!res || !res.tierUp) return;
-    const streak = getConsecutiveLoginsEAT();
-    if (streak < 4) return;
-
-    const tier = res.newTier;
-    if (!tier) return;
-    const modal  = document.getElementById('tierUpModal');
-    const icon   = document.getElementById('tierUpIcon');
-    const name   = document.getElementById('tierUpName');
-    if (icon) icon.textContent = tier.icon || '⬆️';
-    if (name) name.textContent = tier.name || 'Silver';
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.style.zIndex = '9999999';
-    }
-    if (typeof triggerConfetti === 'function') triggerConfetti();
+    // Disabled as requested - VIP tier up modal completely removed
+    return;
 }
 
 window.closeVIPModal = function() {
