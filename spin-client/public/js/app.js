@@ -211,6 +211,34 @@ window.setUnauthenticatedState = function () {
     if (chatLockOverlay) chatLockOverlay.style.display = 'flex';
 };
 
+window.showRegBonusModal = function () {
+    const modal = document.getElementById('regBonusModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999999';
+        modal.style.visibility = 'visible';
+        modal.style.opacity = '1';
+    }
+};
+
+window.closeRegBonusModal = function () {
+    const modal = document.getElementById('regBonusModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (APP_STATE && APP_STATE.isAuthenticated) {
+        updateBalanceUI(APP_STATE.balance || 1000.00, APP_STATE.coins || 200);
+    }
+};
+
+window.clearAppCache = function () {
+    localStorage.removeItem('spin_jwt_token');
+    localStorage.removeItem('spin_user_data');
+    sessionStorage.clear();
+    setUnauthenticatedState();
+    if (window.showToast) window.showToast('Cache memory cleared cleanly! 🧹', 'info');
+};
+
 let currentAuthMode = 'login';
 window._authMode = 'login';
 
