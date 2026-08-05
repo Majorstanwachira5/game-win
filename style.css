@@ -165,6 +165,133 @@ body {
 }
 .logout-hdr-btn:hover { background: var(--red-accent); color: #fff; transform: scale(1.05); }
 
+/* ELEVATED TOP 200 COINS BALANCE BADGE */
+.wallet-container {
+  display: flex;
+  align-items: center;
+}
+
+.coins-card {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.22) 0%, rgba(20, 16, 5, 0.95) 100%);
+  border: 1.5px solid var(--gold-primary);
+  border-radius: 12px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 18px rgba(255, 215, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateY(-2px);
+  backdrop-filter: blur(8px);
+}
+
+.coins-card:hover {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 6px 26px rgba(255, 215, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  border-color: #FFFFFF;
+}
+
+.coins-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  transform: rotate(45deg);
+  animation: shineCoinShimmer 3.5s infinite linear;
+}
+
+@keyframes shineCoinShimmer {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  25%, 100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.coins-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.coins-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--gold-primary);
+  letter-spacing: 1.2px;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+.coins-gained-badge {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--green-glow);
+  text-shadow: 0 0 8px var(--green-glow);
+}
+
+.coins-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  color: #FFFFFF;
+  text-shadow: 0 0 12px var(--gold-primary), 0 2px 4px rgba(0,0,0,0.8);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.coins-value::before {
+  content: '🪙';
+  font-size: 16px;
+  filter: drop-shadow(0 0 5px #FFD700);
+  animation: coinIconPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes coinIconPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(15deg); }
+}
+
+.top-coins-bonus-pill {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.28) 0%, rgba(255, 140, 0, 0.28) 100%);
+  border: 1.5px solid var(--gold-primary);
+  border-radius: 20px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.25s ease;
+  animation: floatBonusPill 3s infinite ease-in-out;
+}
+
+.top-coins-bonus-pill:hover {
+  transform: scale(1.06) translateY(-2px);
+  box-shadow: 0 0 24px rgba(255, 215, 0, 0.7);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.45) 0%, rgba(255, 140, 0, 0.45) 100%);
+}
+
+@keyframes floatBonusPill {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.bonus-tag {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #FFF;
+  letter-spacing: 0.8px;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.9);
+}
+
 /* AUTH MODAL */
 .auth-modal-card { max-width: 400px; }
 .auth-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 10px; }

@@ -443,7 +443,22 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
         );
 
         if (existingKey) {
-            return res.status(400).json({ error: 'An account with this email address already exists. Please log in.' });
+            const existingUser = users[existingKey];
+            const token = generatePlayerToken(existingUser.id);
+            return res.json({
+                success: true,
+                message: 'Account already exists. Logged in successfully.',
+                token,
+                user: {
+                    id: existingUser.id,
+                    name: existingUser.name || formattedEmail.split('@')[0],
+                    email: existingUser.email || formattedEmail,
+                    balance: existingUser.balance || 1000.00,
+                    coins: existingUser.coins || 200,
+                    vipTier: existingUser.vipTier || 'bronze',
+                    xp: existingUser.xp || 50
+                }
+            });
         }
 
         const userId = 'usr_' + Date.now() + '_' + Math.floor(Math.random() * 1000);

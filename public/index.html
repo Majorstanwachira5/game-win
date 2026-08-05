@@ -300,6 +300,10 @@
         <div class="header-right-auth">
             <!-- UNAUTHENTICATED GUEST STATE -->
             <div id="unauthHeader" class="auth-btn-row">
+                <div class="top-coins-bonus-pill" onclick="openAuthModal('register')" title="Register now to claim 200 Free Bonus Coins!">
+                    <span class="coin-icon-spin">🪙</span>
+                    <span class="bonus-tag">200 FREE COINS</span>
+                </div>
                 <button id="openLoginBtn" class="hdr-auth-btn login-hdr-btn" onclick="openAuthModal('login')">🔑
                     LOGIN</button>
                 <button id="openRegisterBtn" class="hdr-auth-btn reg-hdr-btn" onclick="openAuthModal('register')">📝
@@ -312,13 +316,13 @@
                     <span class="user-vip-badge" id="hdrVipTier">BRONZE VIP</span>
                 </div>
                 <div class="wallet-container">
-                    <div class="coins-card">
+                    <div class="coins-card elevated-coins-card">
                         <div class="coins-top">
                             <span class="coins-label">COINS BALANCE</span>
                             <span class="coins-gained-badge" id="coinsGainedBadge" style="display:none">+<span
                                     id="coinsGainedVal">0</span> Coins</span>
                         </div>
-                        <div class="coins-value" id="userCoinsText">50,000 Coins</div>
+                        <div class="coins-value" id="userCoinsText">200 Coins</div>
                     </div>
                 </div>
                 <button id="logoutBtn" class="logout-hdr-btn"
