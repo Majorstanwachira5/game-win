@@ -660,16 +660,23 @@ function showCoinsGainedBadge(amount) {
 
 function updateUserState(user, coinsGained = 0) {
     if (!user) return;
-    if (user.balance !== undefined) APP_STATE.balance = user.balance;
-    if (user.coins !== undefined) {
-        APP_STATE.coins = user.coins;
-        animateCoinCount(user.coins);
+    const isTester = (window.isTesterAccount && window.isTesterAccount(user)) || (typeof APP_STATE !== 'undefined' && APP_STATE.isTester);
+    if (isTester) {
+        user.balance = (user.balance && Number(user.balance) >= 250000 ? Number(user.balance) : 250000.00);
+        user.coins = (user.coins && Number(user.coins) >= 250000 ? Number(user.coins) : 250000);
     }
+
+    if (user.balance !== undefined) APP_STATE.balance = user.balance;
+    if (user.coins !== undefined) APP_STATE.coins = user.coins;
     if (user.freeSpins !== undefined) APP_STATE.freeSpins = user.freeSpins;
     if (user.doubleNextWin !== undefined) APP_STATE.doubleNextWin = user.doubleNextWin;
     if (user.mysteryKeys !== undefined) APP_STATE.mysteryKeys = user.mysteryKeys;
     if (user.xp !== undefined) APP_STATE.xp = user.xp;
     if (user.vipTier !== undefined) APP_STATE.vipTier = user.vipTier;
+
+    if (window.updateBalanceUI) {
+        window.updateBalanceUI(APP_STATE.balance, APP_STATE.coins);
+    }
 
     if (coinsGained > 0 || (user.coinsGained && user.coinsGained > 0)) {
         showCoinsGainedBadge(coinsGained || user.coinsGained);

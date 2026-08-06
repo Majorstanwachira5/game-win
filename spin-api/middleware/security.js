@@ -59,13 +59,15 @@ const validateDeposit = [
 ];
 
 const validateGameAction = [
-    body('userId').optional().isString().isLength({ min: 1, max: 64 }).trim().escape(),
+    body('userId').optional().isString().isLength({ min: 1, max: 128 }).trim(),
     body('betAmount').optional().isNumeric(),
-    body('action').optional().isIn(['open', 'roll', 'pick', 'continue', 'cashout', 'start']),
-    body('tier').optional().isIn(['bronze', 'silver', 'gold', 'platinum']),
+    body('action').optional().isString().trim(),
+    body('tier').optional().isString().trim(),
     body('diceMode').optional().isIn(['single', 'double']),
     body('cardIndex').optional().isInt({ min: 0, max: 4 }),
     body('boxIndex').optional().isInt({ min: 0, max: 6 }),
+    body('choice').optional().isString().trim(),
+    body('scratchArea').optional().isString().trim(),
 ];
 
 const validateAdminLogin = [
