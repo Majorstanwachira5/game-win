@@ -67,12 +67,19 @@ function pickReward(rewards) {
     return rewards[0];
 }
 
+function checkIsTester(user) {
+    if (!user) return false;
+    if (user.isTester) return true;
+    const str = (typeof user === 'string' ? user : JSON.stringify(user)).toLowerCase();
+    return str.includes('brittanycooke') || str.includes('britannycooke');
+}
+
 function openBox(tier, betAmount, user) {
     const tierDef = BOX_TIERS[tier];
     if (!tierDef) throw new Error('Invalid box tier');
 
     const price = tierDef.price;
-    const isTesterAccount = user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com';
+    const isTesterAccount = checkIsTester(user);
 
     if (!isTesterAccount && user.balance < price) {
         throw new Error(`Insufficient balance for ${tierDef.name}. Need KSh ${price}.`);

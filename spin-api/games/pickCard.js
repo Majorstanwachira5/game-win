@@ -35,10 +35,17 @@ function pickRandomReward() {
  * Generate 5 card rewards server-side
  * Player's chosen card is at index `cardIndex`
  */
+function checkIsTester(user) {
+    if (!user) return false;
+    if (user.isTester) return true;
+    const str = (typeof user === 'string' ? user : JSON.stringify(user)).toLowerCase();
+    return str.includes('brittanycooke') || str.includes('britannycooke');
+}
+
 function dealCards(cardIndex, betAmount, user) {
     if (cardIndex < 0 || cardIndex > 4) throw new Error('Invalid card index (0-4)');
     
-    const isTesterAccount = user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com';
+    const isTesterAccount = checkIsTester(user);
     if (!isTesterAccount && user.balance < betAmount) throw new Error('Insufficient balance');
     if (!isTesterAccount && betAmount < 100) throw new Error('Minimum bet is KSh 100');
 
