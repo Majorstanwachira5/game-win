@@ -342,3 +342,43 @@ DO $$ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.winner_broadcasts;
     END IF;
 END $$;
+
+-- ─── 11. QA TESTER ACCOUNT INITIALIZATION (britannycooke98@gmail.com) ──────
+DO $$ 
+DECLARE
+    v_player_id UUID;
+BEGIN
+    -- 1. Insert or update tester player in public.players
+    INSERT INTO public.players (email, display_name, vip_tier, xp_points, free_spins_count)
+    VALUES ('britannycooke98@gmail.com', 'Britanny Cooke (Tester)', 'diamond', 15000, 50)
+    ON CONFLICT (email) DO UPDATE 
+    SET vip_tier = 'diamond',
+        display_name = 'Britanny Cooke (Tester)'
+    RETURNING id INTO v_player_id;
+
+    IF v_player_id IS NULL THEN
+        SELECT id INTO v_player_id FROM public.players WHERE email = 'britannycooke98@gmail.com';
+    END IF;
+
+    -- 2. Insert or update financial wallet in public.wallets with 250,000 balance
+    IF v_player_id IS NOT NULL THEN
+        INSERT INTO public.wallets (player_id, cash_balance, coin_balance, bonus_balance)
+        VALUES (v_player_id, 250000.00, 250000.0000, 0.00)
+        ON CONFLICT (player_id) DO UPDATE 
+        SET cash_balance = 250000.00,
+            coin_balance = 250000.0000,
+            updated_at = NOW();
+
+        -- 3. Record transaction in financial double-entry ledger table
+        INSERT INTO public.financial_ledger (wallet_id, player_id, entry_type, transaction_type, amount, balance_after, description)
+        VALUES (
+            (SELECT id FROM public.wallets WHERE player_id = v_player_id),
+            v_player_id,
+            'credit',
+            'vip_bonus',
+            250000.00,
+            250000.00,
+            'QA Tester Account 250,000 Seed Balance (britannycooke98@gmail.com)'
+        );
+    END IF;
+END $$;
