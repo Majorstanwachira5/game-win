@@ -38,7 +38,7 @@ function pickRandomReward() {
 function dealCards(cardIndex, betAmount, user) {
     if (cardIndex < 0 || cardIndex > 4) throw new Error('Invalid card index (0-4)');
     if (user.balance < betAmount) throw new Error('Insufficient balance');
-    if (betAmount < 50) throw new Error('Minimum bet is KSh 50');
+    if (betAmount < 100) throw new Error('Minimum bet is KSh 100');
 
     user.balance -= betAmount;
 

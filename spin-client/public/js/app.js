@@ -745,8 +745,8 @@ function bindDepositModal() {
             const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'M-Pesa';
             const phone = document.getElementById('depositPhoneInput').value;
 
-            if (!amount || amount < 10) {
-                showToast('Minimum deposit is KSh 10', 'error');
+            if (!amount || amount < 100) {
+                showToast('Minimum deposit is KSh 100', 'error');
                 return;
             }
 

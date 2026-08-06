@@ -37,7 +37,7 @@ function pickReward() {
 function playLucky7(boxIndex, betAmount, user) {
     if (boxIndex < 0 || boxIndex > 6) throw new Error('Invalid box index (0-6)');
     if (user.balance < betAmount) throw new Error('Insufficient balance');
-    if (betAmount < 50) throw new Error('Minimum bet is KSh 50');
+    if (betAmount < 100) throw new Error('Minimum bet is KSh 100');
 
     user.balance -= betAmount;
 

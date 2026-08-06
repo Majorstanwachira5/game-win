@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const BOX_TIERS = {
     bronze: {
         id: 'bronze', name: 'Bronze Box', icon: '📦', color: '#cd7f32',
-        price: 50,
+        price: 100,
         rewards: [
             { id: 'nothing',    label: 'Nothing 😢',      type: 'loss',       multiplier: 0,    weight: 50000 },
             { id: 'x0_1',       label: '×0.1',            type: 'win',        multiplier: 0.1,  weight: 25000 },
