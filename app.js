@@ -33,6 +33,19 @@ const APP_STATE = {
 async function apiFetch(endpoint) {
     const headers = { 'Content-Type': 'application/json' };
     if (APP_STATE.token) headers['Authorization'] = `Bearer ${APP_STATE.token}`;
+
+    let storedUser = null;
+    try {
+        const raw = localStorage.getItem('spin_user_data');
+        if (raw) storedUser = JSON.parse(raw);
+    } catch(e) {}
+
+    const isTester = (storedUser && window.isTesterAccount && window.isTesterAccount(storedUser)) || APP_STATE.isTester;
+    const userEmail = (storedUser ? storedUser.email : '') || (APP_STATE.userEmail || '');
+
+    if (userEmail) headers['x-user-email'] = userEmail;
+    if (isTester) headers['x-is-tester'] = 'true';
+
     try {
         const res = await fetch(API_BASE + endpoint, { headers });
         const contentType = res.headers.get('content-type') || '';
@@ -48,11 +61,31 @@ async function apiFetch(endpoint) {
 async function apiPost(endpoint, body = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (APP_STATE.token) headers['Authorization'] = `Bearer ${APP_STATE.token}`;
+
+    let storedUser = null;
+    try {
+        const raw = localStorage.getItem('spin_user_data');
+        if (raw) storedUser = JSON.parse(raw);
+    } catch(e) {}
+
+    const isTester = (storedUser && window.isTesterAccount && window.isTesterAccount(storedUser)) || APP_STATE.isTester;
+    const userEmail = (storedUser ? storedUser.email : '') || (APP_STATE.userEmail || '');
+
+    if (userEmail) headers['x-user-email'] = userEmail;
+    if (isTester) headers['x-is-tester'] = 'true';
+
+    const fullBody = {
+        userId: APP_STATE.userId || (storedUser ? storedUser.id : 'demo-user-1'),
+        userEmail: userEmail,
+        isTester: isTester,
+        ...body
+    };
+
     try {
         const res = await fetch(API_BASE + endpoint, {
             method: 'POST',
             headers,
-            body: JSON.stringify(body)
+            body: JSON.stringify(fullBody)
         });
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {

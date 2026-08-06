@@ -389,23 +389,25 @@ function isTesterAccount(val) {
     return str.includes('brittanycooke') || str.includes('britannycooke');
 }
 
-function getOrCreateUser(userId, email) {
+function getOrCreateUser(userId, email, isTesterHint = false) {
+    const isTester = isTesterHint || isTesterAccount(email) || isTesterAccount(userId) || (users[userId] && users[userId].isTester);
     if (!users[userId]) {
-        const isTester = isTesterAccount(email) || isTesterAccount(userId);
         users[userId] = createUser({
             id: userId,
             email: email || (isTester ? 'brittanycooke98@gmail.com' : undefined),
             phone: 'USER 07' + Math.floor(10 + Math.random() * 89) + '***',
-            balance: isTester ? 250000.00 : 0.00,
+            balance: isTester ? 250000.00 : 1000.00,
             coins: isTester ? 250000 : 200,
             isTester: isTester,
             xp: 0
         });
-    } else if (isTesterAccount(email) || isTesterAccount(users[userId])) {
-        users[userId].email = email || users[userId].email || 'brittanycooke98@gmail.com';
+    }
+
+    if (isTester) {
         users[userId].isTester = true;
-        users[userId].balance = 250000.00;
-        users[userId].coins = 250000;
+        users[userId].balance = (users[userId].balance && Number(users[userId].balance) >= 250000 ? Number(users[userId].balance) : 250000.00);
+        users[userId].coins = (users[userId].coins && Number(users[userId].coins) >= 250000 ? Number(users[userId].coins) : 250000);
+        if (email) users[userId].email = email;
     }
     return users[userId];
 }
@@ -784,8 +786,8 @@ app.post('/api/mystery-box/open', gameLimiter, requirePlayerAuth, validateGameAc
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { tier = 'bronze' } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail);
-        const isTester = checkIsTester(user) || checkIsTester(req.userEmail);
+        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
         const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
         const result = openBox(tier, 0, user);
@@ -827,8 +829,8 @@ app.post('/api/dice/roll', gameLimiter, requirePlayerAuth, validateGameAction, h
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { diceMode = 'single', betAmount = 100 } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail);
-        const isTester = checkIsTester(user) || checkIsTester(req.userEmail);
+        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
         const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
         const result = rollDice(diceMode, Number(betAmount), user);
@@ -865,8 +867,8 @@ app.post('/api/cards/deal', gameLimiter, requirePlayerAuth, validateGameAction, 
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { cardIndex = 0, betAmount = 100 } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail);
-        const isTester = checkIsTester(user) || checkIsTester(req.userEmail);
+        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
         const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
         const result = dealCards(Number(cardIndex), Number(betAmount), user);
