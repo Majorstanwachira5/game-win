@@ -170,7 +170,19 @@ window.setAuthenticatedUser = function (user, token) {
     if (unauthHeader) unauthHeader.style.display = 'none';
     if (authHeader) authHeader.style.display = 'flex';
     if (chatLockOverlay) chatLockOverlay.style.display = 'none';
-    if (authModal) authModal.style.display = 'none';
+    
+    // Automatically close auth modal immediately on authentication success
+    if (authModal) {
+        authModal.style.display = 'none';
+        authModal.style.opacity = '0';
+        authModal.style.visibility = 'hidden';
+        authModal.classList.remove('open', 'active');
+        authModal.setAttribute('style', 'display: none !important');
+    }
+    if (window.closeAuthModal) window.closeAuthModal();
+
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = 'auto';
 
     if (userNameEl) userNameEl.textContent = user.name || user.email || user.phone || 'USER';
     if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + ' VIP';
@@ -269,9 +281,14 @@ window.openAuthModal = function (mode = 'login') {
 window.closeAuthModal = function () {
     const m = document.getElementById('authModal');
     if (m) {
+        m.style.display = 'none';
+        m.style.opacity = '0';
+        m.style.visibility = 'hidden';
         m.classList.remove('open', 'active');
         m.setAttribute('style', 'display: none !important');
     }
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = 'auto';
 };
 
 window.handleAuthSubmit = async function (e) {

@@ -109,7 +109,15 @@
 
             window.closeAuthModal = function () {
                 var modal = document.getElementById('authModal');
-                if (modal) modal.style.display = 'none';
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.style.opacity = '0';
+                    modal.style.visibility = 'hidden';
+                    modal.classList.remove('open', 'active');
+                    modal.setAttribute('style', 'display: none !important');
+                }
+                document.body.style.overflow = '';
+                document.body.style.pointerEvents = 'auto';
             };
 
             // Instant session auto-restore on page reload/refresh
