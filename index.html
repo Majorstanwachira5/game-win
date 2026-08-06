@@ -392,6 +392,39 @@
 
         <!-- ─── CENTER COLUMN: PRIMARY SPIN & WIN WHEEL GAME ─── -->
         <section class="center-stage">
+            <!-- SPIN WHEEL CONTAINER (HERO FEATURE) -->
+            <div class="wheel-stage-card glass-panel text-center">
+                <div class="section-tag-header">
+                    <span class="tag-label">HERO FEATURE</span>
+                    <h2 class="section-title">SPIN & WIN WHEEL</h2>
+                </div>
+
+                <div class="wheel-canvas-wrapper" id="wheelWrapper">
+                    <div class="wheel-pointer-hero"></div>
+                    <canvas id="wheelCanvas" width="460" height="460"></canvas>
+                </div>
+
+                <!-- BET CONTROLS -->
+                <div class="bet-controls-panel margin-top">
+                    <div class="wager-selector-row">
+                        <span class="wager-label">SPIN BET AMOUNT:</span>
+                        <div class="wager-chips">
+                            <button class="chip-btn active" data-amount="100">KSh 100</button>
+                            <button class="chip-btn" data-amount="250">KSh 250</button>
+                            <button class="chip-btn" data-amount="500">KSh 500</button>
+                            <button class="chip-btn" data-amount="1000">KSh 1,000</button>
+                        </div>
+                    </div>
+
+                    <div class="spin-trigger-row margin-top-sm">
+                        <button id="mainSpinBtn" class="spin-gold-btn hero-spin-btn">
+                            <span class="spin-text-main">SPIN NOW</span>
+                            <span class="spin-text-sub">KSh <span id="currentWagerLabel">100</span></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- DAILY LOGIN STREAK CARD -->
             <div class="streak-card-wrapper margin-bottom-sm">
                 <div class="streak-card glass-panel">
@@ -421,42 +454,37 @@
                     </div>
 
                     <div class="streak-action-row margin-top-xs">
-                        <span class="next-reward-hint" id="streakNextHint">🎁 Next: <strong>100 $SPIN Coins + 1 Free Spin</strong></span>
+                        <span class="next-reward-hint" id="streakNextHint">🎁 Next: <strong>100 Play Coins + 1 Free Spin</strong></span>
                         <button class="claim-streak-btn gold-pulse-btn" id="claimStreakBtn" onclick="if(window.claimDailyStreak) window.claimDailyStreak();">🎁 CLAIM STREAK BONUS</button>
                     </div>
                 </div>
             </div>
 
-            <!-- SPIN WHEEL CONTAINER -->
-            <div class="wheel-stage-card glass-panel text-center">
-                <div class="section-tag-header">
-                    <span class="tag-label">PRIMARY GAME</span>
-                    <h2 class="section-title">SPIN & WIN WHEEL</h2>
+            <!-- FEATURED CASINO GAMES GRID (4-COLUMN ROW) -->
+            <div class="desktop-featured-games-grid">
+                <div class="desktop-game-card" onclick="if(window.openGameModal) window.openGameModal('mystery');">
+                    <div class="desktop-game-icon">📦</div>
+                    <div class="desktop-game-title">MYSTERY BOX</div>
+                    <div class="desktop-game-desc">Gold Chests</div>
+                    <button class="spin-gold-btn desktop-game-btn">PLAY</button>
                 </div>
-
-                <div class="wheel-canvas-wrapper" id="wheelWrapper">
-                    <div class="wheel-pointer-hero"></div>
-                    <canvas id="wheelCanvas" width="460" height="460"></canvas>
+                <div class="desktop-game-card" onclick="if(window.openGameModal) window.openGameModal('dice');">
+                    <div class="desktop-game-icon">🎲</div>
+                    <div class="desktop-game-title">3D DICE ROLL</div>
+                    <div class="desktop-game-desc">Casino Craps</div>
+                    <button class="spin-gold-btn desktop-game-btn">PLAY</button>
                 </div>
-
-                <!-- BET CONTROLS -->
-                <div class="bet-controls-panel margin-top">
-                    <div class="wager-selector-row">
-                        <span class="wager-label">SPIN BET AMOUNT:</span>
-                        <div class="wager-chips">
-                            <button class="chip-btn active" data-amount="100">KSh 100</button>
-                            <button class="chip-btn" data-amount="250">KSh 250</button>
-                            <button class="chip-btn" data-amount="500">KSh 500</button>
-                            <button class="chip-btn" data-amount="1000">KSh 1,000</button>
-                        </div>
-                    </div>
-
-                    <div class="spin-trigger-row margin-top-sm">
-                        <button id="mainSpinBtn" class="spin-gold-btn hero-spin-btn">
-                            <span class="spin-text-main">SPIN NOW</span>
-                            <span class="spin-text-sub">KSh <span id="currentWagerLabel">100</span></span>
-                        </button>
-                    </div>
+                <div class="desktop-game-card" onclick="if(window.openGameModal) window.openGameModal('cards');">
+                    <div class="desktop-game-icon">🃏</div>
+                    <div class="desktop-game-title">PICK A CARD</div>
+                    <div class="desktop-game-desc">Dealer Felt</div>
+                    <button class="spin-gold-btn desktop-game-btn">PLAY</button>
+                </div>
+                <div class="desktop-game-card" onclick="if(window.openGameModal) window.openGameModal('lucky7');">
+                    <div class="desktop-game-icon">🎰</div>
+                    <div class="desktop-game-title">LUCKY 7 SLOTS</div>
+                    <div class="desktop-game-desc">3-Reel Slots</div>
+                    <button class="spin-gold-btn desktop-game-btn">PLAY</button>
                 </div>
             </div>
         </section>
@@ -521,8 +549,6 @@
                         <span class="side-tile-sub">3-REEL SLOT MACHINE</span>
                     </div>
                 </div>
-
-
 
                 <!-- VIP CLUB TILE -->
                 <div class="game-side-tile game-tile-trigger vip-side-tile" data-target="vip"
