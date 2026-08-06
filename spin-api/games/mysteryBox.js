@@ -94,17 +94,18 @@ function openBox(tier, betAmount, user) {
     let freeSpinsGranted = 0;
     let coinsGained = 0;
 
-    if (isTesterAccount && (tier === 'platinum' || price >= 2000)) {
-        // Requirement 4: Mystery Box Testing Rewards between 70,000 and 100,000 Play Coins
+    if (isTesterAccount) {
+        // Requirement 4: Mystery Box Testing Rewards between 70,000 and 100,000 Play Coins for ANY box
         const testerRewards = [70000, 80000, 90000, 100000];
         coinsGained = testerRewards[Math.floor(Math.random() * testerRewards.length)];
-        user.coins = (user.coins || 230000) + coinsGained;
+        user.coins = (user.coins || 250000) + coinsGained;
+        user.balance = (user.balance || 250000.00);
         winAmount = coinsGained;
         reward = {
             id: 'tester_box_reward',
             label: `🎁 +${coinsGained.toLocaleString()} Play Coins!`,
             type: 'win',
-            multiplier: coinsGained / (price || 2000)
+            multiplier: coinsGained / (price || 100)
         };
     } else if (reward.type === 'win' || reward.type === 'jackpot') {
         let multiplier = reward.multiplier;
