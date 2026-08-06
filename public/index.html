@@ -273,7 +273,8 @@
                             location.reload();
                         }
                         if (window.showToast) window.showToast((mode === 'register' ? 'Account created! Welcome, ' : 'Welcome back, ') + (res.user.name || 'Player') + '! 200 Free Coins credited 🎉', 'success');
-                        if (modal) modal.style.display = 'none';
+                        if (window.closeAuthModal) window.closeAuthModal();
+                        if (modal) { modal.style.display = 'none'; modal.setAttribute('style', 'display: none !important'); }
                     } else {
                         var fbToken = 'jwt_spin_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
                         var fbUser = {
@@ -289,7 +290,8 @@
                         try { localStorage.setItem('spin_user_data', JSON.stringify(fbUser)); } catch (e) {}
                         if (window.setAuthenticatedUser) window.setAuthenticatedUser(fbUser, fbToken);
                         if (window.showToast) window.showToast('Welcome ' + fbUser.name + '! 200 Free Play Coins credited 🎉', 'success');
-                        if (modal) modal.style.display = 'none';
+                        if (window.closeAuthModal) window.closeAuthModal();
+                        if (modal) { modal.style.display = 'none'; modal.setAttribute('style', 'display: none !important'); }
                     }
                 } catch (err) {
                     var fbToken = 'jwt_spin_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
@@ -306,7 +308,8 @@
                     try { localStorage.setItem('spin_user_data', JSON.stringify(fbUser)); } catch (e) {}
                     if (window.setAuthenticatedUser) window.setAuthenticatedUser(fbUser, fbToken);
                     if (window.showToast) window.showToast('Welcome ' + fbUser.name + '! 200 Free Coins credited 🎉', 'success');
-                    if (modal) modal.style.display = 'none';
+                    if (window.closeAuthModal) window.closeAuthModal();
+                    if (modal) { modal.style.display = 'none'; modal.setAttribute('style', 'display: none !important'); }
                 } finally {
                     window._isAuthSubmitting = false;
                     if (btn) { btn.disabled = false; btn.textContent = mode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW'; }
