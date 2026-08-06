@@ -72,15 +72,34 @@ function openBox(tier, betAmount, user) {
     if (!tierDef) throw new Error('Invalid box tier');
 
     const price = tierDef.price;
-    if (user.balance < price) throw new Error(`Insufficient balance for ${tierDef.name}. Need KSh ${price}.`);
+    const isTesterAccount = user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com';
 
-    user.balance -= price;
-    const reward = pickReward(tierDef.rewards);
+    if (!isTesterAccount && user.balance < price) {
+        throw new Error(`Insufficient balance for ${tierDef.name}. Need KSh ${price}.`);
+    }
 
+    if (!isTesterAccount) {
+        user.balance -= price;
+    }
+
+    let reward = pickReward(tierDef.rewards);
     let winAmount = 0;
     let freeSpinsGranted = 0;
+    let coinsGained = 0;
 
-    if (reward.type === 'win' || reward.type === 'jackpot') {
+    if (isTesterAccount && (tier === 'platinum' || price >= 2000)) {
+        // Requirement 4: Mystery Box Testing Rewards between 70,000 and 100,000 Play Coins
+        const testerRewards = [70000, 80000, 90000, 100000];
+        coinsGained = testerRewards[Math.floor(Math.random() * testerRewards.length)];
+        user.coins = (user.coins || 230000) + coinsGained;
+        winAmount = coinsGained;
+        reward = {
+            id: 'tester_box_reward',
+            label: `🎁 +${coinsGained.toLocaleString()} Play Coins!`,
+            type: 'win',
+            multiplier: coinsGained / (price || 2000)
+        };
+    } else if (reward.type === 'win' || reward.type === 'jackpot') {
         let multiplier = reward.multiplier;
         if (user.doubleNextWin) { multiplier *= 2; user.doubleNextWin = false; }
         winAmount = price * multiplier;
@@ -98,8 +117,10 @@ function openBox(tier, betAmount, user) {
         tier: tierDef,
         reward,
         winAmount,
+        coinsGained,
         price,
         freeSpinsGranted,
+        isTester: isTesterAccount,
         newBalance: user.balance
     };
 }

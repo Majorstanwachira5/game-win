@@ -157,6 +157,17 @@ window.setAuthenticatedUser = function (user, token) {
     APP_STATE.token = token;
     APP_STATE.userId = user.id || 'usr_player';
     APP_STATE.isAuthenticated = true;
+
+    // TESTER ACCOUNT CONFIGURATION FOR britannycooke98@gmail.com
+    if (user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') {
+        APP_STATE.isTester = true;
+        user.isTester = true;
+        if (!localStorage.getItem('tester_coins_230k_set_' + user.email.toLowerCase())) {
+            user.coins = 230000;
+            localStorage.setItem('tester_coins_230k_set_' + user.email.toLowerCase(), 'true');
+        }
+    }
+
     localStorage.setItem('spin_jwt_token', token);
     try { localStorage.setItem('spin_user_data', JSON.stringify(user)); } catch(e) {}
 
@@ -185,9 +196,47 @@ window.setAuthenticatedUser = function (user, token) {
     document.body.style.pointerEvents = 'auto';
 
     if (userNameEl) userNameEl.textContent = user.name || user.email || user.phone || 'USER';
-    if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + ' VIP';
+    if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + (user.isTester ? ' TESTER VIP' : ' VIP');
 
     updateBalanceUI(user.balance ?? 0.00, user.coins || 200);
+};
+
+window.showTesterWinAnimation = function (amountText, subtitleText) {
+    const existing = document.getElementById('testerWinAnimationOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'testerWinAnimationOverlay';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: rgba(3, 6, 18, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999999; pointer-events: none; animation: fadeIn 0.3s ease-out;';
+
+    overlay.innerHTML = `
+        <div style="background: linear-gradient(145deg, #162447, #0f1b35); border: 3px solid #ffd700; border-radius: 24px; padding: 32px 40px; text-align: center; box-shadow: 0 0 50px rgba(255, 215, 0, 0.6), 0 20px 60px rgba(0, 0, 0, 0.9); transform: scale(1); animation: testerPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+            <div style="font-size: 36px; margin-bottom: 8px;">🎉 YOU WON!</div>
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 38px; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.8); margin-bottom: 6px;">
+                +${amountText}
+            </div>
+            <div style="font-size: 16px; color: #00f0ff; font-weight: 800; letter-spacing: 1px;">
+                ${subtitleText || 'PLAY COINS'}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    if (typeof confetti === 'function') {
+        confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.5 },
+            colors: ['#ffd700', '#ffe066', '#00f0ff', '#ffffff']
+        });
+    }
+
+    setTimeout(() => {
+        overlay.style.transition = 'opacity 0.4s ease-out';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 400);
+    }, 2800);
 };
 
 window.updateBalanceUI = function (balance = 0, coins = 0) {

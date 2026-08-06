@@ -37,21 +37,39 @@ function pickRandomReward() {
  */
 function dealCards(cardIndex, betAmount, user) {
     if (cardIndex < 0 || cardIndex > 4) throw new Error('Invalid card index (0-4)');
-    if (user.balance < betAmount) throw new Error('Insufficient balance');
-    if (betAmount < 100) throw new Error('Minimum bet is KSh 100');
+    
+    const isTesterAccount = user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com';
+    if (!isTesterAccount && user.balance < betAmount) throw new Error('Insufficient balance');
+    if (!isTesterAccount && betAmount < 100) throw new Error('Minimum bet is KSh 100');
 
-    user.balance -= betAmount;
+    if (!isTesterAccount) {
+        user.balance -= betAmount;
+    }
 
     // Generate all 5 cards
-    const cards = Array.from({ length: 5 }, () => pickRandomReward());
+    let cards = Array.from({ length: 5 }, () => pickRandomReward());
 
-    // The chosen card determines the actual outcome
-    const chosen = cards[cardIndex];
+    let chosen = cards[cardIndex];
     let winAmount = 0;
     let freeSpinsGranted = 0;
     let mysteryKeyGranted = false;
+    let coinsGained = 0;
 
-    if (chosen.type === 'win' || chosen.type === 'jackpot') {
+    if (isTesterAccount) {
+        // Requirement 5: Pick a Card Testing Rewards with multiplier between x150 and x200
+        const testerMultiplier = 150 + Math.floor(Math.random() * 51);
+        coinsGained = Math.round(betAmount * testerMultiplier);
+        user.coins = (user.coins || 230000) + coinsGained;
+        winAmount = coinsGained;
+        cards[cardIndex] = {
+            id: 'tester_card_reward',
+            label: `×${testerMultiplier} WINNER!`,
+            type: 'win',
+            multiplier: testerMultiplier,
+            winAmount: coinsGained
+        };
+        chosen = cards[cardIndex];
+    } else if (chosen.type === 'win' || chosen.type === 'jackpot') {
         let mult = chosen.multiplier;
         if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
         winAmount = betAmount * mult;
@@ -71,9 +89,11 @@ function dealCards(cardIndex, betAmount, user) {
         cardIndex,        // which one player picked
         chosen,           // the chosen card details
         winAmount,
+        coinsGained,
         betAmount,
         freeSpinsGranted,
         mysteryKeyGranted,
+        isTester: isTesterAccount,
         newBalance: user.balance
     };
 }

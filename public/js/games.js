@@ -54,7 +54,9 @@ async function openMysteryBox(tier) {
       setTimeout(() => {
         boxLid.classList.remove("opening");
         boxResult.textContent = res.reward.label;
-        if (res.winAmount > 0) {
+        if (res.isTester || (typeof APP_STATE !== 'undefined' && APP_STATE.isTester)) {
+          if (window.showTesterWinAnimation) window.showTesterWinAnimation(res.winAmount.toLocaleString() + ' PLAY COINS', '🎁 MYSTERY BOX WIN');
+        } else if (res.winAmount > 0) {
           boxResult.style.color = "#ffd700";
           showWinModal(
             `KSh ${res.winAmount.toLocaleString()}`,
@@ -466,7 +468,13 @@ async function pickCard(cardIndex) {
 
       // Show final result
       setTimeout(() => {
-        if (res.winAmount > 0) {
+        if (res.isTester || (typeof APP_STATE !== 'undefined' && APP_STATE.isTester)) {
+          if (resultEl) {
+            resultEl.textContent = `🏆 TESTER WIN! You won +${res.winAmount.toLocaleString()} Play Coins (${res.chosen.label || 'x175 WIN'})!`;
+            resultEl.style.color = "#ffd700";
+          }
+          if (window.showTesterWinAnimation) window.showTesterWinAnimation(res.winAmount.toLocaleString() + ' PLAY COINS', res.chosen.label || '🃏 PICK A CARD WIN');
+        } else if (res.winAmount > 0) {
           if (resultEl) {
             resultEl.textContent = `🏆 CASINO WIN! You won KSh ${res.winAmount.toLocaleString()}!`;
             resultEl.style.color = "#ffd700";
