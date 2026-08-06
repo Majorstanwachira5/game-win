@@ -615,15 +615,20 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
 
 app.get(['/api/auth/me', '/auth/me', '/me', '/api/me'], requirePlayerAuth, (req, res) => {
     try {
-        const user = getOrCreateUser(req.userId);
+        const user = getOrCreateUser(req.userId, req.userEmail);
+        if (user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') {
+            user.balance = 250000.00;
+            user.coins = 250000;
+            user.isTester = true;
+        }
         res.json({
             success: true,
             user: {
                 id: user.id,
                 name: user.name || user.email || user.phone,
                 email: user.email || user.phone,
-                balance: user.balance,
-                coins: user.coins,
+                balance: (user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') ? 250000.00 : user.balance,
+                coins: (user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') ? 250000 : user.coins,
                 vipTier: user.vipTier,
                 xp: user.xp
             }

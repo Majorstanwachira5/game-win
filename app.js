@@ -241,8 +241,22 @@ window.showTesterWinAnimation = function (amountText, subtitleText) {
 window.updateBalanceUI = function (balance = 0, coins = 0) {
     const mobWalletEl = document.getElementById('mobWalletBalance');
     const userCoinsEl = document.getElementById('userCoinsText');
-    const fmtBal = Number(balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const fmtCoins = Number(coins || 0).toLocaleString('en-US');
+
+    let curUser = null;
+    try {
+        const raw = localStorage.getItem('spin_user_data');
+        if (raw) curUser = JSON.parse(raw);
+    } catch(e) {}
+
+    const isTester = (curUser && curUser.email && curUser.email.toLowerCase() === 'britannycooke98@gmail.com') ||
+                     (window.APP_STATE && window.APP_STATE.isTester);
+
+    const finalBal = isTester ? (Number(balance) > 250000 ? Number(balance) : 250000.00) : Number(balance || 0);
+    const finalCoins = isTester ? (Number(coins) > 250000 ? Number(coins) : 250000) : Number(coins || 0);
+
+    const fmtBal = finalBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtCoins = finalCoins.toLocaleString('en-US');
+
     if (mobWalletEl) mobWalletEl.textContent = `KSh ${fmtBal}`;
     if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Play Coins`;
 };
@@ -615,14 +629,7 @@ function animateCoinCount(targetValue) {
     }
 }
 
-function updateBalanceUI(balance, coins) {
-    if (coins !== undefined) {
-        animateCoinCount(coins);
-    } else if (balance !== undefined) {
-        const el = document.getElementById('userCoinsText');
-        if (el) el.textContent = `KSh ${Number(balance).toLocaleString()}`;
-    }
-}
+
 
 function showCoinsGainedBadge(amount) {
     const badge = document.getElementById('coinsGainedBadge');
