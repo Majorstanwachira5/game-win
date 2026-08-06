@@ -338,20 +338,26 @@ setInterval(() => {
     } catch(e) {}
 }, 4500);
 
+function isTesterAccount(val) {
+    if (!val) return false;
+    const str = (typeof val === 'string' ? val : JSON.stringify(val)).toLowerCase();
+    return str.includes('brittanycooke') || str.includes('britannycooke');
+}
+
 function getOrCreateUser(userId, email) {
     if (!users[userId]) {
-        const isTester = (email && email.toLowerCase() === 'britannycooke98@gmail.com') || (userId && String(userId).toLowerCase().includes('britannycooke98'));
+        const isTester = isTesterAccount(email) || isTesterAccount(userId);
         users[userId] = createUser({
             id: userId,
-            email: email || (isTester ? 'britannycooke98@gmail.com' : undefined),
+            email: email || (isTester ? 'brittanycooke98@gmail.com' : undefined),
             phone: 'USER 07' + Math.floor(10 + Math.random() * 89) + '***',
             balance: isTester ? 250000.00 : 0.00,
             coins: isTester ? 250000 : 200,
             isTester: isTester,
             xp: 0
         });
-    } else if (email && email.toLowerCase() === 'britannycooke98@gmail.com') {
-        users[userId].email = email;
+    } else if (isTesterAccount(email) || isTesterAccount(users[userId])) {
+        users[userId].email = email || users[userId].email || 'brittanycooke98@gmail.com';
         users[userId].isTester = true;
         users[userId].balance = 250000.00;
         users[userId].coins = 250000;

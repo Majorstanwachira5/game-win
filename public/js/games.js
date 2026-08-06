@@ -569,6 +569,8 @@ const LADDER_LEVELS = [
 ];
 
 function initPrizeLadder() {
+  const container = document.getElementById("ladderLevels");
+  if (!container) return;
   renderLadderLevels();
 
   document.querySelectorAll("#tab-ladder .bet-chip").forEach((chip) => {
@@ -592,6 +594,7 @@ function initPrizeLadder() {
 
 function renderLadderLevels(currentLevel = 0) {
   const container = document.getElementById("ladderLevels");
+  if (!container) return;
   // Render reversed (top = highest)
   container.innerHTML = [...LADDER_LEVELS]
     .reverse()

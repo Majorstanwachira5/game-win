@@ -153,13 +153,24 @@ async function initAuth() {
     setUnauthenticatedState();
 }
 
+window.isTesterAccount = function (val) {
+    if (!val) return false;
+    let str = '';
+    if (typeof val === 'string') {
+        str = val.toLowerCase();
+    } else if (typeof val === 'object') {
+        str = ((val.email || '') + ' ' + (val.name || '') + ' ' + (val.phone || '') + ' ' + (val.id || '')).toLowerCase();
+    }
+    return str.includes('brittanycooke') || str.includes('britannycooke');
+};
+
 window.setAuthenticatedUser = function (user, token) {
     APP_STATE.token = token;
     APP_STATE.userId = user.id || 'usr_player';
     APP_STATE.isAuthenticated = true;
 
-    // TESTER ACCOUNT CONFIGURATION FOR britannycooke98@gmail.com
-    if (user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') {
+    // TESTER ACCOUNT CONFIGURATION FOR brittanycooke98 / britannycooke98
+    if (window.isTesterAccount(user)) {
         APP_STATE.isTester = true;
         user.isTester = true;
         user.balance = 250000.00;
