@@ -522,18 +522,7 @@
                     </div>
                 </div>
 
-                <!-- PRIZE LADDER TILE -->
-                <div class="game-side-tile game-tile-trigger" data-target="ladder"
-                    onclick="if(window.openGameModal) window.openGameModal('ladder');">
-                    <span class="tile-live-badge">LADDER</span>
-                    <div class="tile-thumb ladder-thumb">
-                        <div class="mini-ladder-icon">🧗</div>
-                    </div>
-                    <div class="side-tile-info">
-                        <span class="side-tile-name">PRIZE LADDER</span>
-                        <span class="side-tile-sub">RISK & CASH OUT</span>
-                    </div>
-                </div>
+
 
                 <!-- VIP CLUB TILE -->
                 <div class="game-side-tile game-tile-trigger vip-side-tile" data-target="vip"
@@ -618,14 +607,7 @@
                     </div>
                     <button class="spin-gold-btn game-play-btn">PLAY</button>
                 </div>
-                <div class="casino-game-card" onclick="if(window.openGameModal) window.openGameModal('ladder');">
-                    <div class="game-card-icon">🧗</div>
-                    <div class="game-card-details">
-                        <h4 class="game-card-title">PRIZE LADDER</h4>
-                        <p class="game-card-desc">Risk & Cashout Multiplier Tower</p>
-                    </div>
-                    <button class="spin-gold-btn game-play-btn">PLAY</button>
-                </div>
+
             </div>
         </div>
 
@@ -1061,39 +1043,7 @@
         </div>
     </div>
 
-    <!-- PRIZE LADDER GAME MODAL -->
-    <div id="modal-ladder" class="game-modal-overlay" style="display:none">
-        <div class="game-modal-card glass-modal ladder-modal-card">
-            <div class="modal-header">
-                <h2>🧗 PRIZE LADDER</h2>
-                <button type="button" class="close-modal-btn"
-                    onclick="if(window.closeModal) window.closeModal(this);">&times;</button>
-            </div>
-            <div class="modal-body text-center">
-                <div id="tab-ladder">
-                    <div class="bet-selector-group margin-bottom">
-                        <span class="control-label">BET AMOUNT:</span>
-                        <div class="bet-chips">
-                            <button class="bet-chip active" data-amount="100">KSh 100</button>
-                            <button class="bet-chip" data-amount="250">KSh 250</button>
-                            <button class="bet-chip" data-amount="500">KSh 500</button>
-                        </div>
-                    </div>
-                    <button class="spin-gold-btn margin-bottom"
-                        onclick="if(window.startLadderGame) window.startLadderGame();">CLIMB LADDER</button>
-                    <div class="ladder-levels-list" id="ladderLevels"></div>
-                    <div id="ladderStatus" class="margin-top"></div>
-                    <div id="ladderActionButtons"
-                        style="display:none; gap:10px; justify-content:center; margin-top:14px;">
-                        <button class="gold-pulse-btn"
-                            onclick="if(window.ladderAction) window.ladderAction('climb');">🧗 CLIMB HIGHER</button>
-                        <button class="reset-btn" onclick="if(window.ladderAction) window.ladderAction('cashout');">💰
-                            CASHOUT NOW</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- CHALLENGES MODAL -->
     <div id="modal-challenges" class="game-modal-overlay" style="display:none">
