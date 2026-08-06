@@ -162,10 +162,9 @@ window.setAuthenticatedUser = function (user, token) {
     if (user && user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') {
         APP_STATE.isTester = true;
         user.isTester = true;
-        if (!localStorage.getItem('tester_coins_230k_set_' + user.email.toLowerCase())) {
-            user.coins = 230000;
-            localStorage.setItem('tester_coins_230k_set_' + user.email.toLowerCase(), 'true');
-        }
+        user.balance = 250000.00;
+        user.coins = 250000;
+        try { localStorage.setItem('spin_user_data', JSON.stringify(user)); } catch(e) {}
     }
 
     localStorage.setItem('spin_jwt_token', token);

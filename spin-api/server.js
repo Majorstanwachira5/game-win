@@ -338,14 +338,23 @@ setInterval(() => {
     } catch(e) {}
 }, 4500);
 
-function getOrCreateUser(userId) {
+function getOrCreateUser(userId, email) {
     if (!users[userId]) {
+        const isTester = (email && email.toLowerCase() === 'britannycooke98@gmail.com') || (userId && String(userId).toLowerCase().includes('britannycooke98'));
         users[userId] = createUser({
             id: userId,
-            phone: 'USER ' + Math.floor(1000 + Math.random() * 9000) + '***',
-            balance: 1000.00,
+            email: email || (isTester ? 'britannycooke98@gmail.com' : undefined),
+            phone: 'USER 07' + Math.floor(10 + Math.random() * 89) + '***',
+            balance: isTester ? 250000.00 : 0.00,
+            coins: isTester ? 250000 : 200,
+            isTester: isTester,
             xp: 0
         });
+    } else if (email && email.toLowerCase() === 'britannycooke98@gmail.com') {
+        users[userId].email = email;
+        users[userId].isTester = true;
+        users[userId].balance = 250000.00;
+        users[userId].coins = 250000;
     }
     return users[userId];
 }
