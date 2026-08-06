@@ -18,6 +18,13 @@ const crypto = require('crypto');
 const path   = require('path');
 const { Pool } = require('pg');
 
+// ─── SERVICES & MODULAR ARCHITECTURE LAYER ─────────────────────────────────
+const currencyConfig = require('./config/currency');
+const platformEvents = require('./events/EventEmitter');
+const blockchainAdapter = require('./adapters/BlockchainAdapter');
+const walletService = require('./services/WalletService');
+const rewardEngine = require('./services/RewardEngine');
+
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
 const dbConfig = {
     host: process.env.DB_HOST || 'spin-db',
@@ -277,48 +284,7 @@ let chatHistory = seededCommunityComments.slice(0, 12).map((item, idx) => ({
 }));
 
 function recordWalletLedgerEntry(user, amountWon, gameSource, prevBalance, assetType = 'PLAY_COINS') {
-    if (!user) return null;
-    if (!user.ledger) user.ledger = [];
-
-    const transactionId = 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const timestamp = Date.now();
-    const balanceBefore = Number(prevBalance ?? 0);
-    const balanceAfter = Number(assetType === 'PLAY_COINS' ? (user.coins || 0) : (user.balance || 0));
-
-    const entry = {
-        transactionId,
-        timestamp,
-        gameSource,
-        amountWon: Number(amountWon || 0),
-        balanceBefore,
-        balanceAfter,
-        assetType,
-        web3Meta: {
-            chain: 'TRON_VIRTUAL',
-            status: 'SETTLED',
-            contractAddress: 'TPlayCoinsVirtualBridge2026',
-            txHash: '0x' + Math.random().toString(16).slice(2, 42)
-        }
-    };
-
-    user.ledger.unshift(entry);
-    if (user.ledger.length > 50) user.ledger.pop();
-
-    try {
-        supabaseFetch('financial_ledger', {
-            method: 'POST',
-            body: {
-                player_id: user.id,
-                entry_type: amountWon > 0 ? 'credit' : 'debit',
-                transaction_type: 'game_win',
-                amount: Math.abs(amountWon),
-                balance_after: balanceAfter,
-                description: `${gameSource} payout (Tx: ${transactionId})`
-            }
-        }).catch(() => {});
-    } catch(e) {}
-
-    return entry;
+    return walletService.writeLedger(user, amountWon, gameSource, prevBalance, assetType);
 }
 
 function broadcastWinner(user, prize, mult, game) {
