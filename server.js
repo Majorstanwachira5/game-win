@@ -24,6 +24,7 @@ const platformEvents = require('./events/EventEmitter');
 const blockchainAdapter = require('./adapters/BlockchainAdapter');
 const walletService = require('./services/WalletService');
 const rewardEngine = require('./services/RewardEngine');
+const mpesaService = require('./services/MpesaService');
 
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
 const dbConfig = {
@@ -1138,28 +1139,40 @@ app.post(['/api/chat/send', '/chat/send'], (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 //  DARAJA M-PESA STK PUSH API ROUTE
 // ═══════════════════════════════════════════════════════════════════════════
-app.post('/api/mpesa/stkpush', depositLimiter, requirePlayerAuth, (req, res) => {
+//  DARAJA M-PESA PAYMENT & CALLBACK ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+app.post('/api/mpesa/stkpush', depositLimiter, requirePlayerAuth, async (req, res) => {
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
-        const { phone = '0712345678', amount = 100, game = 'Spin' } = req.body;
-        const user = getOrCreateUser(userId);
+        const { phone = '0712345678', amount = 100 } = req.body;
+        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
-        const checkoutRequestId = 'ws_CO_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        const coinsGained = getCoinsForBet(amount);
-        user.coins = (user.coins || 50000) + coinsGained;
+        const result = await mpesaService.initiateStkPush(userId, phone, amount);
+        const coinsGained = rewardEngine.calculateRewardCoins(amount);
+
+        if (checkIsTester(user) || req.isTester) {
+            walletService.creditWallet(user, amount, 'KSH', 'M-Pesa Express Deposit');
+            walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
+        }
 
         res.json({
-            success: true,
-            MerchantRequestID: '29115-34627-1',
-            CheckoutRequestID: checkoutRequestId,
-            ResponseCode: '0',
-            ResponseDescription: 'Success. Request accepted for processing',
-            CustomerMessage: `STK Push sent to ${phone}. Enter M-Pesa PIN to authorize payment of KSh ${amount}`,
+            ...result,
             coinsGained,
             user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+});
+
+app.post('/api/mpesa/callback', (req, res) => {
+    try {
+        const userId = req.query.userId || req.body.userId || 'demo-user-1';
+        const user = getOrCreateUser(userId);
+        const outcome = mpesaService.processCallback(req.body, user);
+        res.json(outcome);
+    } catch (err) {
+        res.status(400).json({ ResultCode: 1, ResultDesc: err.message });
     }
 });
 
