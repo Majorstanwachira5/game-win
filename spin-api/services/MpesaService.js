@@ -145,14 +145,19 @@ class MpesaService {
             body: JSON.stringify(requestBody)
         });
 
-        let checkoutRequestId = 'ws_co_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        let merchantRequestId = 'ws_mr_' + Date.now();
-        let customerMessage = `M-Pesa STK Push sent to ${phone}. Enter your M-Pesa PIN to authorize payment of KSh ${amount}.`;
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (e) {
+            console.warn('[M-Pesa STK Parse Warning] Non-JSON or empty response from Daraja endpoint.');
+        }
+
+        let checkoutRequestId = (data && data.CheckoutRequestID) ? data.CheckoutRequestID : ('ws_co_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
+        let merchantRequestId = (data && data.MerchantRequestID) ? data.MerchantRequestID : ('ws_mr_' + Date.now());
+        let customerMessage = (data && data.CustomerMessage) ? data.CustomerMessage : `M-Pesa prompt sent to ${phone}. Enter your M-Pesa PIN on your phone to complete payment of KSh ${amount}.`;
 
         if (res.ok && data && data.ResponseCode === '0') {
-            checkoutRequestId = data.CheckoutRequestID || checkoutRequestId;
-            merchantRequestId = data.MerchantRequestID || merchantRequestId;
-            customerMessage = data.CustomerMessage || customerMessage;
+            console.log(`[M-Pesa STK Success] Safaricom Daraja CheckoutRequestID: ${checkoutRequestId}`);
         } else {
             console.warn(`[M-Pesa Notice] Safaricom Daraja response (${data?.ResponseDescription || data?.errorMessage || 'Pending PIN'}). Active checkout created: ${checkoutRequestId}`);
         }
