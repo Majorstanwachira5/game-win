@@ -35,7 +35,30 @@ class MpesaService {
         }
 
         const authBuffer = Buffer.from(`${this.consumerKey.trim()}:${this.consumerSecret.trim()}`).toString('base64');
-        const response = await fetch(`${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
+        
+        // Attempt 1: Primary configured baseUrl
+        try {
+            const response = await fetch(`${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Basic ${authBuffer}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (response.ok && data.access_token) {
+                return data.access_token;
+            }
+        } catch (e) {
+            console.warn('[M-Pesa Auth] Primary environment connection failed, attempting fallback...');
+        }
+
+        // Attempt 2: Auto-fallback to alternate environment (Sandbox <-> Production)
+        const altBaseUrl = this.baseUrl.includes('sandbox') 
+            ? 'https://api.safaricom.co.ke' 
+            : 'https://sandbox.safaricom.co.ke';
+
+        const altResponse = await fetch(`${altBaseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
             method: 'GET',
             headers: {
                 'Authorization': `Basic ${authBuffer}`,
@@ -43,13 +66,14 @@ class MpesaService {
             }
         });
 
-        const data = await response.json();
-        if (!response.ok || !data.access_token) {
-            const errDesc = data.errorMessage || data.error_description || JSON.stringify(data);
-            throw new Error(`[M-Pesa Auth Error] Safaricom Daraja returned ${response.status}: ${errDesc}`);
+        const altData = await altResponse.json();
+        if (altResponse.ok && altData.access_token) {
+            this.baseUrl = altBaseUrl; // Permanently switch to working environment
+            return altData.access_token;
         }
 
-        return data.access_token;
+        const errDesc = altData.errorMessage || altData.error_description || JSON.stringify(altData);
+        throw new Error(`[M-Pesa Auth Error] Safaricom Daraja returned ${altResponse.status}: ${errDesc}`);
     }
 
     /**

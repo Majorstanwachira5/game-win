@@ -775,69 +775,118 @@ function bindWheelControls() {
 }
 
 function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
-    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
-    let phone = savedUser.phone || '';
+    const modal = document.getElementById('phonePayModal');
+    const phoneInput = document.getElementById('directPayPhoneInput');
+    const subTitle = document.getElementById('phonePaySubTitle');
+    const submitBtn = document.getElementById('submitDirectPayBtn');
+    const statusBanner = document.getElementById('directPayStatusBanner');
+    const statusText = document.getElementById('directPayStatusText');
 
-    const cleanPhone = (p) => (p || '').replace(/\D/g, '');
-    if (!phone || cleanPhone(phone).length < 9 || phone.includes('***')) {
-        const inputPhone = prompt(`Enter Safaricom M-Pesa Phone Number to send KSh ${amount.toLocaleString()} STK Push:`, '0712345678');
-        if (!inputPhone) {
-            showToast('Payment cancelled.', 'info');
-            return;
-        }
-        phone = inputPhone.trim();
-        savedUser.phone = phone;
-        localStorage.setItem('spin_user_data', JSON.stringify(savedUser));
+    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+    if (phoneInput && !phoneInput.value) {
+        phoneInput.value = savedUser.phone || '';
     }
 
-    showToast(`📲 Sending M-Pesa STK Push prompt to ${phone}...`, 'info');
+    if (subTitle) {
+        subTitle.innerHTML = `Deposit <strong style="color:var(--gold-primary)">KSh ${amount.toLocaleString()}</strong> via Safaricom M-Pesa to Play:`;
+    }
 
-    apiPost('/api/deposit', {
-        userId: APP_STATE.userId || 'demo-user-1',
-        amount,
-        phone,
-        gameAction
-    }).then(res => {
-        if (!res || !res.success) {
-            showToast(res?.error || 'STK Push failed to send', 'error');
+    if (statusBanner) statusBanner.style.display = 'none';
+
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('open', 'active');
+    }
+
+    if (!submitBtn) return;
+
+    // Clone button to strip existing event listeners
+    const newSubmitBtn = submitBtn.cloneNode(true);
+    submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
+
+    newSubmitBtn.addEventListener('click', async () => {
+        const curPhoneInput = document.getElementById('directPayPhoneInput');
+        let phone = curPhoneInput ? curPhoneInput.value.trim() : '';
+        const cleanP = phone.replace(/\D/g, '');
+        if (!phone || cleanP.length < 9) {
+            showToast('Please enter a valid Safaricom phone number (e.g. 0712345678)', 'error');
             return;
         }
 
-        showToast(`📲 STK Push sent to ${phone}. Enter your M-Pesa PIN on your phone to play!`, 'warning');
+        savedUser.phone = phone;
+        localStorage.setItem('spin_user_data', JSON.stringify(savedUser));
 
-        const checkoutRequestId = res.CheckoutRequestID;
-        if (!checkoutRequestId) return;
+        newSubmitBtn.disabled = true;
+        newSubmitBtn.textContent = '⏳ SENDING TO MPESA...';
+        if (statusBanner) {
+            statusBanner.style.display = 'block';
+            if (statusText) statusText.textContent = `📲 Sending M-Pesa prompt to ${phone}...`;
+        }
 
-        let attempts = 0;
-        const maxAttempts = 20;
-        const pollInterval = setInterval(async () => {
-            attempts++;
-            try {
-                const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
-                if (statusRes && statusRes.status === 'COMPLETED') {
-                    clearInterval(pollInterval);
-                    showToast(`✅ Payment Confirmed! KSh ${amount.toLocaleString()} credited! Playing now...`, 'success');
-                    if (statusRes.user) {
-                        updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
+        try {
+            const res = await apiPost('/api/deposit', {
+                userId: APP_STATE.userId || 'demo-user-1',
+                amount,
+                phone,
+                gameAction
+            });
+
+            if (!res || !res.success) {
+                newSubmitBtn.disabled = false;
+                newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
+                showToast(res?.error || 'Failed to send M-Pesa prompt', 'error');
+                if (statusBanner) statusBanner.style.display = 'none';
+                return;
+            }
+
+            if (statusText) statusText.textContent = `📲 M-Pesa prompt sent to ${phone}. Enter your PIN on your phone to play!`;
+
+            const checkoutRequestId = res.CheckoutRequestID;
+            if (!checkoutRequestId) return;
+
+            let attempts = 0;
+            const maxAttempts = 25;
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                try {
+                    const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
+                    if (statusRes && statusRes.status === 'COMPLETED') {
+                        clearInterval(pollInterval);
+                        if (modal) {
+                            modal.classList.remove('open', 'active');
+                            modal.style.display = 'none';
+                        }
+                        showToast(`✅ Payment Received! KSh ${amount.toLocaleString()} deposited! Playing now...`, 'success');
+                        if (statusRes.user) {
+                            updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
+                        }
+                        triggerConfetti();
+                        if (typeof onPaymentSuccess === 'function') {
+                            onPaymentSuccess();
+                        }
+                    } else if (statusRes && statusRes.status === 'FAILED') {
+                        clearInterval(pollInterval);
+                        newSubmitBtn.disabled = false;
+                        newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
+                        if (statusBanner) statusBanner.style.display = 'none';
+                        showToast(`❌ Payment failed: ${statusRes.reason || 'Cancelled by user'}`, 'error');
                     }
-                    triggerConfetti();
-                    if (typeof onPaymentSuccess === 'function') {
-                        onPaymentSuccess();
-                    }
-                } else if (statusRes && statusRes.status === 'FAILED') {
-                    clearInterval(pollInterval);
-                    showToast(`❌ Payment failed: ${statusRes.reason || 'Cancelled by user'}`, 'error');
+                } catch (e) {
+                    console.warn('Polling error:', e);
                 }
-            } catch (e) {
-                console.warn('Polling error:', e);
-            }
 
-            if (attempts >= maxAttempts) {
-                clearInterval(pollInterval);
-            }
-        }, 3000);
-    }).catch(err => {
-        showToast(err.message || 'M-Pesa STK Push error', 'error');
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    newSubmitBtn.disabled = false;
+                    newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
+                }
+            }, 2500);
+        } catch (err) {
+            newSubmitBtn.disabled = false;
+            newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
+            if (statusBanner) statusBanner.style.display = 'none';
+            showToast(err.message || 'M-Pesa connection error', 'error');
+        }
     });
 }
 window.promptDirectMpesaPayAndPlay = promptDirectMpesaPayAndPlay;
