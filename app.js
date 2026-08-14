@@ -853,17 +853,20 @@ async function performSpin() {
     const wager = APP_STATE.betAmount || 100;
     const isFreeSpin = (user.freeSpins || 0) > 0;
 
-    if (!isFreeSpin && (user.balance || 0) < wager) {
+    if (!isFreeSpin) {
         promptDirectMpesaPayAndPlay(wager, 'spin', () => {
-            performSpin();
+            executeSpin(wager);
         });
         return;
     }
 
+    executeSpin(wager);
+}
+
+async function executeSpin(wager) {
     if (APP_STATE.isSpinning) return;
 
     const spinBtn = document.getElementById('spinNowBtn');
-
     APP_STATE.isSpinning = true;
     if (spinBtn) spinBtn.disabled = true;
 

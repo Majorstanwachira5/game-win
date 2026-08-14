@@ -20,8 +20,10 @@ class MpesaService {
         this.businessShortCode = process.env.MPESA_PAYBILL || '174379';
         this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://game-win-git-main-majorstanwachira5s-projects.vercel.app/api/mpesa/callback';
 
-        // In-memory store for pending transactions status checking
+        // In-memory store for pending transactions status checking & anti-replay defense
         this.pendingTransactions = new Map();
+        this.processedReceipts = new Set();
+        this.processedCheckoutIds = new Set();
     }
 
     /**
@@ -152,7 +154,7 @@ class MpesaService {
     }
 
     /**
-     * Process M-Pesa Callback & Credit User Wallet
+     * Process M-Pesa Callback & Credit User Wallet (with Anti-Replay Guard)
      */
     processCallback(callbackBody, user) {
         if (!callbackBody || !callbackBody.Body || !callbackBody.Body.stkCallback) {
@@ -174,6 +176,22 @@ class MpesaService {
                 if (item.Name === 'MpesaReceiptNumber') mpesaReceiptNumber = item.Value;
                 if (item.Name === 'PhoneNumber') phone = item.Value;
             });
+
+            // Idempotency & Replay Attack Defense: Check if already processed
+            if (this.processedCheckoutIds.has(checkoutRequestId) || (mpesaReceiptNumber && this.processedReceipts.has(mpesaReceiptNumber))) {
+                console.warn(`[SECURITY WARN] Replay attack or duplicate callback ignored for CheckoutRequestID: ${checkoutRequestId}, Receipt: ${mpesaReceiptNumber}`);
+                return {
+                    success: true,
+                    resultCode: 0,
+                    resultDesc: 'Duplicate callback ignored (Idempotent)',
+                    amount,
+                    mpesaReceiptNumber
+                };
+            }
+
+            // Register receipt as processed
+            if (checkoutRequestId) this.processedCheckoutIds.add(checkoutRequestId);
+            if (mpesaReceiptNumber) this.processedReceipts.add(mpesaReceiptNumber);
 
             if (user) {
                 walletService.creditWallet(user, amount, 'KSH', 'M-Pesa Deposit');

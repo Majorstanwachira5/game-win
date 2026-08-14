@@ -10,6 +10,11 @@ const { body, validationResult } = require('express-validator');
 const helmetMiddleware = helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    xFrameOptions: { action: 'sameorigin' },
+    xXssProtection: true,
+    noSniff: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: { maxAge: 31536000, includeSubDomains: true }
 });
 
 const isVercelEnv = Boolean(process.env.VERCEL || process.env.NOW_REGION || process.env.NODE_ENV === 'production');
