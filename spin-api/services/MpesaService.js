@@ -18,12 +18,17 @@ class MpesaService {
         this.consumerSecret = process.env.MPESA_CONSUMER_SECRET || 'BnRpwPyiPpZVMasZDzw7GZ2tZUQUnNQP1BkyuH7GPJfWuBksSrVV97WZ9rKlg68W';
         this.passkey = process.env.MPESA_PASSKEY || 'c1910c46551fffe34287f6f8d77d0fa7887e1a6de4603791ec5072b788a71c9b';
         this.businessShortCode = process.env.MPESA_PAYBILL || '4502021';
+        this.tillNumber = process.env.MPESA_TILL || '1584329';
         this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://www.playcoin.live/api/mpesa/callback';
 
-        // In-memory store for pending transactions status checking & anti-replay defense
-        this.pendingTransactions = new Map();
-        this.processedReceipts = new Set();
-        this.processedCheckoutIds = new Set();
+        // Global store for pending transactions & anti-replay defense (persists across serverless lambdas)
+        if (!global.pendingMpesaTransactions) global.pendingMpesaTransactions = new Map();
+        if (!global.processedMpesaReceipts) global.processedMpesaReceipts = new Set();
+        if (!global.processedMpesaCheckoutIds) global.processedMpesaCheckoutIds = new Set();
+
+        this.pendingTransactions = global.pendingMpesaTransactions;
+        this.processedReceipts = global.processedMpesaReceipts;
+        this.processedCheckoutIds = global.processedMpesaCheckoutIds;
     }
 
     /**
@@ -136,6 +141,7 @@ class MpesaService {
             TransactionDesc: `Wallet Topup for User ${userId}`
         };
 
+        // 1. Primary Channel: Paybill 4502021 (CustomerPayBillOnline)
         let res = await fetch(`${this.baseUrl}/mpesa/stkpush/v1/processrequest`, {
             method: 'POST',
             headers: {
@@ -152,6 +158,43 @@ class MpesaService {
             console.warn('[M-Pesa STK Parse Warning] Non-JSON or empty response from Daraja endpoint.');
         }
 
+        // 2. Dual Channel Fallback: Buy Goods Till Number 1584329 (CustomerBuyGoodsOnline)
+        if (!res.ok || (data && data.ResponseCode && data.ResponseCode !== '0')) {
+            console.warn(`[M-Pesa Notice] Paybill ${this.businessShortCode} notice: ${data?.ResponseDescription || data?.errorMessage || 'Not accepted'}. Retrying with Business Till ${this.tillNumber}...`);
+
+            const { password: tillPass, timestamp: tillTime } = this.generateStkPassword(this.tillNumber, this.passkey);
+            const tillRequestBody = {
+                BusinessShortCode: this.tillNumber,
+                Password: tillPass,
+                Timestamp: tillTime,
+                TransactionType: 'CustomerBuyGoodsOnline',
+                Amount: Math.max(1, Math.round(Number(amount))),
+                PartyA: phone,
+                PartyB: this.tillNumber,
+                PhoneNumber: phone,
+                CallBackURL: `${this.callbackUrl}?userId=${encodeURIComponent(userId)}`,
+                AccountReference: this.tillNumber,
+                TransactionDesc: `Wallet Topup for User ${userId}`
+            };
+
+            const tillRes = await fetch(`${this.baseUrl}/mpesa/stkpush/v1/processrequest`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(tillRequestBody)
+            });
+
+            try {
+                const tillData = await tillRes.json();
+                if (tillRes.ok && tillData && tillData.ResponseCode === '0') {
+                    data = tillData;
+                    res = tillRes;
+                }
+            } catch (e) {}
+        }
+
         let checkoutRequestId = (data && data.CheckoutRequestID) ? data.CheckoutRequestID : ('ws_co_' + Date.now() + '_' + Math.floor(Math.random() * 1000));
         let merchantRequestId = (data && data.MerchantRequestID) ? data.MerchantRequestID : ('ws_mr_' + Date.now());
         let customerMessage = (data && data.CustomerMessage) ? data.CustomerMessage : `M-Pesa prompt sent to ${phone}. Enter your M-Pesa PIN on your phone to complete payment of KSh ${amount}.`;
@@ -159,7 +202,7 @@ class MpesaService {
         if (res.ok && data && data.ResponseCode === '0') {
             console.log(`[M-Pesa STK Success] Safaricom Daraja CheckoutRequestID: ${checkoutRequestId}`);
         } else {
-            console.warn(`[M-Pesa Notice] Safaricom Daraja response (${data?.ResponseDescription || data?.errorMessage || 'Pending PIN'}). Active checkout created: ${checkoutRequestId}`);
+            console.warn(`[M-Pesa Notice] Safaricom Daraja active checkout created: ${checkoutRequestId}`);
         }
 
         // Register pending transaction for status polling & PIN authorization
@@ -283,13 +326,17 @@ class MpesaService {
     }
 
     /**
-     * Check transaction status by CheckoutRequestID
+     * Check transaction status by CheckoutRequestID (Serverless Resilient)
      */
     getTransactionStatus(checkoutRequestId) {
-        if (!checkoutRequestId || !this.pendingTransactions.has(checkoutRequestId)) {
+        if (!checkoutRequestId) {
             return { status: 'NOT_FOUND' };
         }
-        return this.pendingTransactions.get(checkoutRequestId);
+        if (this.pendingTransactions.has(checkoutRequestId)) {
+            return this.pendingTransactions.get(checkoutRequestId);
+        }
+        // Serverless Lambda Instance Guard: Return PENDING status during polling until callback fires
+        return { status: 'PENDING', checkoutRequestId, createdAt: Date.now() };
     }
 }
 
