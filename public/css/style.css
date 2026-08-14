@@ -3216,12 +3216,17 @@ body {
   background: rgba(4, 8, 16, 0.88) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  display: flex !important;
+  display: none;
   align-items: center !important;
   justify-content: center !important;
   z-index: 999999 !important;
   padding: 16px !important;
   box-sizing: border-box !important;
+}
+
+.modal-overlay.open, .modal-overlay.active,
+.game-modal-overlay.open, .game-modal-overlay.active {
+  display: flex !important;
 }
 
 .auth-modal-card, .modal-card, .game-modal-card {
