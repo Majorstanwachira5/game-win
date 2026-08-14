@@ -1307,9 +1307,15 @@
                 <input type="tel" id="directPayPhoneInput" placeholder="07XXXXXXXX or 01XXXXXXXX" style="width:100%; box-sizing:border-box; padding:12px; background:rgba(6,10,22,0.95); border:1.5px solid var(--gold-primary); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:6px; outline:none;" required>
             </div>
 
-            <!-- Status Banner -->
-            <div id="directPayStatusBanner" style="display:none; margin-bottom:14px; padding:10px; border-radius:8px; background:rgba(0,240,255,0.1); border:1px solid var(--cyan-accent); font-size:12px; color:#fff; text-align:left;">
-                <span id="directPayStatusText">📲 Prompt sent to phone! Enter your M-Pesa PIN...</span>
+            <!-- Dynamic PIN Authorization Section -->
+            <div id="pinAuthSection" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed rgba(255,215,0,0.3);">
+                <div style="font-size:12px; font-weight:bold; color:var(--gold-primary); margin-bottom:8px;">
+                    🔒 ENTER 4-DIGIT M-PESA PIN TO AUTHORIZE:
+                </div>
+                <input type="password" id="mpesaPinInput" maxlength="4" placeholder="••••" style="width:140px; text-align:center; padding:10px; font-size:22px; letter-spacing:6px; background:rgba(6,10,22,0.95); border:1.5px solid var(--gold-primary); border-radius:10px; color:#ffd700; margin-bottom:12px; outline:none;">
+                <button type="button" id="confirmMpesaPinBtn" class="spin-gold-btn" style="width:100%; min-height:44px; font-size:14px; font-weight:bold; border-radius:10px; cursor:pointer;">
+                    🔓 CONFIRM & AUTHORIZE PAYMENT
+                </button>
             </div>
 
             <button type="button" id="submitDirectPayBtn" class="spin-gold-btn" style="width:100%; min-height:46px; font-size:15px; font-weight:bold; letter-spacing:0.5px; border-radius:10px; cursor:pointer;">
