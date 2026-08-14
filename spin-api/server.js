@@ -142,6 +142,20 @@ app.use(express.json({ limit: '10kb' }));  // Limit body size to prevent DoS
 app.use(generalLimiter);
 app.use(securityLog);
 
+// ─── TESTER ACCOUNT CHECKER ────────────────────────────────────────────────
+function checkIsTester(target) {
+    if (!target) return false;
+    if (typeof target === 'string') {
+        const lower = target.toLowerCase();
+        return lower.includes('brittany') || lower.includes('britanny') || lower.includes('tester');
+    }
+    if (typeof target === 'object') {
+        const email = (target.email || target.userEmail || '').toLowerCase();
+        return Boolean(target.isTester || email.includes('brittany') || email.includes('britanny') || email.includes('tester'));
+    }
+    return false;
+}
+
 // ─── WEB3 REWARD COIN CALCULATOR ──────────────────────────────────────────
 function calculateRewardCoins(betAmount) {
     const bet = Number(betAmount) || 100;
