@@ -219,6 +219,17 @@ class MpesaService {
     }
 
     /**
+     * Attach pending game action to checkoutRequestId
+     */
+    attachGameAction(checkoutRequestId, gameAction) {
+        if (checkoutRequestId && this.pendingTransactions.has(checkoutRequestId)) {
+            const tx = this.pendingTransactions.get(checkoutRequestId);
+            tx.gameAction = gameAction;
+            this.pendingTransactions.set(checkoutRequestId, tx);
+        }
+    }
+
+    /**
      * Check transaction status by CheckoutRequestID
      */
     getTransactionStatus(checkoutRequestId) {

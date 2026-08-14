@@ -774,10 +774,89 @@ function bindWheelControls() {
     });
 }
 
+function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
+    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+    let phone = savedUser.phone || '';
+
+    const cleanPhone = (p) => (p || '').replace(/\D/g, '');
+    if (!phone || cleanPhone(phone).length < 9 || phone.includes('***')) {
+        const inputPhone = prompt(`Enter Safaricom M-Pesa Phone Number to send KSh ${amount.toLocaleString()} STK Push:`, '0712345678');
+        if (!inputPhone) {
+            showToast('Payment cancelled.', 'info');
+            return;
+        }
+        phone = inputPhone.trim();
+        savedUser.phone = phone;
+        localStorage.setItem('spin_user_data', JSON.stringify(savedUser));
+    }
+
+    showToast(`📲 Sending M-Pesa STK Push prompt to ${phone}...`, 'info');
+
+    apiPost('/api/deposit', {
+        userId: APP_STATE.userId || 'demo-user-1',
+        amount,
+        phone,
+        gameAction
+    }).then(res => {
+        if (!res || !res.success) {
+            showToast(res?.error || 'STK Push failed to send', 'error');
+            return;
+        }
+
+        showToast(`📲 STK Push sent to ${phone}. Enter your M-Pesa PIN on your phone to play!`, 'warning');
+
+        const checkoutRequestId = res.CheckoutRequestID;
+        if (!checkoutRequestId) return;
+
+        let attempts = 0;
+        const maxAttempts = 20;
+        const pollInterval = setInterval(async () => {
+            attempts++;
+            try {
+                const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
+                if (statusRes && statusRes.status === 'COMPLETED') {
+                    clearInterval(pollInterval);
+                    showToast(`✅ Payment Confirmed! KSh ${amount.toLocaleString()} credited! Playing now...`, 'success');
+                    if (statusRes.user) {
+                        updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
+                    }
+                    triggerConfetti();
+                    if (typeof onPaymentSuccess === 'function') {
+                        onPaymentSuccess();
+                    }
+                } else if (statusRes && statusRes.status === 'FAILED') {
+                    clearInterval(pollInterval);
+                    showToast(`❌ Payment failed: ${statusRes.reason || 'Cancelled by user'}`, 'error');
+                }
+            } catch (e) {
+                console.warn('Polling error:', e);
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(pollInterval);
+            }
+        }, 3000);
+    }).catch(err => {
+        showToast(err.message || 'M-Pesa STK Push error', 'error');
+    });
+}
+window.promptDirectMpesaPayAndPlay = promptDirectMpesaPayAndPlay;
+
 async function performSpin() {
     if (!APP_STATE.isAuthenticated) {
         showToast('Please Register or Log In first to Spin & Win!', 'warning');
         if (window.openAuthModal) window.openAuthModal('register');
+        return;
+    }
+
+    const user = APP_STATE.user || {};
+    const wager = APP_STATE.betAmount || 100;
+    const isFreeSpin = (user.freeSpins || 0) > 0;
+
+    if (!isFreeSpin && (user.balance || 0) < wager) {
+        promptDirectMpesaPayAndPlay(wager, 'spin', () => {
+            performSpin();
+        });
         return;
     }
 

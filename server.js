@@ -684,6 +684,7 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
         else if (!isTester) { user.balance -= actualWager; financialStats.totalRevenue += actualWager; }
 
         user.totalSpins += 1;
+        user.trialCount = (user.trialCount || 0) + 1;
         user.totalWagered += actualWager;
         financialStats.totalSpins += 1;
 
@@ -699,10 +700,13 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
         } else if (wonSlice.type === 'win' || wonSlice.type === 'jackpot') {
             let mult = wonSlice.multiplier;
             if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
-            winAmount = actualWager > 0 ? (actualWager * mult) : (betAmount * mult);
+            let rawWin = actualWager > 0 ? (actualWager * mult) : (betAmount * mult);
+            // FIRST 5 TRIALS RULE: 0 cash wins for trial <= 5 (coins awarded regardless)
+            if (user.trialCount <= 5) { rawWin = 0; }
+            winAmount = rawWin;
             user.balance += winAmount;
             user.totalWon += winAmount;
-            financialStats.totalPayout += winAmount;
+            if (winAmount > 0) financialStats.totalPayout += winAmount;
         } else if (wonSlice.type === 'free_spin') {
             freeSpinsGranted = wonSlice.count || 1;
             user.freeSpins += freeSpinsGranted;
@@ -730,7 +734,7 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
             wasFreeSpin: isFreeSpin, freeSpinsGranted, coinsGained, ledgerEntry, isTester,
             xpGained: xpResult.gained, tierUp: xpResult.tierUp, newTier: xpResult.newTier,
             completedChallenges: completed,
-            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, doubleNextWin: user.doubleNextWin, xp: user.xp, vipTier: user.vipTier }
+            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, doubleNextWin: user.doubleNextWin, xp: user.xp, vipTier: user.vipTier, trialCount: user.trialCount }
         });
     } catch (err) {
         console.error('[SPIN ERROR]', err.message);
@@ -757,7 +761,15 @@ app.post('/api/mystery-box/open', gameLimiter, requirePlayerAuth, validateGameAc
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
         const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        user.trialCount = (user.trialCount || 0) + 1;
         const result = openBox(tier, 0, user);
+
+        if (user.trialCount <= 5 && !isTester) {
+            if (result.winAmount > 0) {
+                user.balance -= result.winAmount;
+                result.winAmount = 0;
+            }
+        }
 
         financialStats.totalRevenue += result.price;
         financialStats.totalBoxes += 1;
@@ -800,7 +812,16 @@ app.post('/api/dice/roll', gameLimiter, requirePlayerAuth, validateGameAction, h
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
         const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        user.trialCount = (user.trialCount || 0) + 1;
         const result = rollDice(diceMode, Number(betAmount), user);
+
+        if (user.trialCount <= 5 && !isTester) {
+            if (result.winAmount > 0) {
+                user.balance -= result.winAmount;
+                result.winAmount = 0;
+                result.isWin = false;
+            }
+        }
 
         financialStats.totalRevenue += result.betAmount;
         financialStats.totalDice += 1;
@@ -838,7 +859,16 @@ app.post('/api/cards/deal', gameLimiter, requirePlayerAuth, validateGameAction, 
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
         const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        user.trialCount = (user.trialCount || 0) + 1;
         const result = dealCards(Number(cardIndex), Number(betAmount), user);
+
+        if (user.trialCount <= 5 && !isTester) {
+            if (result.winAmount > 0) {
+                user.balance -= result.winAmount;
+                result.winAmount = 0;
+                result.isWin = false;
+            }
+        }
 
         financialStats.totalRevenue += result.betAmount;
         financialStats.totalCards += 1;
