@@ -16,7 +16,7 @@ class MpesaService {
         
         this.consumerKey = process.env.MPESA_CONSUMER_KEY || '3XBvq3KNUzR75NiPUeg8RE758K4dsu1rL8HHaVGprgOf7kWj';
         this.consumerSecret = process.env.MPESA_CONSUMER_SECRET || 'BnRpwPyiPpZVMasZDzw7GZ2tZUQUnNQP1BkyuH7GPJfWuBksSrVV97WZ9rKlg68W';
-        this.passkey = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919';
+        this.passkey = process.env.MPESA_PASSKEY || 'c1910c46551fffe34287f6f8d77d0fa7887e1a6de4603791ec5072b788a71c9b';
         this.businessShortCode = process.env.MPESA_PAYBILL || '4502021';
         this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://www.playcoin.live/api/mpesa/callback';
 
