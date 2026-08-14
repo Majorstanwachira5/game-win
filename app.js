@@ -89,9 +89,13 @@ async function apiPost(endpoint, body = {}) {
         });
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
-            return await res.json();
+            const data = await res.json();
+            if (!res.ok && data) {
+                return { success: false, error: data.error || data.message || `Server error (${res.status})` };
+            }
+            return data;
         }
-        return { success: false, error: 'Non-JSON server response' };
+        return { success: false, error: `Server error (${res.status})` };
     } catch (e) {
         return { success: false, error: e.message || 'Network error' };
     }

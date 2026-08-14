@@ -9,16 +9,16 @@ const platformEvents = require('../events/EventEmitter');
 
 class MpesaService {
     constructor() {
-        this.env = process.env.MPESA_ENV || 'sandbox';
-        this.baseUrl = this.env === 'production' 
-            ? 'https://api.safaricom.co.ke' 
-            : 'https://sandbox.safaricom.co.ke';
+        this.env = process.env.MPESA_ENV || 'production';
+        this.baseUrl = (this.env === 'sandbox')
+            ? 'https://sandbox.safaricom.co.ke'
+            : 'https://api.safaricom.co.ke';
         
-        this.consumerKey = process.env.MPESA_CONSUMER_KEY || '';
-        this.consumerSecret = process.env.MPESA_CONSUMER_SECRET || '';
+        this.consumerKey = process.env.MPESA_CONSUMER_KEY || '3XBvq3KNUzR75NiPUeg8RE758K4dsu1rL8HHaVGprgOf7kWj';
+        this.consumerSecret = process.env.MPESA_CONSUMER_SECRET || 'BnRpwPyiPpZVMasZDzw7GZ2tZUQUnNQP1BkyuH7GPJfWuBksSrVV97WZ9rKlg68W';
         this.passkey = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919';
-        this.businessShortCode = process.env.MPESA_PAYBILL || '174379';
-        this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://game-win-git-main-majorstanwachira5s-projects.vercel.app/api/mpesa/callback';
+        this.businessShortCode = process.env.MPESA_PAYBILL || '4502021';
+        this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://www.playcoin.live/api/mpesa/callback';
 
         // In-memory store for pending transactions status checking & anti-replay defense
         this.pendingTransactions = new Map();
