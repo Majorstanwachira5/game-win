@@ -93,6 +93,7 @@ body {
   background: linear-gradient(135deg, #ffffff 0%, #ffe066 30%, #ffd700 65%, #d4af37 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: goldShimmer 3s linear infinite;
   text-shadow: 0 0 24px rgba(255, 215, 0, 0.5);
@@ -104,6 +105,7 @@ body {
   color: var(--cyan-accent);
   background: linear-gradient(180deg, #00f0ff 0%, #00897b 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 12px var(--cyan-accent));
   transform: scale(1.15) rotate(-3deg);
@@ -778,7 +780,7 @@ body {
 }
 .tile-img { max-width: 100%; max-height: 340px; object-fit: contain; filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6)); }
 
-.3d-float { animation: float3d 4s ease-in-out infinite alternate; }
+.\33 d-float, [class*="3d-float"], .float-3d { animation: float3d 4s ease-in-out infinite alternate; }
 @keyframes float3d { 0%{ transform: translateY(0); } 100%{ transform: translateY(-8px); } }
 
 .tile-title-bar {
@@ -1003,6 +1005,7 @@ body {
   font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700;
   color: var(--text-muted); letter-spacing: 1px;
 }
+.side-tile-thumb {
   width: 54px; height: 54px;
   border-radius: 12px;
   background: radial-gradient(circle, rgba(255, 215, 0, 0.12) 0%, rgba(6, 10, 22, 0.95) 100%);
