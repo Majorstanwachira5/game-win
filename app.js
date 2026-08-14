@@ -828,55 +828,143 @@ async function performSpin() {
 }
 window.performSpin = performSpin;
 
-// ─── MODALS & DEPOSITS ─────────────────────────────────────────────────────
+function openDepositModal() {
+    const modal = document.getElementById('depositModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+    const phoneInput = document.getElementById('depositPhoneInput');
+    if (phoneInput && !phoneInput.value) {
+        phoneInput.value = savedUser.phone || savedUser.email || '';
+    }
+}
+window.openDepositModal = openDepositModal;
+
 function bindDepositModal() {
     const modal = document.getElementById('depositModal');
     const openBtn = document.getElementById('openDepositBtn');
     const closeBtn = document.getElementById('closeDepositBtn');
     const confirmBtn = document.getElementById('confirmDepositBtn');
+    const statusBanner = document.getElementById('stkStatusBanner');
+    const statusTitle = document.getElementById('stkStatusTitle');
+    const statusDesc = document.getElementById('stkStatusDesc');
 
-    if (openBtn) openBtn.addEventListener('click', () => modal.style.display = 'flex');
-    if (closeBtn) closeBtn.addEventListener('click', () => modal.style.display = 'none');
+    if (openBtn) openBtn.addEventListener('click', openDepositModal);
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+        if (modal) modal.style.display = 'none';
+        if (statusBanner) statusBanner.style.display = 'none';
+    });
 
     // Preset buttons
     document.querySelectorAll('.preset-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.getElementById('depositAmountInput').value = btn.dataset.amt;
+            const amtInput = document.getElementById('depositAmountInput');
+            if (amtInput) amtInput.value = btn.dataset.amt || '100';
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         });
     });
 
     if (confirmBtn) {
         confirmBtn.addEventListener('click', async () => {
-            const amount = Number(document.getElementById('depositAmountInput').value);
-            const method = document.querySelector('input[name="payMethod"]:checked')?.value || 'M-Pesa';
-            const phone = document.getElementById('depositPhoneInput').value;
+            const amountInput = document.getElementById('depositAmountInput');
+            const phoneInput = document.getElementById('depositPhoneInput');
+            const amount = Number(amountInput ? amountInput.value : 100);
+            const phone = phoneInput ? phoneInput.value.trim() : '';
 
-            if (!amount || amount < 100) {
-                showToast('Minimum deposit is KSh 100', 'error');
+            if (!amount || amount < 10) {
+                showToast('Minimum deposit amount is KSh 10', 'error');
+                return;
+            }
+
+            if (!phone || phone.length < 9) {
+                showToast('Please enter a valid Safaricom M-Pesa phone number (e.g. 07XXXXXXXX)', 'error');
                 return;
             }
 
             confirmBtn.disabled = true;
-            confirmBtn.textContent = 'Processing Deposit...';
+            confirmBtn.textContent = '⌛ INITIATING STK PUSH...';
+            if (statusBanner) statusBanner.style.display = 'none';
 
             try {
                 const res = await apiPost('/api/deposit', {
-                    userId: APP_STATE.userId,
-                    amount, method, phone
+                    userId: APP_STATE.userId || 'demo-user-1',
+                    amount,
+                    phone
                 });
 
-                if (!res.success) throw new Error(res.error || 'Deposit failed');
+                if (!res || !res.success) {
+                    throw new Error(res?.error || res?.ResponseDescription || 'STK Push initiation failed.');
+                }
 
-                showToast(`KSh ${amount.toLocaleString()} deposited via ${method}!`, 'success');
-                updateUserState({ balance: res.newBalance });
-                modal.style.display = 'none';
-                triggerConfetti();
+                if (statusBanner) {
+                    statusBanner.style.display = 'block';
+                    statusBanner.style.borderColor = 'var(--cyan-accent)';
+                    if (statusTitle) statusTitle.textContent = '📲 STK Push Prompt Sent!';
+                    if (statusDesc) statusDesc.textContent = `A prompt has been sent to ${phone}. Enter your M-Pesa PIN on your phone to complete payment of KSh ${amount.toLocaleString()}.`;
+                }
+
+                confirmBtn.textContent = '📲 AWAITING M-PESA PIN...';
+                showToast(`STK Push sent to ${phone}. Enter your M-Pesa PIN on your phone.`, 'info');
+
+                const checkoutRequestId = res.CheckoutRequestID;
+                if (!checkoutRequestId) return;
+
+                let attempts = 0;
+                const maxAttempts = 20;
+                const pollInterval = setInterval(async () => {
+                    attempts++;
+                    try {
+                        const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
+                        if (statusRes && statusRes.status === 'COMPLETED') {
+                            clearInterval(pollInterval);
+                            if (statusBanner) {
+                                statusBanner.style.borderColor = 'var(--gold-primary)';
+                                if (statusTitle) statusTitle.textContent = '✅ Payment Confirmed!';
+                                if (statusDesc) statusDesc.textContent = `KSh ${amount.toLocaleString()} credited successfully!`;
+                            }
+                            showToast(`✅ Payment Confirmed! KSh ${amount.toLocaleString()} credited to your wallet!`, 'success');
+                            
+                            if (statusRes.user) {
+                                updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
+                            }
+                            triggerConfetti();
+
+                            setTimeout(() => {
+                                if (modal) modal.style.display = 'none';
+                                if (statusBanner) statusBanner.style.display = 'none';
+                                confirmBtn.disabled = false;
+                                confirmBtn.textContent = '⚡ SEND M-PESA STK PUSH PROMPT';
+                            }, 2500);
+
+                        } else if (statusRes && statusRes.status === 'FAILED') {
+                            clearInterval(pollInterval);
+                            if (statusBanner) {
+                                statusBanner.style.borderColor = '#ff4444';
+                                if (statusTitle) statusTitle.textContent = '❌ Payment Failed';
+                                if (statusDesc) statusDesc.textContent = statusRes.reason || 'Payment cancelled or timed out.';
+                            }
+                            showToast(`Payment failed: ${statusRes.reason || 'Cancelled by user'}`, 'error');
+                            confirmBtn.disabled = false;
+                            confirmBtn.textContent = '⚡ RETRY M-PESA DEPOSIT';
+                        }
+                    } catch (e) {
+                        console.warn('Status poll error:', e.message);
+                    }
+
+                    if (attempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        if (confirmBtn.disabled) {
+                            confirmBtn.disabled = false;
+                            confirmBtn.textContent = '⚡ SEND M-PESA STK PUSH PROMPT';
+                        }
+                    }
+                }, 3000);
 
             } catch (err) {
-                showToast(err.message, 'error');
-            } finally {
+                showToast(err.message || 'M-Pesa STK Push failed. Check your details.', 'error');
                 confirmBtn.disabled = false;
-                confirmBtn.textContent = 'CONFIRM & PROCESS DEPOSIT';
+                confirmBtn.textContent = '⚡ SEND M-PESA STK PUSH PROMPT';
             }
         });
     }

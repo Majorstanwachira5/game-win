@@ -1141,28 +1141,36 @@ app.post(['/api/chat/send', '/chat/send'], (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 //  DARAJA M-PESA PAYMENT & CALLBACK ROUTES
 // ═══════════════════════════════════════════════════════════════════════════
-app.post('/api/mpesa/stkpush', depositLimiter, requirePlayerAuth, async (req, res) => {
+app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAuth, async (req, res) => {
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
-        const { phone = '0712345678', amount = 100 } = req.body;
+        const { phone = '', amount = 100 } = req.body;
         const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
         const result = await mpesaService.initiateStkPush(userId, phone, amount);
         const coinsGained = rewardEngine.calculateRewardCoins(amount);
 
-        if (checkIsTester(user) || req.isTester) {
-            walletService.creditWallet(user, amount, 'KSH', 'M-Pesa Express Deposit');
-            walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
-        }
-
+        // Real payment: Funds are credited ONLY upon successful M-Pesa Callback (ResultCode: 0)
         res.json({
             ...result,
             coinsGained,
             user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
         });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(400).json({ success: false, error: err.message });
     }
+});
+
+app.get('/api/deposit/status/:checkoutRequestId', requirePlayerAuth, (req, res) => {
+    const { checkoutRequestId } = req.params;
+    const tx = mpesaService.getTransactionStatus(checkoutRequestId);
+    const userId = req.userId || req.query.userId || 'demo-user-1';
+    const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+
+    res.json({
+        ...tx,
+        user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
+    });
 });
 
 app.post('/api/mpesa/callback', (req, res) => {
@@ -1170,6 +1178,12 @@ app.post('/api/mpesa/callback', (req, res) => {
         const userId = req.query.userId || req.body.userId || 'demo-user-1';
         const user = getOrCreateUser(userId);
         const outcome = mpesaService.processCallback(req.body, user);
+        
+        if (outcome.success && outcome.amount > 0) {
+            const coinsGained = rewardEngine.calculateRewardCoins(outcome.amount);
+            walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
+        }
+
         res.json(outcome);
     } catch (err) {
         res.status(400).json({ ResultCode: 1, ResultDesc: err.message });

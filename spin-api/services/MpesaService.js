@@ -1,6 +1,7 @@
 /**
  * services/MpesaService.js — Safaricom Daraja M-Pesa Integration Engine
- * Full support for OAuth Tokens, STK Push (Lipa Na M-Pesa Online), C2B, B2C Withdrawals, & Callback Processing.
+ * Full support for OAuth Tokens, STK Push (Lipa Na M-Pesa Online), Callback Processing & Realtime Status Tracking.
+ * Production/Sandbox ready. No mock fallbacks.
  */
 const crypto = require('crypto');
 const walletService = require('./WalletService');
@@ -13,32 +14,40 @@ class MpesaService {
             ? 'https://api.safaricom.co.ke' 
             : 'https://sandbox.safaricom.co.ke';
         
-        this.consumerKey = process.env.MPESA_CONSUMER_KEY || 'Yl4S3KEcr173mbeUdYdjf147IuG3rJ824ArMkP6Z';
-        this.consumerSecret = process.env.MPESA_CONSUMER_SECRET || 'sandbox_secret_key_2026';
+        this.consumerKey = process.env.MPESA_CONSUMER_KEY || '';
+        this.consumerSecret = process.env.MPESA_CONSUMER_SECRET || '';
         this.passkey = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919';
         this.businessShortCode = process.env.MPESA_PAYBILL || '174379';
         this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://game-win-git-main-majorstanwachira5s-projects.vercel.app/api/mpesa/callback';
+
+        // In-memory store for pending transactions status checking
+        this.pendingTransactions = new Map();
     }
 
     /**
      * Generate Daraja OAuth Access Token using Basic Auth
      */
     async getAccessToken() {
-        try {
-            const authBuffer = Buffer.from(`${this.consumerKey}:${this.consumerSecret}`).toString('base64');
-            const response = await fetch(`${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Basic ${authBuffer}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            const data = await response.json();
-            return data.access_token || 'mock_access_token_' + Date.now();
-        } catch (err) {
-            console.warn('[MPESA AUTH ERROR] Using fallback token:', err.message);
-            return 'mock_access_token_' + Date.now();
+        if (!this.consumerKey || !this.consumerSecret) {
+            throw new Error('[M-Pesa Config Error] MPESA_CONSUMER_KEY or MPESA_CONSUMER_SECRET missing in environment variables.');
         }
+
+        const authBuffer = Buffer.from(`${this.consumerKey.trim()}:${this.consumerSecret.trim()}`).toString('base64');
+        const response = await fetch(`${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Basic ${authBuffer}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.access_token) {
+            const errDesc = data.errorMessage || data.error_description || JSON.stringify(data);
+            throw new Error(`[M-Pesa Auth Error] Safaricom Daraja returned ${response.status}: ${errDesc}`);
+        }
+
+        return data.access_token;
     }
 
     /**
@@ -80,61 +89,66 @@ class MpesaService {
      */
     async initiateStkPush(userId, rawPhone, amount, accountReference = 'SpinWin') {
         const phone = this.formatPhone(rawPhone);
+        if (!phone || phone.length !== 12 || !phone.startsWith('254')) {
+            throw new Error('Invalid Kenyan phone number format. Must be 07XXXXXXXX, 01XXXXXXXX, or 254XXXXXXXXX.');
+        }
+
         const token = await this.getAccessToken();
         const { password, timestamp } = this.generateStkPassword();
-        const checkoutRequestId = 'ws_CO_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
         const requestBody = {
             BusinessShortCode: this.businessShortCode,
             Password: password,
             Timestamp: timestamp,
             TransactionType: 'CustomerPayBillOnline',
-            Amount: Math.max(10, Number(amount)),
+            Amount: Math.max(1, Math.round(Number(amount))),
             PartyA: phone,
             PartyB: this.businessShortCode,
             PhoneNumber: phone,
-            CallBackURL: this.callbackUrl,
+            CallBackURL: `${this.callbackUrl}?userId=${encodeURIComponent(userId)}`,
             AccountReference: accountReference,
             TransactionDesc: `Wallet Topup for User ${userId}`
         };
 
-        try {
-            const res = await fetch(`${this.baseUrl}/mpesa/stkpush/v1/processrequest`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            });
+        const res = await fetch(`${this.baseUrl}/mpesa/stkpush/v1/processrequest`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
 
-            const data = await res.json();
-            platformEvents.emitEvent('STK_PUSH_INITIATED', {
-                userId,
-                phone,
-                amount,
-                checkoutRequestId: data.CheckoutRequestID || checkoutRequestId
-            });
-
-            return {
-                success: true,
-                MerchantRequestID: data.MerchantRequestID || '29115-34627-1',
-                CheckoutRequestID: data.CheckoutRequestID || checkoutRequestId,
-                ResponseCode: data.ResponseCode || '0',
-                ResponseDescription: data.ResponseDescription || 'Success. Request accepted for processing',
-                CustomerMessage: data.CustomerMessage || `STK Push sent to ${phone}. Enter M-Pesa PIN to authorize payment of KSh ${amount}`
-            };
-        } catch (err) {
-            console.warn('[MPESA STK PUSH WARN] Returning fallback simulation response:', err.message);
-            return {
-                success: true,
-                MerchantRequestID: '29115-34627-1',
-                CheckoutRequestID: checkoutRequestId,
-                ResponseCode: '0',
-                ResponseDescription: 'Success. Request accepted for processing',
-                CustomerMessage: `STK Push prompt sent to ${phone}. Enter your M-Pesa PIN to authorize payment of KSh ${amount}.`
-            };
+        const data = await res.json();
+        if (!res.ok || data.ResponseCode !== '0') {
+            const errorMsg = data.errorMessage || data.ResponseDescription || 'STK Push request rejected by Safaricom Daraja.';
+            throw new Error(`[M-Pesa STK Error] ${errorMsg}`);
         }
+
+        // Register pending transaction for status polling
+        this.pendingTransactions.set(data.CheckoutRequestID, {
+            userId,
+            phone,
+            amount: Number(amount),
+            status: 'PENDING',
+            createdAt: Date.now()
+        });
+
+        platformEvents.emitEvent('STK_PUSH_INITIATED', {
+            userId,
+            phone,
+            amount,
+            checkoutRequestId: data.CheckoutRequestID
+        });
+
+        return {
+            success: true,
+            MerchantRequestID: data.MerchantRequestID,
+            CheckoutRequestID: data.CheckoutRequestID,
+            ResponseCode: data.ResponseCode,
+            ResponseDescription: data.ResponseDescription,
+            CustomerMessage: data.CustomerMessage || `STK Push sent to ${phone}. Enter your M-Pesa PIN on your phone to complete payment of KSh ${amount}`
+        };
     }
 
     /**
@@ -146,6 +160,7 @@ class MpesaService {
         }
 
         const stkCallback = callbackBody.Body.stkCallback;
+        const checkoutRequestId = stkCallback.CheckoutRequestID;
         const resultCode = stkCallback.ResultCode;
 
         if (resultCode === 0) {
@@ -162,7 +177,15 @@ class MpesaService {
 
             if (user) {
                 walletService.creditWallet(user, amount, 'KSH', 'M-Pesa Deposit');
-                walletService.writeLedger(user, amount, 'M-Pesa Deposit', user.balance - amount, 'KSH');
+                walletService.writeLedger(user, amount, 'M-Pesa Deposit', user.balance, 'KSH');
+            }
+
+            if (checkoutRequestId && this.pendingTransactions.has(checkoutRequestId)) {
+                const tx = this.pendingTransactions.get(checkoutRequestId);
+                tx.status = 'COMPLETED';
+                tx.mpesaReceiptNumber = mpesaReceiptNumber;
+                tx.amount = amount;
+                this.pendingTransactions.set(checkoutRequestId, tx);
             }
 
             platformEvents.emitEvent('PAYMENT_RECEIVED', {
@@ -181,11 +204,28 @@ class MpesaService {
             };
         }
 
+        if (checkoutRequestId && this.pendingTransactions.has(checkoutRequestId)) {
+            const tx = this.pendingTransactions.get(checkoutRequestId);
+            tx.status = 'FAILED';
+            tx.reason = stkCallback.ResultDesc || 'Payment failed or cancelled';
+            this.pendingTransactions.set(checkoutRequestId, tx);
+        }
+
         return {
             success: false,
             resultCode,
             resultDesc: stkCallback.ResultDesc || 'Payment failed or cancelled by user'
         };
+    }
+
+    /**
+     * Check transaction status by CheckoutRequestID
+     */
+    getTransactionStatus(checkoutRequestId) {
+        if (!checkoutRequestId || !this.pendingTransactions.has(checkoutRequestId)) {
+            return { status: 'NOT_FOUND' };
+        }
+        return this.pendingTransactions.get(checkoutRequestId);
     }
 }
 

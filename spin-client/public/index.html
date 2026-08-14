@@ -359,12 +359,20 @@
                     <span class="user-display-name" id="hdrUserName">USER 0712***891</span>
                     <span class="user-vip-badge" id="hdrVipTier">BRONZE VIP</span>
                 </div>
-                <div class="wallet-container">
+                <div class="wallet-container" style="display:flex; align-items:center; gap:8px;">
+                    <div class="coins-card elevated-coins-card" style="background:rgba(255, 215, 0, 0.08); border-color:rgba(255,215,0,0.3);">
+                        <div class="coins-top">
+                            <span class="coins-label" style="color:var(--gold-primary);">CASH BALANCE</span>
+                        </div>
+                        <div class="coins-value" id="userBalanceText" style="color:var(--gold-primary); font-weight:bold;">KSh 0.00</div>
+                    </div>
+                    <button id="openDepositBtn" class="spin-gold-btn deposit-hdr-btn" onclick="if(window.openDepositModal) window.openDepositModal();" style="padding: 6px 12px; font-size:11px; min-height:36px; display:flex; align-items:center; gap:4px;">
+                        ⚡ DEPOSIT
+                    </button>
                     <div class="coins-card elevated-coins-card">
                         <div class="coins-top">
                             <span class="coins-label">COINS BALANCE</span>
-                            <span class="coins-gained-badge" id="coinsGainedBadge" style="display:none">+<span
-                                    id="coinsGainedVal">0</span> Coins</span>
+                            <span class="coins-gained-badge" id="coinsGainedBadge" style="display:none">+<span id="coinsGainedVal">0</span> Coins</span>
                         </div>
                         <div class="coins-value" id="userCoinsText">200 Coins</div>
                     </div>
@@ -1231,6 +1239,56 @@
             <span>Profile</span>
         </button>
     </nav>
+
+    <!-- REAL SAFARICOM M-PESA DEPOSIT MODAL -->
+    <div id="depositModal" class="game-modal-overlay" style="display:none">
+        <div class="game-modal-card glass-modal deposit-modal-card" style="max-width:440px; width:92%;">
+            <div class="modal-header">
+                <h2>📲 M-PESA EXPRESS DEPOSIT</h2>
+                <button class="close-modal-btn" id="closeDepositBtn" onclick="if(window.closeModal) window.closeModal(this); else { var m = document.getElementById('depositModal'); if(m) m.style.display='none'; }">&times;</button>
+            </div>
+            <div class="modal-body text-center" style="padding:16px;">
+                <p class="modal-subtitle" style="font-size:12px; color:var(--gold-primary);">Instant Lipa Na M-Pesa STK Push Deposit</p>
+                
+                <div class="deposit-presets margin-top" style="margin-top:12px;">
+                    <span class="bet-label" style="font-size:11px; color:var(--text-muted);">QUICK AMOUNT (KSH):</span>
+                    <div class="bet-chips margin-top-sm" style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-top:6px;">
+                        <button type="button" class="bet-chip preset-btn active" data-amt="100">KSh 100</button>
+                        <button type="button" class="bet-chip preset-btn" data-amt="250">KSh 250</button>
+                        <button type="button" class="bet-chip preset-btn" data-amt="500">KSh 500</button>
+                        <button type="button" class="bet-chip preset-btn" data-amt="1000">KSh 1,000</button>
+                        <button type="button" class="bet-chip preset-btn" data-amt="2500">KSh 2,500</button>
+                    </div>
+                </div>
+
+                <div class="form-group margin-top" style="text-align:left; margin-top:14px;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">DEPOSIT AMOUNT (KSH):</label>
+                    <input type="number" id="depositAmountInput" value="100" min="10" max="150000" class="mpesa-input" placeholder="Enter amount (min KSh 10)" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(6,10,22,0.9); border:1px solid rgba(255,215,0,0.4); border-radius:8px; color:#fff; font-size:14px; font-weight:bold; margin-top:4px;">
+                </div>
+
+                <div class="form-group margin-top" style="text-align:left; margin-top:12px;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--cyan-accent);">SAFARICOM M-PESA PHONE NUMBER:</label>
+                    <input type="tel" id="depositPhoneInput" placeholder="07XXXXXXXX or 01XXXXXXXX" class="mpesa-input" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(6,10,22,0.9); border:1px solid var(--cyan-accent); border-radius:8px; color:#fff; font-size:14px; font-weight:bold; margin-top:4px;" required>
+                    <small style="color: var(--text-muted); font-size:11px; display:block; margin-top:4px;">An STK Push prompt will be sent directly to this phone asking for your M-Pesa PIN.</small>
+                </div>
+
+                <!-- STK Push Live Progress Banner -->
+                <div id="stkStatusBanner" style="display:none; margin-top:14px; padding:12px; border-radius:8px; background:rgba(0, 240, 255, 0.1); border:1.5px solid var(--cyan-accent); color:#fff; text-align:left;">
+                    <div style="display:flex; align-items:center; gap:8px; font-weight:bold; color:var(--gold-primary);">
+                        <span class="spinner-icon" style="font-size:16px;">🔄</span>
+                        <span id="stkStatusTitle">STK Push Sent!</span>
+                    </div>
+                    <div id="stkStatusDesc" style="font-size:12px; margin-top:4px; color:#e0e0e0;">
+                        Check your phone screen and enter your M-Pesa PIN to authorize payment.
+                    </div>
+                </div>
+
+                <button type="button" id="confirmDepositBtn" class="spin-gold-btn margin-top full-width" style="min-height:48px; font-size:14px; font-weight:bold; margin-top:16px; width:100%;">
+                    ⚡ SEND M-PESA STK PUSH PROMPT
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- SCRIPTS -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
