@@ -424,8 +424,12 @@ class MpesaService {
 
         // Handle Failed / Cancelled / Timed out STK Push
         if (pendingTx) {
+            let cleanReason = resultDesc || 'Payment declined by M-Pesa';
+            if (cleanReason.includes('unresolved reason type') || cleanReason.includes('[STK Push]')) {
+                cleanReason = 'Payment request was declined by M-Pesa';
+            }
             pendingTx.status = 'FAILED';
-            pendingTx.reason = resultDesc;
+            pendingTx.reason = cleanReason;
             pendingTx.resultCode = resultCode;
             pendingTx.resultDesc = resultDesc;
             await this.recordTransaction(pendingTx);
@@ -435,6 +439,7 @@ class MpesaService {
             success: false,
             resultCode,
             resultDesc: resultDesc || 'Payment failed or cancelled by user',
+            reason: pendingTx?.reason || 'Payment failed or cancelled by user',
             userId
         };
     }
@@ -451,6 +456,257 @@ class MpesaService {
             return tx;
         }
         return { status: 'PENDING', checkoutRequestId, createdAt: Date.now() };
+    }
+
+    /**
+     * STK Push Query (M-PESA Express Status Check)
+     * Proxy:STKPushQuery - https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query
+     */
+    async queryStkPush(checkoutRequestId) {
+        if (!checkoutRequestId) throw new Error('Missing checkoutRequestId');
+        const token = await this.getAccessToken();
+        const { password, timestamp } = this.generateStkPassword();
+
+        const requestBody = {
+            BusinessShortCode: this.businessShortCode,
+            Password: password,
+            Timestamp: timestamp,
+            CheckoutRequestID: checkoutRequestId
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/stkpushquery/v1/query`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
+    }
+
+    /**
+     * B2C Payment (Payouts / Withdrawals to Phone)
+     * Proxy:B2C - https://api.safaricom.co.ke/mpesa/b2c/v1/paymentrequest
+     */
+    async initiateB2CPayment({ phone, amount, commandId = 'BusinessPayment', remarks = 'Wallet Withdrawal', occasion = '' }) {
+        const formattedPhone = this.formatPhone(phone);
+        const token = await this.getAccessToken();
+        const initiatorName = process.env.MPESA_INITIATOR_NAME || 'testapi';
+        const securityCredential = process.env.MPESA_SECURITY_CREDENTIAL || '';
+
+        const requestBody = {
+            InitiatorName: initiatorName,
+            SecurityCredential: securityCredential,
+            CommandID: commandId,
+            Amount: Math.max(1, Math.round(Number(amount))),
+            PartyA: this.businessShortCode,
+            PartyB: formattedPhone,
+            Remarks: remarks,
+            QueueTimeOutURL: `${this.callbackUrl}/timeout`,
+            ResultURL: `${this.callbackUrl}/result`,
+            Occasion: occasion
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/b2c/v1/paymentrequest`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
+    }
+
+    /**
+     * Reversal Request
+     * Proxy:Reversal - https://api.safaricom.co.ke/mpesa/reversal/v1/request
+     */
+    async initiateReversal({ transactionId, amount, receiverParty, remarks = 'Transaction Reversal', occasion = '' }) {
+        const token = await this.getAccessToken();
+        const initiatorName = process.env.MPESA_INITIATOR_NAME || 'testapi';
+        const securityCredential = process.env.MPESA_SECURITY_CREDENTIAL || '';
+
+        const requestBody = {
+            Initiator: initiatorName,
+            SecurityCredential: securityCredential,
+            CommandID: 'TransactionReversal',
+            TransactionID: transactionId,
+            Amount: Math.max(1, Math.round(Number(amount))),
+            ReceiverParty: receiverParty || this.businessShortCode,
+            RecieverIdentifierType: '11',
+            Remarks: remarks,
+            Occasion: occasion,
+            ResultURL: `${this.callbackUrl}/reversal/result`,
+            QueueTimeOutURL: `${this.callbackUrl}/reversal/timeout`
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/reversal/v1/request`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
+    }
+
+    /**
+     * C2B Register URL (v1 or v2)
+     * Proxy:C2B_v1 / Proxy:C2B_v2 - https://api.safaricom.co.ke/mpesa/c2b/v1/registerurl
+     */
+    async registerC2BUrl({ responseType = 'Completed', validationUrl, confirmationUrl, version = 'v1' }) {
+        const token = await this.getAccessToken();
+        const requestBody = {
+            ShortCode: this.businessShortCode,
+            ResponseType: responseType,
+            ConfirmationURL: confirmationUrl || `${this.callbackUrl}/c2b/confirm`,
+            ValidationURL: validationUrl || `${this.callbackUrl}/c2b/validate`
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/c2b/${version}/registerurl`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
+    }
+
+    /**
+     * Transaction Status Query
+     * Proxy:TransactionStatus - https://api.safaricom.co.ke/mpesa/transactionstatus/v1/query
+     */
+    async queryTransactionStatus({ transactionId, remarks = 'Status Check', occasion = '' }) {
+        const token = await this.getAccessToken();
+        const initiatorName = process.env.MPESA_INITIATOR_NAME || 'testapi';
+        const securityCredential = process.env.MPESA_SECURITY_CREDENTIAL || '';
+
+        const requestBody = {
+            Initiator: initiatorName,
+            SecurityCredential: securityCredential,
+            CommandID: 'TransactionStatusQuery',
+            TransactionID: transactionId,
+            PartyA: this.businessShortCode,
+            IdentifierType: '4',
+            ResultURL: `${this.callbackUrl}/status/result`,
+            QueueTimeOutURL: `${this.callbackUrl}/status/timeout`,
+            Remarks: remarks,
+            Occasion: occasion
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/transactionstatus/v1/query`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
+    }
+
+    /**
+     * Account Balance Query
+     * Proxy:AccountBalance - https://api.safaricom.co.ke/mpesa/accountbalance/v1/query
+     */
+    async queryAccountBalance({ remarks = 'Account Balance Check' } = {}) {
+        const token = await this.getAccessToken();
+        const initiatorName = process.env.MPESA_INITIATOR_NAME || 'testapi';
+        const securityCredential = process.env.MPESA_SECURITY_CREDENTIAL || '';
+
+        const requestBody = {
+            Initiator: initiatorName,
+            SecurityCredential: securityCredential,
+            CommandID: 'AccountBalance',
+            PartyA: this.businessShortCode,
+            IdentifierType: '4',
+            Remarks: remarks,
+            QueueTimeOutURL: `${this.callbackUrl}/balance/timeout`,
+            ResultURL: `${this.callbackUrl}/balance/result`
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/accountbalance/v1/query`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
+    }
+
+    /**
+     * Dynamic QR Code Generation
+     * Proxy:Dynamic QRCode - https://api.safaricom.co.ke/mpesa/qrcode/v1/generate
+     */
+    async generateDynamicQr({ merchantName = 'SpinWin', refNo = 'SpinWinPay', amount, trxCode = 'PB', cpi = this.businessShortCode }) {
+        const token = await this.getAccessToken();
+        const requestBody = {
+            MerchantName: merchantName,
+            RefNo: refNo,
+            Amount: Math.max(1, Math.round(Number(amount))),
+            TrxCode: trxCode,
+            CPI: cpi,
+            Size: '300'
+        };
+
+        const targetUrl = `${this.baseUrl}/mpesa/qrcode/v1/generate`;
+        const res = await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await res.json().catch(() => ({}));
+        return {
+            httpStatus: res.status,
+            ...data
+        };
     }
 }
 

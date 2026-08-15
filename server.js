@@ -1255,6 +1255,26 @@ app.post('/api/mpesa/callback', async (req, res) => {
     }
 });
 
+app.get('/api/mpesa/test-oauth', async (req, res) => {
+    try {
+        const token = await mpesaService.getAccessToken();
+        res.json({ success: true, tokenPreview: `${token.substring(0, 10)}...`, environment: mpesaService.env, baseUrl: mpesaService.baseUrl });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/mpesa/query-stk', async (req, res) => {
+    try {
+        const { checkoutRequestId } = req.body;
+        if (!checkoutRequestId) return res.status(400).json({ success: false, error: 'checkoutRequestId is required' });
+        const queryRes = await mpesaService.queryStkPush(checkoutRequestId);
+        res.json({ success: true, ...queryRes });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  USER / PROFILE
 // ═══════════════════════════════════════════════════════════════════════════

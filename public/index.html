@@ -46,11 +46,11 @@
             window.closeAllModals = function () {
                 var overlays = document.querySelectorAll('.game-modal-overlay, .modal-overlay, [id^="modal-"]');
                 for (var i = 0; i < overlays.length; i++) {
-                    var m = overlays[i];
-                    if (m.id !== 'authModal' && m.id !== 'regBonusModal') {
-                        m.style.display = 'none';
-                        m.classList.remove('open', 'active');
-                        m.setAttribute('style', 'display: none !important');
+                    var modalItem = overlays[i];
+                    if (modalItem.id !== 'authModal' && modalItem.id !== 'regBonusModal') {
+                        modalItem.style.display = 'none';
+                        modalItem.classList.remove('open', 'active');
+                        modalItem.setAttribute('style', 'display: none !important');
                     }
                 }
                 document.body.style.overflow = '';
@@ -366,9 +366,6 @@
                         </div>
                         <div class="coins-value" id="userBalanceText" style="color:var(--gold-primary); font-weight:bold;">KSh 0.00</div>
                     </div>
-                    <button id="openDepositBtn" class="spin-gold-btn deposit-hdr-btn" onclick="if(window.openDepositModal) window.openDepositModal();" style="padding: 6px 12px; font-size:11px; min-height:36px; display:flex; align-items:center; gap:4px;">
-                        ⚡ DEPOSIT
-                    </button>
                     <div class="coins-card elevated-coins-card">
                         <div class="coins-top">
                             <span class="coins-label">COINS BALANCE</span>
@@ -1003,7 +1000,7 @@
                     <h2>LUCKY 7 SLOT MACHINE</h2>
                 </div>
                 <button type="button" class="close-modal-btn"
-                    onclick="const m=document.getElementById('modal-lucky7'); if(m) m.style.display='none';"
+                    onclick="const lucky7Modal=document.getElementById('modal-lucky7'); if(lucky7Modal) lucky7Modal.style.display='none';"
                     aria-label="Close">&times;</button>
             </div>
             <div class="modal-body slot-cabinet-body">
@@ -1123,7 +1120,7 @@
                     <h2>VIP MEMBERSHIP</h2>
                 </div>
                 <button type="button" class="close-modal-btn"
-                    onclick="if(window.closeVIPModal) window.closeVIPModal(); else { const m=document.getElementById('modal-vip'); if(m) m.style.display='none'; }"
+                    onclick="if(window.closeVIPModal) window.closeVIPModal(); else { const vipModal=document.getElementById('modal-vip'); if(vipModal) vipModal.style.display='none'; }"
                     aria-label="Close">&times;</button>
             </div>
             <div class="modal-body vip-popup-body">
@@ -1245,7 +1242,7 @@
         <div class="game-modal-card glass-modal deposit-modal-card" style="max-width:440px; width:92%;">
             <div class="modal-header">
                 <h2>📲 M-PESA EXPRESS DEPOSIT</h2>
-                <button class="close-modal-btn" id="closeDepositBtn" onclick="if(window.closeModal) window.closeModal(this); else { var m = document.getElementById('depositModal'); if(m) m.style.display='none'; }">&times;</button>
+                <button class="close-modal-btn" id="closeDepositBtn" onclick="if(window.closeModal) window.closeModal(this); else { var depositModalEl = document.getElementById('depositModal'); if(depositModalEl) depositModalEl.style.display='none'; }">&times;</button>
             </div>
             <div class="modal-body text-center" style="padding:16px;">
                 <p class="modal-subtitle" style="font-size:12px; color:var(--gold-primary);">Instant Lipa Na M-Pesa STK Push Deposit</p>
