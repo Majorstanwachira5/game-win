@@ -1695,12 +1695,4 @@ function initLiveMiniComponents() {
     }
 }
 
-// ─── DARAJA M-PESA STK PUSH PROMPT MODAL (BYPASSED / HIDDEN) ───────────────
-function openMpesaStkModal(gameName, amount, onConfirmCallback) {
-    const modal = document.getElementById('mpesaStkModal');
-    if (modal) modal.style.display = 'none';
-    if (typeof onConfirmCallback === 'function') {
-        onConfirmCallback();
-    }
-}
-window.openMpesaStkModal = openMpesaStkModal;
+// Pure Daraja STK Push Integration — No legacy bypass functions.
