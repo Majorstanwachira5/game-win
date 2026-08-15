@@ -1,7 +1,7 @@
 /**
- * services/MpesaService.js — Production-Grade Safaricom Daraja Engine
- * Strictly enforces Daraja API specs, OAuth authentication, STK Push validation,
- * East Africa Time (UTC+3) password hashing, anti-replay callback security, and true status tracking.
+ * services/MpesaService.js — Forensic Production Safaricom Daraja Engine
+ * Zero fake success. Byte-accurate East Africa Time (UTC+3) password hashing,
+ * full diagnostic logging, strict Daraja API response validation, and secure callback handling.
  */
 const walletService = require('./WalletService');
 const platformEvents = require('../events/EventEmitter');
@@ -39,13 +39,13 @@ class MpesaService {
         }
 
         const authBuffer = Buffer.from(`${this.consumerKey}:${this.consumerSecret}`).toString('base64');
-        const url = `${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`;
+        const targetUrl = `${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`;
 
-        console.log(`[MPESA OAUTH REQUEST] Target: ${url}`);
+        console.log(`\n🔍 [MPESA OAUTH REQUEST] Target: ${targetUrl}`);
         
         let response;
         try {
-            response = await fetch(url, {
+            response = await fetch(targetUrl, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Basic ${authBuffer}`,
@@ -53,24 +53,25 @@ class MpesaService {
                 }
             });
         } catch (fetchErr) {
-            console.error(`[MPESA OAUTH ERROR] Network request failed: ${fetchErr.message}`);
-            throw new Error(`M-Pesa OAuth Network Error: ${fetchErr.message}`);
+            console.error(`❌ [MPESA OAUTH NETWORK ERROR] Request failed: ${fetchErr.message}`);
+            throw new Error(`Safaricom OAuth Network Error: ${fetchErr.message}`);
         }
 
         let data = {};
         try {
             data = await response.json();
         } catch (jsonErr) {
-            throw new Error(`M-Pesa OAuth Invalid JSON Response (Status ${response.status})`);
+            throw new Error(`Safaricom OAuth returned non-JSON response (Status ${response.status})`);
         }
+
+        console.log(`[MPESA OAUTH RESPONSE] HTTP Status: ${response.status}, Token Received: ${Boolean(data.access_token)}`);
 
         if (!response.ok || !data.access_token) {
             const errDesc = data.errorMessage || data.error_description || JSON.stringify(data);
-            console.error(`[MPESA OAUTH FAILED] HTTP ${response.status}: ${errDesc}`);
+            console.error(`❌ [MPESA OAUTH REJECTED] HTTP ${response.status}: ${errDesc}`);
             throw new Error(`Safaricom Daraja OAuth Rejected (${response.status}): ${errDesc}`);
         }
 
-        console.log(`[MPESA OAUTH SUCCESS] Access token generated successfully.`);
         return data.access_token;
     }
 
@@ -143,7 +144,19 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/stkpush/v1/processrequest`;
-        console.log(`[MPESA STK REQUEST] Target: ${targetUrl}, Phone: ${phone.substring(0, 6)}****, Amount: ${amount}, ShortCode: ${this.businessShortCode}`);
+        
+        console.log('====================================================');
+        console.log('🔍 [MPESA DIAGNOSTIC TEST START]');
+        console.log('====================================================');
+        console.log(`Environment: ${this.env}`);
+        console.log(`Target URL: ${targetUrl}`);
+        console.log(`Phone: ${phone.substring(0, 6)}****`);
+        console.log(`Amount: KSh ${amount}`);
+        console.log(`ShortCode: ${this.businessShortCode}`);
+        console.log(`TransactionType: ${this.transactionType}`);
+        console.log(`Timestamp (EAT UTC+3): ${timestamp}`);
+        console.log(`CallBackURL: ${this.callbackUrl}`);
+        console.log('----------------------------------------------------');
 
         let res;
         try {
@@ -156,7 +169,7 @@ class MpesaService {
                 body: JSON.stringify(requestBody)
             });
         } catch (fetchErr) {
-            console.error(`[MPESA STK ERROR] Network request failed: ${fetchErr.message}`);
+            console.error(`❌ [MPESA STK NETWORK ERROR] ${fetchErr.message}`);
             throw new Error(`Safaricom STK Push Network Error: ${fetchErr.message}`);
         }
 
@@ -164,15 +177,25 @@ class MpesaService {
         try {
             data = await res.json();
         } catch (e) {
-            throw new Error(`Safaricom Daraja STK Push returned non-JSON response (Status ${res.status})`);
+            throw new Error(`Safaricom Daraja returned non-JSON response (HTTP ${res.status})`);
         }
 
-        console.log(`[MPESA STK RESPONSE] HTTP ${res.status}:`, JSON.stringify(data));
+        console.log('[STK DARAJA RESPONSE]');
+        console.log(`HTTP Status: ${res.status}`);
+        console.log(`ResponseCode: "${data.ResponseCode}"`);
+        console.log(`ResponseDescription: "${data.ResponseDescription || ''}"`);
+        console.log(`MerchantRequestID: "${data.MerchantRequestID || ''}"`);
+        console.log(`CheckoutRequestID: "${data.CheckoutRequestID || ''}"`);
+        console.log(`CustomerMessage: "${data.CustomerMessage || ''}"`);
+        if (data.errorCode) console.log(`errorCode: "${data.errorCode}"`);
+        if (data.errorMessage) console.log(`errorMessage: "${data.errorMessage}"`);
+        console.log('====================================================\n');
 
-        // Strict Validation: STK Push MUST return ResponseCode === '0' and valid CheckoutRequestID
+        // Rule Zero & Section 8 Strict Verification:
+        // STK Push is successful ONLY when Daraja returns ResponseCode === '0' AND genuine CheckoutRequestID
         if (!res.ok || !data || data.ResponseCode !== '0' || !data.CheckoutRequestID) {
             const errDesc = data?.ResponseDescription || data?.errorMessage || `HTTP Status ${res.status}`;
-            console.error(`[MPESA STK REJECTED] Safaricom Daraja rejected STK Push: ${errDesc}`);
+            console.error(`❌ [MPESA STK REJECTED] Daraja rejected request: ${errDesc}`);
             throw new Error(`M-Pesa STK Push Failed: ${errDesc}`);
         }
 
@@ -180,9 +203,7 @@ class MpesaService {
         const merchantRequestId = data.MerchantRequestID || '';
         const customerMessage = data.CustomerMessage || 'Request accepted for processing';
 
-        console.log(`[MPESA STK ACCEPTED] CheckoutRequestID: ${checkoutRequestId}`);
-
-        // Register pending transaction for status tracking & callback verification
+        // Register pending transaction with genuine Safaricom CheckoutRequestID
         this.pendingTransactions.set(checkoutRequestId, {
             userId,
             phone,
@@ -211,7 +232,7 @@ class MpesaService {
     }
 
     /**
-     * Process M-Pesa Callback & Credit User Wallet (Authoritative Callback & Anti-Replay)
+     * Process Authoritative Safaricom Webhook Callback & Credit User Wallet
      */
     processCallback(callbackBody) {
         if (!callbackBody || !callbackBody.Body || !callbackBody.Body.stkCallback) {
@@ -223,7 +244,7 @@ class MpesaService {
         const resultCode = stkCallback.ResultCode;
         const resultDesc = stkCallback.ResultDesc || '';
 
-        console.log(`[MPESA CALLBACK RECEIVED] CheckoutRequestID: ${checkoutRequestId}, ResultCode: ${resultCode}, Desc: ${resultDesc}`);
+        console.log(`\n📲 [MPESA CALLBACK RECEIVED] CheckoutRequestID: ${checkoutRequestId}, ResultCode: ${resultCode}, Desc: "${resultDesc}"`);
 
         if (!checkoutRequestId) {
             return { success: false, message: 'Missing CheckoutRequestID in callback' };
@@ -245,9 +266,9 @@ class MpesaService {
                 if (item.Name === 'PhoneNumber') phone = item.Value;
             });
 
-            // Idempotency & Replay Protection
+            // Idempotency & Replay Attack Defense
             if (this.processedCheckoutIds.has(checkoutRequestId) || (mpesaReceiptNumber && this.processedReceipts.has(mpesaReceiptNumber))) {
-                console.warn(`[SECURITY WARN] Replay attack or duplicate callback blocked for CheckoutRequestID: ${checkoutRequestId}, Receipt: ${mpesaReceiptNumber}`);
+                console.warn(`[SECURITY WARN] Duplicate callback ignored for CheckoutRequestID: ${checkoutRequestId}, Receipt: ${mpesaReceiptNumber}`);
                 return {
                     success: true,
                     resultCode: 0,
@@ -258,7 +279,7 @@ class MpesaService {
                 };
             }
 
-            // Register receipt & checkout ID as processed
+            // Mark as processed
             if (checkoutRequestId) this.processedCheckoutIds.add(checkoutRequestId);
             if (mpesaReceiptNumber) this.processedReceipts.add(mpesaReceiptNumber);
 
