@@ -32,6 +32,84 @@ async function dbFetch(table, options = {}) {
     }
 }
 
+const https = require('https');
+const http = require('http');
+
+/**
+ * Robust IPv4 Daraja HTTP Client
+ * Bypasses Node undici IPv6 connection issues against api.safaricom.co.ke
+ */
+async function darajaFetch(url, options = {}) {
+    return new Promise((resolve, reject) => {
+        try {
+            const parsedUrl = new URL(url);
+            const bodyStr = options.body ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)) : null;
+
+            const headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 DarajaClient/2.0',
+                'Accept': 'application/json, text/plain, */*',
+                'Connection': 'close',
+                ...(options.headers || {})
+            };
+
+            if (bodyStr && !headers['Content-Type']) {
+                headers['Content-Type'] = 'application/json';
+            }
+            if (bodyStr) {
+                headers['Content-Length'] = Buffer.byteLength(bodyStr);
+            }
+
+            const reqOptions = {
+                protocol: parsedUrl.protocol,
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: options.method || 'GET',
+                headers: headers,
+                family: 4, // Forces IPv4 to avoid node undici ECONNREFUSED/fetch failed
+                timeout: options.timeout || 30000
+            };
+
+            const lib = parsedUrl.protocol === 'https:' ? https : http;
+            const req = lib.request(reqOptions, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    let parsedJson = null;
+                    try {
+                        parsedJson = JSON.parse(data);
+                    } catch (e) {
+                        parsedJson = null;
+                    }
+                    resolve({
+                        ok: res.statusCode >= 200 && res.statusCode < 300,
+                        status: res.statusCode,
+                        headers: res.headers,
+                        json: async () => (parsedJson !== null ? parsedJson : JSON.parse(data)),
+                        text: async () => data,
+                        data: parsedJson
+                    });
+                });
+            });
+
+            req.on('error', (err) => {
+                reject(new Error(`Safaricom Network Request Failed: ${err.message || 'Connection Error'}`));
+            });
+
+            req.on('timeout', () => {
+                req.destroy(new Error('Safaricom Connection Timed Out (30s)'));
+            });
+
+            if (bodyStr) {
+                req.write(bodyStr);
+            }
+            req.end();
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
 class MpesaService {
     constructor() {
         this.env = (process.env.MPESA_ENV || 'production').toLowerCase();
@@ -72,7 +150,7 @@ class MpesaService {
         
         let response;
         try {
-            response = await fetch(targetUrl, {
+            response = await darajaFetch(targetUrl, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Basic ${authBuffer}`,
@@ -275,7 +353,7 @@ class MpesaService {
 
         let res;
         try {
-            res = await fetch(targetUrl, {
+            res = await darajaFetch(targetUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -479,7 +557,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/stkpushquery/v1/query`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -519,7 +597,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/b2c/v1/paymentrequest`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -559,7 +637,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/reversal/v1/request`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -589,7 +667,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/c2b/${version}/registerurl`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -628,7 +706,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/transactionstatus/v1/query`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -665,7 +743,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/accountbalance/v1/query`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -697,7 +775,7 @@ class MpesaService {
         };
 
         const targetUrl = `${this.baseUrl}/mpesa/qrcode/v1/generate`;
-        const res = await fetch(targetUrl, {
+        const res = await darajaFetch(targetUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
