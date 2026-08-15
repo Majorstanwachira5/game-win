@@ -3,6 +3,73 @@
  * Navigation, API calls, Socket.IO, Spin Engine integration, Modals, Toasts
  */
 
+// ─── CLIENT-SIDE DEFENSE & CYBERSECURITY HARDENING SUITE ───────────────────
+(function initClientDefense() {
+    'use strict';
+
+    // 1. Production Console Silence (Hides internal logs, stack traces & debug leaks)
+    if (typeof window !== 'undefined' && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const noop = function() {};
+        window.console = {
+            log: noop,
+            info: noop,
+            warn: noop,
+            debug: noop,
+            dir: noop,
+            table: noop,
+            trace: noop,
+            time: noop,
+            timeEnd: noop,
+            group: noop,
+            groupEnd: noop,
+            error: noop
+        };
+    }
+
+    // 2. Disable Context Menu (Right-Click)
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    }, { capture: true });
+
+    // 3. Disable DevTools & Source Code Inspection Shortcuts
+    document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        // Ctrl+Shift+I / Cmd+Option+I (DevTools Inspect)
+        // Ctrl+Shift+J / Cmd+Option+J (Console)
+        // Ctrl+Shift+C / Cmd+Option+C (Element Selector)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        // Ctrl+U / Cmd+U (View Source)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        // Ctrl+S / Cmd+S (Save Page)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    }, { capture: true });
+
+    // 4. Disable Dragging of Images / Elements
+    document.addEventListener('dragstart', function(e) {
+        if (e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+        }
+    }, { capture: true });
+})();
+
 const getApiBase = () => {
     if (typeof window !== 'undefined' && window.location) {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
