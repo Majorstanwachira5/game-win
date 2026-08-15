@@ -450,7 +450,12 @@ window.handleAuthSubmit = async function (e) {
             localStorage.setItem('spin_jwt_token', res.token);
             localStorage.setItem('spin_user_data', JSON.stringify(res.user));
             window.setAuthenticatedUser(res.user, res.token);
-            if (modal) modal.style.display = 'none';
+            if (window.closeAuthModal) window.closeAuthModal();
+            else if (modal) modal.style.display = 'none';
+
+            // Smooth transition to main dashboard view
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             if (activeMode === 'register') {
                 if (window.showRegBonusModal) window.showRegBonusModal(true);
                 else showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! 200 Free Play Coins credited 🎉`, 'success');
@@ -472,7 +477,12 @@ window.handleAuthSubmit = async function (e) {
             localStorage.setItem('spin_jwt_token', fallbackToken);
             localStorage.setItem('spin_user_data', JSON.stringify(fallbackUser));
             window.setAuthenticatedUser(fallbackUser, fallbackToken);
-            if (modal) modal.style.display = 'none';
+            if (window.closeAuthModal) window.closeAuthModal();
+            else if (modal) modal.style.display = 'none';
+
+            // Smooth transition to main dashboard view
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             if (activeMode === 'register') {
                 if (window.showRegBonusModal) window.showRegBonusModal(true);
                 else showToast(`Welcome ${fallbackUser.name}! 200 Free Play Coins credited 🎉`, 'success');
@@ -499,7 +509,12 @@ window.handleAuthSubmit = async function (e) {
         localStorage.setItem('spin_jwt_token', fallbackToken);
         localStorage.setItem('spin_user_data', JSON.stringify(fallbackUser));
         window.setAuthenticatedUser(fallbackUser, fallbackToken);
-        if (modal) modal.style.display = 'none';
+        if (window.closeAuthModal) window.closeAuthModal();
+        else if (modal) modal.style.display = 'none';
+
+        // Smooth transition to main dashboard view
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
         showToast(`Welcome ${fallbackUser.name}! 🎉`, 'success');
     }
     return false;
