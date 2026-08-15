@@ -942,7 +942,7 @@ window.formatMpesaReason = function (rawReason, code) {
                             if (typeof onPaymentSuccess === 'function') {
                                 onPaymentSuccess();
                             }
-                        }, 1200);
+                        }, 600);
                     } else if (statusRes && statusRes.status === 'FAILED') {
                         clearInterval(pollInterval);
                         newSubmitBtn.disabled = false;
@@ -1000,7 +1000,7 @@ async function performSpin() {
     const wager = APP_STATE.betAmount || 100;
     const isFreeSpin = (user.freeSpins || 0) > 0;
 
-    if (!isFreeSpin) {
+    if (!isFreeSpin && (APP_STATE.balance || 0) < wager) {
         promptDirectMpesaPayAndPlay(wager, 'spin', () => {
             executeSpin(wager);
         });
