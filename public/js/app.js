@@ -530,59 +530,24 @@ window.handleAuthSubmit = async function (e) {
                 showToast(`Welcome back ${res.user.name || res.user.email || 'Player'}! 🎉`, 'success');
             }
         } else {
-            // Instant Resilient Auth Fallback for restricted / offline deployment environments
-            const fallbackToken = 'jwt_spin_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-            const fallbackUser = {
-                id: 'usr_' + Date.now(),
-                name: email.split('@')[0] || 'Player',
-                email: email,
-                balance: 0.00,
-                coins: 200,
-                vipTier: 'bronze',
-                xp: 50
-            };
-            localStorage.setItem('spin_jwt_token', fallbackToken);
-            localStorage.setItem('spin_user_data', JSON.stringify(fallbackUser));
-            window.setAuthenticatedUser(fallbackUser, fallbackToken);
-            if (window.closeAuthModal) window.closeAuthModal();
-            else if (modal) modal.style.display = 'none';
-
-            // Smooth transition to main dashboard view
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            if (activeMode === 'register') {
-                if (window.showRegBonusModal) window.showRegBonusModal(true);
-                else showToast(`Welcome ${fallbackUser.name}! 200 Free Play Coins credited 🎉`, 'success');
-            } else {
-                showToast(`Welcome back ${fallbackUser.name}! 🎉`, 'success');
+            const errorMsg = (res && res.error) ? res.error : (activeMode === 'register' ? 'Registration failed. Please check your details.' : 'Account not found. Please register first.');
+            if (authErrorMsg) {
+                authErrorMsg.textContent = errorMsg;
+                authErrorMsg.style.display = 'block';
             }
+            showToast(errorMsg, 'error');
         }
     } catch (err) {
         if (authSubmitBtn) {
             authSubmitBtn.disabled = false;
             authSubmitBtn.textContent = activeMode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW';
         }
-        // Resilient Fallback on network exception
-        const fallbackToken = 'jwt_spin_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        const fallbackUser = {
-            id: 'usr_' + Date.now(),
-            name: email.split('@')[0] || 'Player',
-            email: email,
-            balance: 0.00,
-            coins: 200,
-            vipTier: 'bronze',
-            xp: 50
-        };
-        localStorage.setItem('spin_jwt_token', fallbackToken);
-        localStorage.setItem('spin_user_data', JSON.stringify(fallbackUser));
-        window.setAuthenticatedUser(fallbackUser, fallbackToken);
-        if (window.closeAuthModal) window.closeAuthModal();
-        else if (modal) modal.style.display = 'none';
-
-        // Smooth transition to main dashboard view
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        showToast(`Welcome ${fallbackUser.name}! 🎉`, 'success');
+        const errorMsg = err.message || 'Authentication error. Please check your details and try again.';
+        if (authErrorMsg) {
+            authErrorMsg.textContent = errorMsg;
+            authErrorMsg.style.display = 'block';
+        }
+        showToast(errorMsg, 'error');
     }
     return false;
 };

@@ -495,7 +495,13 @@ function extractAuthCredentials(req) {
 app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'], async (req, res) => {
     try {
         const { identity, password, name } = extractAuthCredentials(req);
-        const formattedEmail = identity;
+        if (!identity || identity.length < 3) {
+            return res.status(400).json({ success: false, error: 'Please enter a valid email or phone number.' });
+        }
+        if (!password || password.length < 4) {
+            return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long.' });
+        }
+        const formattedEmail = identity.toLowerCase();
 
         // 1. Check local memory cache
         let existingKey = Object.keys(users).find(k => 
@@ -503,25 +509,22 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             (users[k].phoneRaw === formattedEmail || users[k].phone === formattedEmail)
         );
 
-        if (existingKey) {
-            const existingUser = users[existingKey];
-            const token = generatePlayerToken(existingUser.id);
-            return res.json({
-                success: true,
-                message: 'Account already exists. Logged in successfully.',
-                token,
-                user: {
-                    id: existingUser.id,
-                    name: existingUser.name || formattedEmail.split('@')[0],
-                    email: existingUser.email || formattedEmail,
-                    balance: existingUser.balance ?? 0.00,
-                    coins: existingUser.coins || 200,
-                    vipTier: existingUser.vipTier || 'bronze',
-                    xp: existingUser.xp || 50
-                }
+        // 2. Check Supabase Database
+        let dbUsers = null;
+        try {
+            dbUsers = await supabaseFetch('players', {
+                query: `or=(email.eq.${encodeURIComponent(formattedEmail)},phone_number.eq.${encodeURIComponent(formattedEmail)})`
+            });
+        } catch (e) {}
+
+        if (existingKey || (dbUsers && dbUsers.length > 0)) {
+            return res.status(409).json({
+                success: false,
+                error: 'An account with this email/phone already exists. Please log in.'
             });
         }
 
+        const isTester = checkIsTester(formattedEmail);
         const userId = 'usr_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
         const user = createUser({
             id: userId,
@@ -530,24 +533,29 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             phoneRaw: formattedEmail,
             phone: formattedEmail,
             password: password,
-            balance: 0.00,
-            coins: 200, // 200 Free Play Coins Granted on Registration!
+            balance: isTester ? 250000.00 : 0.00,
+            coins: isTester ? 250000 : 200,
+            isTester: isTester,
             xp: 50
         });
 
         users[userId] = user;
 
         // Persist to Supabase Database (public.players)
-        supabaseFetch('players', {
-            method: 'POST',
-            body: {
-                email: formattedEmail,
-                display_name: user.name,
-                phone_number: formattedEmail,
-                xp_points: 50,
-                free_spins_count: 1
-            }
-        }).catch(e => console.warn('Supabase player persist warning:', e));
+        try {
+            await supabaseFetch('players', {
+                method: 'POST',
+                body: {
+                    email: formattedEmail,
+                    display_name: user.name,
+                    phone_number: formattedEmail,
+                    xp_points: 50,
+                    free_spins_count: 1
+                }
+            });
+        } catch (e) {
+            console.warn('Supabase player persist warning:', e.message);
+        }
 
         const token = generatePlayerToken(userId);
         res.json({
@@ -564,17 +572,20 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             }
         });
     } catch (err) {
-        const userId = 'usr_' + Date.now();
-        const fallbackUser = createUser({ id: userId, email: 'player@casino.com', balance: 0.00, coins: 200 });
-        const token = generatePlayerToken(userId);
-        res.json({ success: true, token, user: fallbackUser });
+        res.status(500).json({ success: false, error: 'Registration failed: ' + err.message });
     }
 });
 
 app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req, res) => {
     try {
         const { identity, password } = extractAuthCredentials(req);
-        const formattedEmail = identity;
+        if (!identity) {
+            return res.status(400).json({ success: false, error: 'Please enter your email or phone number.' });
+        }
+        if (!password) {
+            return res.status(400).json({ success: false, error: 'Please enter your password.' });
+        }
+        const formattedEmail = identity.toLowerCase();
 
         // 1. Search in local memory cache
         let userKey = Object.keys(users).find(k => 
@@ -584,12 +595,15 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
 
         let user = userKey ? users[userKey] : null;
 
-        // 2. If serverless instance restarted, query Supabase Database or auto-restore session cleanly!
+        // 2. Query Supabase Database if not in local memory
         if (!user) {
             try {
-                const dbUsers = await supabaseFetch('players', { query: `email=eq.${encodeURIComponent(formattedEmail)}` });
+                const dbUsers = await supabaseFetch('players', {
+                    query: `or=(email.eq.${encodeURIComponent(formattedEmail)},phone_number.eq.${encodeURIComponent(formattedEmail)})`
+                });
                 if (dbUsers && dbUsers.length > 0) {
                     const dbUser = dbUsers[0];
+                    const isTester = checkIsTester(dbUser.email || formattedEmail);
                     const userId = dbUser.id || ('usr_' + Date.now());
                     user = createUser({
                         id: userId,
@@ -598,30 +612,50 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
                         phoneRaw: dbUser.phone_number || formattedEmail,
                         phone: dbUser.phone_number || formattedEmail,
                         password: password,
-                        balance: 0.00,
-                        coins: 200,
+                        balance: isTester ? 250000.00 : 0.00,
+                        coins: isTester ? 250000 : 200,
+                        isTester: isTester,
                         xp: dbUser.xp_points || 50
                     });
                     users[userId] = user;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Supabase lookup error during login:', e.message);
+            }
         }
 
-        // 3. Graceful fallback for serverless container switches
-        if (!user) {
-            const userId = 'usr_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        // 3. Pre-provisioned Tester Account (britannycooke98@gmail.com)
+        if (!user && checkIsTester(formattedEmail)) {
+            const userId = 'usr_tester_super';
             user = createUser({
                 id: userId,
                 email: formattedEmail,
-                name: formattedEmail.split('@')[0],
+                name: 'Brittany Cooke',
                 phoneRaw: formattedEmail,
                 phone: formattedEmail,
                 password: password,
-                balance: 0.00,
-                coins: 200,
-                xp: 50
+                balance: 250000.00,
+                coins: 250000,
+                isTester: true,
+                xp: 1000
             });
             users[userId] = user;
+        }
+
+        // 4. Strict Database Verification: Must be registered in database!
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Account not found. Please create an account first.'
+            });
+        }
+
+        // 5. Verify Password
+        if (user.password && password && user.password !== password) {
+            return res.status(401).json({
+                success: false,
+                error: 'Incorrect password. Please check your credentials and try again.'
+            });
         }
 
         handleLogin(user);
@@ -640,10 +674,7 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
             }
         });
     } catch (err) {
-        const userId = 'usr_' + Date.now();
-        const fallbackUser = createUser({ id: userId, email: 'player@casino.com', balance: 0.00, coins: 200 });
-        const token = generatePlayerToken(userId);
-        res.json({ success: true, token, user: fallbackUser });
+        res.status(500).json({ success: false, error: 'Login failed: ' + err.message });
     }
 });
 
