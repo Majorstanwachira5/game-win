@@ -17,6 +17,24 @@ function initMysteryBox() {
 }
 
 async function openMysteryBox(tier) {
+  const prices = { bronze: 100, silver: 250, gold: 500, platinum: 1000 };
+  const cost = prices[tier] || 100;
+
+  if (typeof APP_STATE !== "undefined" && APP_STATE.isTester) {
+    executeOpenMysteryBox(tier);
+    return;
+  }
+
+  if (typeof window.promptDirectMpesaPayAndPlay === "function") {
+    window.promptDirectMpesaPayAndPlay(cost, `mystery_box_${tier}`, () => {
+      executeOpenMysteryBox(tier);
+    });
+  } else {
+    executeOpenMysteryBox(tier);
+  }
+}
+
+async function executeOpenMysteryBox(tier) {
   const btn = document.querySelector(`.tier-open-btn[data-tier="${tier}"]`);
   if (btn) {
     btn.disabled = true;
@@ -190,6 +208,22 @@ async function rollDice() {
     return;
   }
 
+  const wager = Number(diceBet) || 100;
+  if (typeof APP_STATE !== "undefined" && APP_STATE.isTester) {
+    executeRollDice();
+    return;
+  }
+
+  if (typeof window.promptDirectMpesaPayAndPlay === "function") {
+    window.promptDirectMpesaPayAndPlay(wager, "dice_roll", () => {
+      executeRollDice();
+    });
+  } else {
+    executeRollDice();
+  }
+}
+
+async function executeRollDice() {
   const btn = document.getElementById("rollDiceBtn");
   const die1 = document.getElementById("die1");
   const die2 = document.getElementById("die2");
@@ -409,6 +443,24 @@ async function pickCard(cardIndex) {
   }
 
   if (!cardsActive) return;
+
+  const wager = Number(cardBet) || 100;
+  if (typeof APP_STATE !== "undefined" && APP_STATE.isTester) {
+    executePickCard(cardIndex);
+    return;
+  }
+
+  if (typeof window.promptDirectMpesaPayAndPlay === "function") {
+    window.promptDirectMpesaPayAndPlay(wager, "pick_card", () => {
+      executePickCard(cardIndex);
+    });
+  } else {
+    executePickCard(cardIndex);
+  }
+}
+
+async function executePickCard(cardIndex) {
+  if (!cardsActive) return;
   cardsActive = false;
 
   const resultEl = document.getElementById("cardResult");
@@ -612,6 +664,22 @@ function renderLadderLevels(currentLevel = 0) {
 }
 
 async function startLadder() {
+  const wager = Number(ladderBet) || 100;
+  if (typeof APP_STATE !== "undefined" && APP_STATE.isTester) {
+    executeStartLadder();
+    return;
+  }
+
+  if (typeof window.promptDirectMpesaPayAndPlay === "function") {
+    window.promptDirectMpesaPayAndPlay(wager, "prize_ladder", () => {
+      executeStartLadder();
+    });
+  } else {
+    executeStartLadder();
+  }
+}
+
+async function executeStartLadder() {
   const btn = document.getElementById("startLadderBtn");
   btn.disabled = true;
   btn.textContent = "Starting...";
@@ -755,10 +823,22 @@ function initLucky7() {
 window.playLucky7Slot = async function () {
   if (lucky7Spinning) return;
 
-  if (APP_STATE.balance < lucky7Bet) {
-    showToast("Insufficient wallet balance to spin slot reels!", "error");
+  const wager = Number(lucky7Bet) || 100;
+  if (typeof APP_STATE !== "undefined" && APP_STATE.isTester) {
+    executeLucky7Slot();
     return;
   }
+
+  if (typeof window.promptDirectMpesaPayAndPlay === "function") {
+    window.promptDirectMpesaPayAndPlay(wager, "lucky7_slot", () => {
+      executeLucky7Slot();
+    });
+  } else {
+    executeLucky7Slot();
+  }
+};
+
+async function executeLucky7Slot() {
 
   lucky7Spinning = true;
   const spinBtn = document.getElementById("spinLucky7Btn");
