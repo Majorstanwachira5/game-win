@@ -42,8 +42,9 @@ class MpesaService {
         this.consumerKey = (process.env.MPESA_CONSUMER_KEY || '').trim();
         this.consumerSecret = (process.env.MPESA_CONSUMER_SECRET || '').trim();
         this.passkey = (process.env.MPESA_PASSKEY || '').trim();
-        this.businessShortCode = (process.env.MPESA_PAYBILL || process.env.MPESA_SHORTCODE || '4502021').trim();
-        this.transactionType = process.env.MPESA_TRANSACTION_TYPE || 'CustomerPayBillOnline';
+        this.businessShortCode = (process.env.MPESA_SHORTCODE || process.env.MPESA_PAYBILL || '4502021').trim();
+        this.tillNumber = (process.env.MPESA_TILL || '1584329').trim();
+        this.transactionType = (process.env.MPESA_TRANSACTION_TYPE || (this.tillNumber ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline')).trim();
         this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://www.playcoin.live/api/mpesa/callback';
 
         // Global store for pending transactions & anti-replay defense across serverless lambdas
@@ -240,6 +241,9 @@ class MpesaService {
         const token = await this.getAccessToken();
         const { password, timestamp } = this.generateStkPassword();
 
+        const isBuyGoods = this.transactionType === 'CustomerBuyGoodsOnline';
+        const partyB = (isBuyGoods && this.tillNumber) ? this.tillNumber : this.businessShortCode;
+
         const requestBody = {
             BusinessShortCode: this.businessShortCode,
             Password: password,
@@ -247,7 +251,7 @@ class MpesaService {
             TransactionType: this.transactionType,
             Amount: Math.max(1, Math.round(Number(amount))),
             PartyA: phone,
-            PartyB: this.businessShortCode,
+            PartyB: partyB,
             PhoneNumber: phone,
             CallBackURL: this.callbackUrl,
             AccountReference: accountReference,
