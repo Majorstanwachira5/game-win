@@ -1064,7 +1064,12 @@ function bindDepositModal() {
 
             confirmBtn.disabled = true;
             confirmBtn.textContent = '⌛ INITIATING STK PUSH...';
-            if (statusBanner) statusBanner.style.display = 'none';
+            if (statusBanner) {
+                statusBanner.style.display = 'block';
+                statusBanner.style.borderColor = 'var(--cyan-accent)';
+                if (statusTitle) statusTitle.textContent = '📡 Calling Safaricom Daraja API...';
+                if (statusDesc) statusDesc.textContent = `Sending STK Push request for KSh ${amount.toLocaleString()} to ${phone}...`;
+            }
 
             try {
                 const res = await apiPost('/api/deposit', {
@@ -1074,14 +1079,21 @@ function bindDepositModal() {
                 });
 
                 if (!res || !res.success) {
-                    throw new Error(res?.error || res?.ResponseDescription || 'STK Push initiation failed.');
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = '⚡ RETRY M-PESA DEPOSIT';
+                    if (statusBanner) {
+                        statusBanner.style.borderColor = '#ff4444';
+                        if (statusTitle) statusTitle.textContent = '❌ Daraja API Error';
+                        if (statusDesc) statusDesc.textContent = res?.error || res?.ResponseDescription || 'Safaricom Daraja STK push rejected.';
+                    }
+                    showToast(res?.error || 'Failed to communicate with Safaricom Daraja API', 'error');
+                    return;
                 }
 
                 if (statusBanner) {
-                    statusBanner.style.display = 'block';
-                    statusBanner.style.borderColor = 'var(--cyan-accent)';
-                    if (statusTitle) statusTitle.textContent = '📲 STK Push Prompt Sent!';
-                    if (statusDesc) statusDesc.textContent = `A prompt has been sent to ${phone}. Enter your M-Pesa PIN on your phone to complete payment of KSh ${amount.toLocaleString()}.`;
+                    statusBanner.style.borderColor = 'var(--gold-primary)';
+                    if (statusTitle) statusTitle.textContent = '📡 Request Accepted by Safaricom!';
+                    if (statusDesc) statusDesc.textContent = `CheckoutID: ${res.CheckoutRequestID}. Enter M-Pesa PIN on your phone.`;
                 }
 
                 confirmBtn.textContent = '📲 AWAITING M-PESA PIN...';
@@ -1091,7 +1103,7 @@ function bindDepositModal() {
                 if (!checkoutRequestId) return;
 
                 let attempts = 0;
-                const maxAttempts = 20;
+                const maxAttempts = 30;
                 const pollInterval = setInterval(async () => {
                     attempts++;
                     try {
@@ -1101,7 +1113,7 @@ function bindDepositModal() {
                             if (statusBanner) {
                                 statusBanner.style.borderColor = 'var(--gold-primary)';
                                 if (statusTitle) statusTitle.textContent = '✅ Payment Confirmed!';
-                                if (statusDesc) statusDesc.textContent = `KSh ${amount.toLocaleString()} credited successfully!`;
+                                if (statusDesc) statusDesc.textContent = `KSh ${amount.toLocaleString()} credited successfully! Receipt: ${statusRes.mpesaReceiptNumber || 'OK'}`;
                             }
                             showToast(`✅ Payment Confirmed! KSh ${amount.toLocaleString()} credited to your wallet!`, 'success');
                             
@@ -1122,7 +1134,7 @@ function bindDepositModal() {
                             if (statusBanner) {
                                 statusBanner.style.borderColor = '#ff4444';
                                 if (statusTitle) statusTitle.textContent = '❌ Payment Failed';
-                                if (statusDesc) statusDesc.textContent = statusRes.reason || 'Payment cancelled or timed out.';
+                                if (statusDesc) statusDesc.textContent = statusRes.reason || 'Payment rejected by Safaricom or cancelled by user.';
                             }
                             showToast(`Payment failed: ${statusRes.reason || 'Cancelled by user'}`, 'error');
                             confirmBtn.disabled = false;
@@ -1136,11 +1148,15 @@ function bindDepositModal() {
                         clearInterval(pollInterval);
                         if (confirmBtn.disabled) {
                             confirmBtn.disabled = false;
-                            confirmBtn.textContent = '⚡ SEND M-PESA STK PUSH PROMPT';
+                            confirmBtn.textContent = '⚡ RETRY M-PESA DEPOSIT';
+                            if (statusBanner) {
+                                statusBanner.style.borderColor = '#ff4444';
+                                if (statusTitle) statusTitle.textContent = '❌ Callback Timeout';
+                                if (statusDesc) statusDesc.textContent = 'No callback received from Safaricom after 75 seconds.';
+                            }
                         }
                     }
-                }, 3000);
-
+                }, 2500);
             } catch (err) {
                 showToast(err.message || 'M-Pesa STK Push failed. Check your details.', 'error');
                 confirmBtn.disabled = false;
