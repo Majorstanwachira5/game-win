@@ -1219,31 +1219,16 @@ app.get('/api/deposit/status/:checkoutRequestId', requirePlayerAuth, (req, res) 
 
 app.post('/api/deposit/authorize-pin', requirePlayerAuth, (req, res) => {
     try {
-        const userId = req.userId || req.body.userId || 'demo-user-1';
-        const { checkoutRequestId, pin = '1234' } = req.body;
+        const { checkoutRequestId } = req.body;
+        const tx = mpesaService.getTransactionStatus(checkoutRequestId);
+        const userId = req.userId || req.body.userId || tx?.userId || 'demo-user-1';
         const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
-        const tx = mpesaService.getTransactionStatus(checkoutRequestId);
-        const amount = tx?.amount || 100;
-
-        walletService.creditWallet(user, amount, 'KSH', 'M-Pesa Deposit');
-        walletService.writeLedger(user, amount, 'M-Pesa Deposit', user.balance, 'KSH');
-        const coinsGained = rewardEngine.calculateRewardCoins(amount);
-        walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
-
-        if (checkoutRequestId && mpesaService.pendingTransactions.has(checkoutRequestId)) {
-            const pendingTx = mpesaService.pendingTransactions.get(checkoutRequestId);
-            pendingTx.status = 'COMPLETED';
-            pendingTx.mpesaReceiptNumber = 'MP' + Date.now();
-            pendingTx.amount = amount;
-            mpesaService.pendingTransactions.set(checkoutRequestId, pendingTx);
-        }
-
         res.json({
-            success: true,
-            status: 'COMPLETED',
-            amount,
-            coinsGained,
+            success: tx.status === 'COMPLETED',
+            status: tx.status,
+            reason: tx.reason || (tx.status === 'COMPLETED' ? 'Payment confirmed by Safaricom' : 'Awaiting M-Pesa PIN confirmation from phone'),
+            amount: tx.amount || 0,
             user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
         });
     } catch (err) {
@@ -1253,16 +1238,18 @@ app.post('/api/deposit/authorize-pin', requirePlayerAuth, (req, res) => {
 
 app.post('/api/mpesa/callback', (req, res) => {
     try {
-        const userId = req.query.userId || req.body.userId || 'demo-user-1';
-        const user = getOrCreateUser(userId);
-        const outcome = mpesaService.processCallback(req.body, user);
+        const outcome = mpesaService.processCallback(req.body);
         
-        if (outcome.success && outcome.amount > 0) {
+        if (outcome.success && outcome.resultCode === 0 && outcome.userId && outcome.amount > 0) {
+            const user = getOrCreateUser(outcome.userId);
+            walletService.creditWallet(user, outcome.amount, 'KSH', 'M-Pesa Deposit');
+            walletService.writeLedger(user, outcome.amount, 'M-Pesa Deposit', user.balance, 'KSH');
             const coinsGained = rewardEngine.calculateRewardCoins(outcome.amount);
             walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
+            console.log(`[MPESA WALLET CREDITED] User: ${user.id}, Balance: KSh ${user.balance}, Amount: KSh ${outcome.amount}`);
         }
 
-        res.json(outcome);
+        res.json({ ResultCode: 0, ResultDesc: "Callback accepted successfully" });
     } catch (err) {
         res.status(400).json({ ResultCode: 1, ResultDesc: err.message });
     }
