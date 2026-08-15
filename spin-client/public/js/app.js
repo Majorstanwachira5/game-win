@@ -825,10 +825,13 @@ function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
         localStorage.setItem('spin_user_data', JSON.stringify(savedUser));
 
         newSubmitBtn.disabled = true;
-        newSubmitBtn.textContent = '⏳ SENDING TO MPESA...';
+        newSubmitBtn.textContent = '⏳ CALLING DARAJA STK ENDPOINT...';
         if (statusBanner) {
             statusBanner.style.display = 'block';
-            if (statusText) statusText.textContent = `📲 Sending M-Pesa prompt to ${phone}...`;
+            statusBanner.style.background = 'rgba(0, 240, 255, 0.1)';
+            statusBanner.style.border = '1px solid #00f0ff';
+            statusBanner.style.color = '#00f0ff';
+            if (statusText) statusText.textContent = `📡 Hitting Safaricom Daraja STK Push endpoint for ${phone}...`;
         }
 
         try {
@@ -841,13 +844,25 @@ function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
 
             if (!res || !res.success) {
                 newSubmitBtn.disabled = false;
-                newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
-                if (statusBanner) statusBanner.style.display = 'none';
-                showToast(res?.error || 'Failed to send M-Pesa prompt', 'error');
+                newSubmitBtn.textContent = '⚡ RETRY PAY & PLAY';
+                if (statusBanner) {
+                    statusBanner.style.display = 'block';
+                    statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                    statusBanner.style.border = '1px solid #ff4444';
+                    statusBanner.style.color = '#ff6666';
+                    const rawError = res?.error || res?.message || 'Daraja STK push failed';
+                    if (statusText) statusText.textContent = `❌ DARAJA API ERROR: ${rawError}`;
+                }
+                showToast(res?.error || 'Failed to communicate with Safaricom Daraja API', 'error');
                 return;
             }
 
-            if (statusText) statusText.textContent = `📲 M-Pesa prompt sent to ${phone}. Enter your M-Pesa PIN on your phone screen to play!`;
+            if (statusBanner) {
+                statusBanner.style.background = 'rgba(255, 215, 0, 0.15)';
+                statusBanner.style.border = '1px solid #ffd700';
+                statusBanner.style.color = '#ffe066';
+                if (statusText) statusText.textContent = `📡 Request Accepted by Safaricom! CheckoutID: ${res.CheckoutRequestID}. Awaiting M-Pesa Callback...`;
+            }
 
             const checkoutRequestId = res.CheckoutRequestID;
             if (!checkoutRequestId) return;
@@ -860,23 +875,37 @@ function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
                     const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
                     if (statusRes && statusRes.status === 'COMPLETED') {
                         clearInterval(pollInterval);
-                        if (modal) {
-                            modal.classList.remove('open', 'active');
-                            modal.style.display = 'none';
+                        if (statusBanner) {
+                            statusBanner.style.background = 'rgba(0, 255, 100, 0.15)';
+                            statusBanner.style.border = '1px solid #00ff66';
+                            statusBanner.style.color = '#00ff66';
+                            if (statusText) statusText.textContent = `✅ Payment Confirmed by Safaricom! Receipt: ${statusRes.mpesaReceiptNumber || 'OK'}`;
                         }
                         showToast(`✅ Payment Received! KSh ${amount.toLocaleString()} deposited! Playing now...`, 'success');
                         if (statusRes.user) {
                             updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
                         }
                         triggerConfetti();
-                        if (typeof onPaymentSuccess === 'function') {
-                            onPaymentSuccess();
-                        }
+                        setTimeout(() => {
+                            if (modal) {
+                                modal.classList.remove('open', 'active');
+                                modal.style.display = 'none';
+                            }
+                            if (typeof onPaymentSuccess === 'function') {
+                                onPaymentSuccess();
+                            }
+                        }, 1200);
                     } else if (statusRes && statusRes.status === 'FAILED') {
                         clearInterval(pollInterval);
                         newSubmitBtn.disabled = false;
-                        newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
-                        if (statusBanner) statusBanner.style.display = 'none';
+                        newSubmitBtn.textContent = '⚡ RETRY PAY & PLAY';
+                        if (statusBanner) {
+                            statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                            statusBanner.style.border = '1px solid #ff4444';
+                            statusBanner.style.color = '#ff6666';
+                            const reasonDesc = statusRes.reason || 'Payment rejected or cancelled';
+                            if (statusText) statusText.textContent = `❌ Safaricom Payment Rejected: ${reasonDesc}`;
+                        }
                         showToast(`❌ Payment failed: ${statusRes.reason || 'Cancelled by user'}`, 'error');
                     }
                 } catch (e) {
@@ -886,13 +915,25 @@ function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
                     newSubmitBtn.disabled = false;
-                    newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
+                    newSubmitBtn.textContent = '⚡ RETRY PAY & PLAY';
+                    if (statusBanner) {
+                        statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                        statusBanner.style.border = '1px solid #ff4444';
+                        statusBanner.style.color = '#ff6666';
+                        if (statusText) statusText.textContent = `❌ Timeout: No Safaricom callback received after 75s. Retrying endpoint...`;
+                    }
                 }
             }, 2500);
         } catch (err) {
             newSubmitBtn.disabled = false;
-            newSubmitBtn.textContent = '⚡ PAY & PLAY NOW';
-            if (statusBanner) statusBanner.style.display = 'none';
+            newSubmitBtn.textContent = '⚡ RETRY PAY & PLAY';
+            if (statusBanner) {
+                statusBanner.style.display = 'block';
+                statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                statusBanner.style.border = '1px solid #ff4444';
+                statusBanner.style.color = '#ff6666';
+                if (statusText) statusText.textContent = `❌ CONNECTION ERROR: ${err.message || 'M-Pesa endpoint connection error'}`;
+            }
             showToast(err.message || 'M-Pesa connection error', 'error');
         }
     });
