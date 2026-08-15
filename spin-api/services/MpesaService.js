@@ -1,10 +1,36 @@
 /**
  * services/MpesaService.js — Forensic Production Safaricom Daraja Engine
  * Zero fake success. Byte-accurate East Africa Time (UTC+3) password hashing,
- * full diagnostic logging, strict Daraja API response validation, and secure callback handling.
+ * full diagnostic logging, strict Daraja API response validation, persistent database transaction state,
+ * and secure callback handling.
  */
 const walletService = require('./WalletService');
 const platformEvents = require('../events/EventEmitter');
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tyznjnbpsobrapbamtbn.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_8i5lE6rUTJR2q-lw3tWmrA_6AsG2b23';
+
+async function dbFetch(table, options = {}) {
+    const url = `${SUPABASE_URL}/rest/v1/${table}${options.query ? '?' + options.query : ''}`;
+    const headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': options.prefer || 'return=representation'
+    };
+    try {
+        const res = await fetch(url, {
+            method: options.method || 'GET',
+            headers,
+            body: options.body ? JSON.stringify(options.body) : undefined
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.warn('[MPESA DB PERSIST WARNING]', e.message);
+        return null;
+    }
+}
 
 class MpesaService {
     constructor() {
@@ -114,6 +140,91 @@ class MpesaService {
     }
 
     /**
+     * Persist Transaction Record to Persistent Supabase Database & Memory Map
+     */
+    async recordTransaction(tx) {
+        if (!tx || !tx.checkoutRequestId) return;
+        this.pendingTransactions.set(tx.checkoutRequestId, tx);
+
+        try {
+            const dbPayload = {
+                mpesa_checkout_request_id: tx.checkoutRequestId,
+                phone_number: tx.phone,
+                amount: tx.amount,
+                status: tx.status.toLowerCase(),
+                metadata: {
+                    userId: tx.userId,
+                    merchantRequestId: tx.merchantRequestId || '',
+                    reason: tx.reason || '',
+                    resultCode: tx.resultCode !== undefined ? tx.resultCode : null,
+                    resultDesc: tx.resultDesc || ''
+                }
+            };
+            if (tx.mpesaReceiptNumber) dbPayload.mpesa_receipt_number = tx.mpesaReceiptNumber;
+
+            const existing = await dbFetch('transactions', {
+                query: `mpesa_checkout_request_id=eq.${encodeURIComponent(tx.checkoutRequestId)}`
+            });
+
+            if (existing && existing.length > 0) {
+                await dbFetch('transactions', {
+                    method: 'PATCH',
+                    query: `mpesa_checkout_request_id=eq.${encodeURIComponent(tx.checkoutRequestId)}`,
+                    body: dbPayload
+                });
+            } else {
+                await dbFetch('transactions', {
+                    method: 'POST',
+                    body: {
+                        player_id: tx.userId && tx.userId.length === 36 ? tx.userId : '00000000-0000-0000-0000-000000000001',
+                        type: 'deposit',
+                        ...dbPayload
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('[MPESA DB RECORD WARNING]', e.message);
+        }
+    }
+
+    /**
+     * Retrieve Transaction Record by Genuine CheckoutRequestID (Memory + Supabase DB Fallback)
+     */
+    async getTransaction(checkoutRequestId) {
+        if (!checkoutRequestId) return null;
+
+        if (this.pendingTransactions.has(checkoutRequestId)) {
+            return this.pendingTransactions.get(checkoutRequestId);
+        }
+
+        try {
+            const rows = await dbFetch('transactions', {
+                query: `mpesa_checkout_request_id=eq.${encodeURIComponent(checkoutRequestId)}`
+            });
+            if (rows && rows.length > 0) {
+                const r = rows[0];
+                const meta = r.metadata || {};
+                const tx = {
+                    userId: meta.userId || 'demo-user-1',
+                    phone: r.phone_number,
+                    amount: Number(r.amount),
+                    status: (r.status || 'pending').toUpperCase(),
+                    checkoutRequestId: r.mpesa_checkout_request_id,
+                    merchantRequestId: meta.merchantRequestId || '',
+                    mpesaReceiptNumber: r.mpesa_receipt_number || null,
+                    reason: meta.reason || null
+                };
+                this.pendingTransactions.set(checkoutRequestId, tx);
+                return tx;
+            }
+        } catch (e) {
+            console.warn('[MPESA DB LOOKUP WARNING]', e.message);
+        }
+
+        return null;
+    }
+
+    /**
      * Initiate M-Pesa Express STK Push
      */
     async initiateStkPush(userId, rawPhone, amount, accountReference = 'SpinWin') {
@@ -203,8 +314,7 @@ class MpesaService {
         const merchantRequestId = data.MerchantRequestID || '';
         const customerMessage = data.CustomerMessage || 'Request accepted for processing';
 
-        // Register pending transaction with genuine Safaricom CheckoutRequestID
-        this.pendingTransactions.set(checkoutRequestId, {
+        const tx = {
             userId,
             phone,
             amount: Number(amount),
@@ -212,7 +322,10 @@ class MpesaService {
             createdAt: Date.now(),
             checkoutRequestId,
             merchantRequestId
-        });
+        };
+
+        // Register pending transaction in persistent DB & memory
+        await this.recordTransaction(tx);
 
         platformEvents.emitEvent('STK_PUSH_INITIATED', {
             userId,
@@ -234,7 +347,7 @@ class MpesaService {
     /**
      * Process Authoritative Safaricom Webhook Callback & Credit User Wallet
      */
-    processCallback(callbackBody) {
+    async processCallback(callbackBody) {
         if (!callbackBody || !callbackBody.Body || !callbackBody.Body.stkCallback) {
             return { success: false, message: 'Invalid callback payload structure' };
         }
@@ -250,8 +363,8 @@ class MpesaService {
             return { success: false, message: 'Missing CheckoutRequestID in callback' };
         }
 
-        // Look up registered internal transaction
-        const pendingTx = this.pendingTransactions.get(checkoutRequestId);
+        // Retrieve transaction from Memory or Persistent Database
+        const pendingTx = await this.getTransaction(checkoutRequestId);
         const userId = pendingTx ? pendingTx.userId : null;
 
         if (resultCode === 0) {
@@ -287,7 +400,9 @@ class MpesaService {
                 pendingTx.status = 'COMPLETED';
                 pendingTx.mpesaReceiptNumber = mpesaReceiptNumber;
                 pendingTx.completedAmount = amount;
-                this.pendingTransactions.set(checkoutRequestId, pendingTx);
+                pendingTx.resultCode = resultCode;
+                pendingTx.resultDesc = resultDesc;
+                await this.recordTransaction(pendingTx);
             }
 
             platformEvents.emitEvent('PAYMENT_RECEIVED', {
@@ -311,7 +426,9 @@ class MpesaService {
         if (pendingTx) {
             pendingTx.status = 'FAILED';
             pendingTx.reason = resultDesc;
-            this.pendingTransactions.set(checkoutRequestId, pendingTx);
+            pendingTx.resultCode = resultCode;
+            pendingTx.resultDesc = resultDesc;
+            await this.recordTransaction(pendingTx);
         }
 
         return {
@@ -323,14 +440,15 @@ class MpesaService {
     }
 
     /**
-     * Check transaction status by CheckoutRequestID
+     * Check transaction status by CheckoutRequestID (DB + Memory Async Support)
      */
-    getTransactionStatus(checkoutRequestId) {
+    async getTransactionStatus(checkoutRequestId) {
         if (!checkoutRequestId) {
             return { status: 'NOT_FOUND' };
         }
-        if (this.pendingTransactions.has(checkoutRequestId)) {
-            return this.pendingTransactions.get(checkoutRequestId);
+        const tx = await this.getTransaction(checkoutRequestId);
+        if (tx) {
+            return tx;
         }
         return { status: 'PENDING', checkoutRequestId, createdAt: Date.now() };
     }

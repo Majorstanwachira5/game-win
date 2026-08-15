@@ -1205,9 +1205,9 @@ app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAu
     }
 });
 
-app.get('/api/deposit/status/:checkoutRequestId', requirePlayerAuth, (req, res) => {
+app.get('/api/deposit/status/:checkoutRequestId', requirePlayerAuth, async (req, res) => {
     const { checkoutRequestId } = req.params;
-    const tx = mpesaService.getTransactionStatus(checkoutRequestId);
+    const tx = await mpesaService.getTransactionStatus(checkoutRequestId);
     const userId = req.userId || req.query.userId || 'demo-user-1';
     const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
@@ -1217,18 +1217,18 @@ app.get('/api/deposit/status/:checkoutRequestId', requirePlayerAuth, (req, res) 
     });
 });
 
-app.post('/api/deposit/authorize-pin', requirePlayerAuth, (req, res) => {
+app.post('/api/deposit/authorize-pin', requirePlayerAuth, async (req, res) => {
     try {
         const { checkoutRequestId } = req.body;
-        const tx = mpesaService.getTransactionStatus(checkoutRequestId);
+        const tx = await mpesaService.getTransactionStatus(checkoutRequestId);
         const userId = req.userId || req.body.userId || tx?.userId || 'demo-user-1';
         const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
         res.json({
-            success: tx.status === 'COMPLETED',
-            status: tx.status,
-            reason: tx.reason || (tx.status === 'COMPLETED' ? 'Payment confirmed by Safaricom' : 'Awaiting M-Pesa PIN confirmation from phone'),
-            amount: tx.amount || 0,
+            success: tx?.status === 'COMPLETED',
+            status: tx?.status || 'PENDING',
+            reason: tx?.reason || (tx?.status === 'COMPLETED' ? 'Payment confirmed by Safaricom' : 'Awaiting M-Pesa PIN confirmation from phone'),
+            amount: tx?.amount || 0,
             user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
         });
     } catch (err) {
@@ -1236,9 +1236,9 @@ app.post('/api/deposit/authorize-pin', requirePlayerAuth, (req, res) => {
     }
 });
 
-app.post('/api/mpesa/callback', (req, res) => {
+app.post('/api/mpesa/callback', async (req, res) => {
     try {
-        const outcome = mpesaService.processCallback(req.body);
+        const outcome = await mpesaService.processCallback(req.body);
         
         if (outcome.success && outcome.resultCode === 0 && outcome.userId && outcome.amount > 0) {
             const user = getOrCreateUser(outcome.userId);
