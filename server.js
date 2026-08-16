@@ -733,7 +733,23 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
         user.totalWagered += actualWager;
         financialStats.totalSpins += 1;
 
-        const wonSlice = getRandomSlice();
+        let wonSlice;
+        if (isTester) {
+            wonSlice = getRandomSlice();
+        } else if (user.trialCount <= 5) {
+            // First 5 spins rule: Award Free Spins (60% chance) or Try Again (40% chance)
+            const isFreeSpinDrop = Math.random() < 0.60;
+            if (isFreeSpinDrop) {
+                const fsSlices = wheelSlices.filter(s => s.type === 'free_spin');
+                wonSlice = fsSlices[Math.floor(Math.random() * fsSlices.length)] || wheelSlices.find(s => s.id === 'free_spin_1');
+            } else {
+                const lossSlices = wheelSlices.filter(s => s.type === 'loss');
+                wonSlice = lossSlices[Math.floor(Math.random() * lossSlices.length)] || wheelSlices.find(s => s.id === 'try_again_1');
+            }
+        } else {
+            wonSlice = getRandomSlice();
+        }
+
         const sliceIndex = wheelSlices.findIndex(s => s.id === wonSlice.id);
         let winAmount = 0;
         let freeSpinsGranted = 0;
@@ -742,19 +758,18 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
             const testerMult = 150 + Math.floor(Math.random() * 101);
             winAmount = Math.round(betAmount * testerMult);
             user.coins = (user.coins || 250000) + winAmount;
+        } else if (wonSlice.type === 'free_spin') {
+            freeSpinsGranted = wonSlice.count || 1;
+            user.freeSpins += freeSpinsGranted;
         } else if (wonSlice.type === 'win' || wonSlice.type === 'jackpot') {
             let mult = wonSlice.multiplier;
             if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
             let rawWin = actualWager > 0 ? (actualWager * mult) : (betAmount * mult);
-            // FIRST 5 TRIALS RULE: 0 cash wins for trial <= 5 (coins awarded regardless)
             if (user.trialCount <= 5) { rawWin = 0; }
             winAmount = rawWin;
             user.balance += winAmount;
             user.totalWon += winAmount;
             if (winAmount > 0) financialStats.totalPayout += winAmount;
-        } else if (wonSlice.type === 'free_spin') {
-            freeSpinsGranted = wonSlice.count || 1;
-            user.freeSpins += freeSpinsGranted;
         } else if (wonSlice.type === 'double_next') {
             user.doubleNextWin = true;
         }

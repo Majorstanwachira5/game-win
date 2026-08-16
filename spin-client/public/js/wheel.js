@@ -309,15 +309,26 @@ window.WheelEngine = {
         if (_wheelInstance) _wheelInstance.updateSlices(slices);
     },
     spinToSlice(targetIndex, onComplete) {
-        if (_wheelInstance) _wheelInstance.spinToTargetIndex(targetIndex, 5000, onComplete);
+        if (!_wheelInstance) {
+            const canvas = document.getElementById('wheelCanvas') || document.getElementById('mobileWheelCanvas');
+            if (canvas) {
+                _wheelInstance = new SpinWheelEngine(canvas.id);
+            }
+        }
+        if (_wheelInstance) {
+            _wheelInstance.spinToTargetIndex(targetIndex, 4500, onComplete);
+        } else {
+            if (typeof onComplete === 'function') setTimeout(onComplete, 1500);
+        }
     }
 };
 
 // Auto-initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        if (!_wheelInstance && document.getElementById('wheelCanvas')) {
-            window.WheelEngine.init('wheelCanvas');
+        if (!_wheelInstance && (document.getElementById('wheelCanvas') || document.getElementById('mobileWheelCanvas'))) {
+            const id = document.getElementById('wheelCanvas') ? 'wheelCanvas' : 'mobileWheelCanvas';
+            window.WheelEngine.init(id);
         }
     }, 100);
 });
