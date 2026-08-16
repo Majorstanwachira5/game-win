@@ -740,30 +740,41 @@
             </div>
             <div class="modal-body">
                 <p class="modal-subtitle">Choose a tier to open your 3D Mystery Box:</p>
-                <div class="mystery-tiers-grid">
+                <div class="mystery-tiers-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
                     <div class="tier-card bronze-tier" data-tier="bronze">
                         <div class="tier-name">BRONZE BOX</div>
-                        <div class="tier-price">KSh 100</div>
+                        <div class="tier-price">KSh 50</div>
+                        <div class="tier-sub" style="font-size:10px; color:#aaa; margin-bottom:6px;">Up to ×3.0</div>
                         <button class="tier-open-btn neon-btn" data-tier="bronze"
-                            onclick="if(window.openMysteryBox) window.openMysteryBox('bronze');">OPEN BOX</button>
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('bronze');">OPEN (KSh 50)</button>
                     </div>
                     <div class="tier-card silver-tier" data-tier="silver">
                         <div class="tier-name">SILVER BOX</div>
                         <div class="tier-price">KSh 150</div>
+                        <div class="tier-sub" style="font-size:10px; color:#aaa; margin-bottom:6px;">Up to ×5.0</div>
                         <button class="tier-open-btn neon-btn" data-tier="silver"
-                            onclick="if(window.openMysteryBox) window.openMysteryBox('silver');">OPEN BOX</button>
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('silver');">OPEN (KSh 150)</button>
                     </div>
                     <div class="tier-card gold-tier" data-tier="gold">
                         <div class="tier-name">GOLD BOX</div>
-                        <div class="tier-price">KSh 500</div>
+                        <div class="tier-price">KSh 300</div>
+                        <div class="tier-sub" style="font-size:10px; color:#ffd700; margin-bottom:6px;">Up to ×15.0</div>
                         <button class="tier-open-btn neon-btn" data-tier="gold"
-                            onclick="if(window.openMysteryBox) window.openMysteryBox('gold');">OPEN BOX</button>
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('gold');">OPEN (KSh 300)</button>
                     </div>
                     <div class="tier-card platinum-tier" data-tier="platinum">
                         <div class="tier-name">PLATINUM BOX</div>
-                        <div class="tier-price">KSh 2,000</div>
+                        <div class="tier-price">KSh 500</div>
+                        <div class="tier-sub" style="font-size:10px; color:#00f0ff; margin-bottom:6px;">Up to ×25.0</div>
                         <button class="tier-open-btn neon-btn" data-tier="platinum"
-                            onclick="if(window.openMysteryBox) window.openMysteryBox('platinum');">OPEN BOX</button>
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('platinum');">OPEN (KSh 500)</button>
+                    </div>
+                    <div class="tier-card diamond-tier" data-tier="diamond" style="border:1px solid #00f0ff;">
+                        <div class="tier-name" style="color:#00f0ff;">DIAMOND BOX</div>
+                        <div class="tier-price" style="color:#00f0ff;">KSh 1,000</div>
+                        <div class="tier-sub" style="font-size:10px; color:#00f0ff; margin-bottom:6px;">Up to ×50.0 & Keys</div>
+                        <button class="tier-open-btn neon-btn" data-tier="diamond"
+                            onclick="if(window.openMysteryBox) window.openMysteryBox('diamond');" style="border-color:#00f0ff; color:#00f0ff;">OPEN (KSh 1,000)</button>
                     </div>
                 </div>
                 <div id="mysteryBoxAnimArea" class="box-anim-area" style="display:none">

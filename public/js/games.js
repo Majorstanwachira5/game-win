@@ -10,17 +10,22 @@ function initMysteryBox() {
   document.querySelectorAll(".tier-open-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const tier = btn.dataset.tier;
-      const betAmount = 0; // Price is enforced server-side per tier
       await openMysteryBox(tier);
     });
   });
 }
 
 async function openMysteryBox(tier) {
-  const prices = { bronze: 100, silver: 250, gold: 500, platinum: 1000 };
-  const cost = prices[tier] || 100;
+  if (!APP_STATE || !APP_STATE.isAuthenticated) {
+    showToast('Please Register or Log In first to Open Mystery Boxes!', 'warning');
+    if (window.openAuthModal) window.openAuthModal('register');
+    return;
+  }
 
-  if (typeof APP_STATE !== "undefined" && APP_STATE.isTester) {
+  const prices = { bronze: 50, silver: 150, gold: 300, platinum: 500, diamond: 1000 };
+  const cost = prices[tier] || 50;
+
+  if (APP_STATE.isTester || (APP_STATE.balance || 0) >= cost) {
     executeOpenMysteryBox(tier);
     return;
   }
@@ -41,6 +46,25 @@ async function executeOpenMysteryBox(tier) {
     btn.textContent = "Opening...";
   }
 
+  const animArea = document.getElementById("mysteryBoxAnimArea");
+  const boxLid = document.getElementById("boxLid");
+  const boxResult = document.getElementById("boxResult");
+
+  const tierEmojis = {
+    bronze: "📦",
+    silver: "🥈",
+    gold: "🥇",
+    platinum: "💎",
+    diamond: "👑",
+  };
+
+  if (boxLid) boxLid.textContent = tierEmojis[tier] || "🎁";
+  if (boxResult) boxResult.textContent = "Unlocking...";
+  if (animArea) {
+    animArea.style.display = "block";
+    animArea.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   try {
     const res = await apiPost("/api/mystery-box/open", {
       userId: APP_STATE.userId,
@@ -48,66 +72,56 @@ async function executeOpenMysteryBox(tier) {
       betAmount: 0,
     });
 
-    if (!res.success) throw new Error(res.error || "Failed to open box");
-
-    // Animate box opening
-    const animArea = document.getElementById("mysteryBoxAnimArea");
-    const boxLid = document.getElementById("boxLid");
-    const boxResult = document.getElementById("boxResult");
-
-    const tierEmojis = {
-      bronze: "📦",
-      silver: "🥈",
-      gold: "🥇",
-      platinum: "💎",
-    };
-    boxLid.textContent = tierEmojis[tier] || "🎁";
-    boxResult.textContent = "";
-    animArea.style.display = "block";
-    animArea.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!res || !res.success) throw new Error(res?.error || "Failed to open box");
 
     // Trigger lid animation
+    if (boxLid) boxLid.classList.add("opening");
+
     setTimeout(() => {
-      boxLid.classList.add("opening");
+      if (boxLid) boxLid.classList.remove("opening");
+      if (boxResult) boxResult.textContent = res.reward.label;
+
+      if (res.isTester || (typeof APP_STATE !== 'undefined' && APP_STATE.isTester)) {
+        if (window.showTesterWinAnimation) window.showTesterWinAnimation(res.winAmount.toLocaleString() + ' PLAY COINS', '🎁 MYSTERY BOX WIN');
+      } else if (res.winAmount > 0) {
+        if (boxResult) boxResult.style.color = "#ffd700";
+        showWinModal(
+          `KSh ${res.winAmount.toLocaleString()}`,
+          res.reward.label,
+          res.xpGained,
+        );
+        triggerConfetti();
+      } else if (res.reward.type === "free_spin") {
+        showToast("🎁 Free Spin added to your account!", "success");
+      } else if (res.reward.type === "double_next") {
+        showToast("🔥 Double Next Win activated!", "warning");
+      } else if (res.reward.type === "jackpot_entry") {
+        showToast("⭐ Exclusive Jackpot Entry earned!", "info");
+      } else {
+        showToast("TRY AGAIN! Good luck next box.", "info");
+      }
+
+      updateUserState(res.user, res.coinsGained);
+      if (typeof handleChallengesCompleted === 'function') handleChallengesCompleted(res.completedChallenges);
+      if (typeof handleTierUp === 'function') handleTierUp(res);
+
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = `OPEN (KSh ${res.price || 50})`;
+      }
+
       setTimeout(() => {
-        boxLid.classList.remove("opening");
-        boxResult.textContent = res.reward.label;
-        if (res.isTester || (typeof APP_STATE !== 'undefined' && APP_STATE.isTester)) {
-          if (window.showTesterWinAnimation) window.showTesterWinAnimation(res.winAmount.toLocaleString() + ' PLAY COINS', '🎁 MYSTERY BOX WIN');
-        } else if (res.winAmount > 0) {
-          boxResult.style.color = "#ffd700";
-          showWinModal(
-            `KSh ${res.winAmount.toLocaleString()}`,
-            res.reward.label,
-            res.xpGained,
-          );
-          triggerConfetti();
-        } else if (res.reward.type === "free_spin") {
-          showToast("🎁 Free Spin added to your account!", "success");
-        } else if (res.reward.type === "double_next") {
-          showToast("🔥 Double Next Win activated!", "warning");
-        } else if (res.reward.type === "jackpot_entry") {
-          showToast("⭐ Exclusive Jackpot Entry earned!", "info");
-        } else {
-          showToast("😔 Better luck next time!", "info");
-        }
+        if (animArea) animArea.style.display = "none";
+      }, 3500);
+    }, 1200);
 
-        updateUserState(res.user, res.coinsGained);
-        handleChallengesCompleted(res.completedChallenges);
-        handleTierUp(res);
-
-        setTimeout(() => {
-          animArea.style.display = "none";
-        }, 3000);
-      }, 1000);
-    }, 100);
   } catch (err) {
-    showToast(err.message, "error");
-  } finally {
     if (btn) {
       btn.disabled = false;
       btn.textContent = "OPEN BOX";
     }
+    if (animArea) animArea.style.display = "none";
+    showToast(err.message || "Failed to open mystery box", "error");
   }
 }
 
