@@ -25,6 +25,7 @@ const blockchainAdapter = require('./adapters/BlockchainAdapter');
 const walletService = require('./services/WalletService');
 const rewardEngine = require('./services/RewardEngine');
 const mpesaService = require('./services/MpesaService');
+const tonService = require('./services/TonService');
 
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
 const dbConfig = {
@@ -1432,6 +1433,131 @@ app.post('/api/mpesa/query-stk', async (req, res) => {
         if (!checkoutRequestId) return res.status(400).json({ success: false, error: 'checkoutRequestId is required' });
         const queryRes = await mpesaService.queryStkPush(checkoutRequestId);
         res.json({ success: true, ...queryRes });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TON BLOCKCHAIN & TELEGRAM MINI APP INTEGRATION ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET /tonconnect-manifest.json — Official TonConnect 2.0 Manifest
+app.get(['/tonconnect-manifest.json', '/api/ton/manifest'], (req, res) => {
+    res.json(tonService.getManifest(req));
+});
+
+// GET /api/ton/generate-payload — Cryptographic nonce generation for ton_proof
+app.get('/api/ton/generate-payload', (req, res) => {
+    res.json(tonService.generateProofPayload());
+});
+
+// POST /api/ton/verify-wallet — Verify TonConnect proof and associate wallet address
+app.post('/api/ton/verify-wallet', requirePlayerAuth, (req, res) => {
+    try {
+        const { address, proof } = req.body;
+        const verifyRes = tonService.verifyTonProof({ address, proof });
+
+        if (!verifyRes.success) {
+            return res.status(400).json(verifyRes);
+        }
+
+        const user = getOrCreateUser(req.userId);
+        user.tonWalletAddress = verifyRes.verifiedAddress;
+        saveUsersCache();
+
+        res.json({
+            success: true,
+            verifiedAddress: user.tonWalletAddress,
+            message: 'TON Wallet verified and linked to player account',
+            user: {
+                id: user.id,
+                tonWalletAddress: user.tonWalletAddress,
+                coins: user.coins,
+                balance: user.balance
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/ton/verify-deposit — Verify on-chain TON transaction and credit Play Coins
+app.post('/api/ton/verify-deposit', requirePlayerAuth, async (req, res) => {
+    try {
+        const { txHash, amountTon, senderAddress, memo } = req.body;
+        const user = getOrCreateUser(req.userId);
+
+        const verifyRes = await tonService.verifyOnChainDeposit({
+            txHash,
+            senderAddress: senderAddress || user.tonWalletAddress,
+            expectedAmountTon: amountTon,
+            memo
+        });
+
+        if (!verifyRes.success) {
+            return res.status(400).json(verifyRes);
+        }
+
+        // Idempotent Coin Crediting (1 TON = 1,000 Play Coins)
+        const coinsAwarded = verifyRes.coinsAwarded;
+        const prevCoins = user.coins || 0;
+
+        walletService.creditWallet(user, coinsAwarded, 'PLAY', 'TON Deposit');
+        walletService.writeLedger(user, coinsAwarded, 'TON Deposit', prevCoins, 'PLAY_COINS');
+        
+        if (!user.creditedTransactions) user.creditedTransactions = [];
+        user.creditedTransactions.push(verifyRes.txHash);
+
+        saveUsersCache();
+
+        res.json({
+            success: true,
+            txHash: verifyRes.txHash,
+            amountTon: verifyRes.amountTon,
+            coinsAwarded,
+            newCoins: user.coins,
+            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, tonWalletAddress: user.tonWalletAddress }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/telegram/auth — Authenticate Telegram Mini App user via HMAC-SHA256
+app.post('/api/telegram/auth', (req, res) => {
+    try {
+        const { initData } = req.body;
+        const authRes = tonService.verifyTelegramInitData(initData);
+
+        if (!authRes.verified || !authRes.user) {
+            return res.status(401).json({ success: false, error: authRes.error || 'Invalid Telegram authentication' });
+        }
+
+        const tgUser = authRes.user;
+        const userId = `tg_${tgUser.id}`;
+        const user = getOrCreateUser(userId, `${tgUser.username || tgUser.id}@telegram.org`);
+        
+        user.telegramId = tgUser.id;
+        user.telegramUsername = tgUser.username || '';
+        user.displayName = `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || user.displayName;
+        saveUsersCache();
+
+        const token = jwt.sign({ id: user.id, email: user.email, isTester: false }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                telegramId: user.telegramId,
+                telegramUsername: user.telegramUsername,
+                displayName: user.displayName,
+                coins: user.coins,
+                balance: user.balance,
+                tonWalletAddress: user.tonWalletAddress
+            }
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
