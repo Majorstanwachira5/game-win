@@ -1608,13 +1608,15 @@ app.post('/api/coins/reward', requirePlayerAuth, (req, res) => {
         const amount = Number(req.body.amount) || 100;
         const reason = req.body.reason || 'Bonus Claim';
 
-        const coinsGained = calculateRewardCoins(amount);
-        user.coins = (user.coins || 200) + coinsGained;
+        const coinsGained = rewardEngine.calculateRewardCoins(amount);
+        walletService.creditWallet(user, coinsGained, 'PLAY', reason);
+        saveUsersCache();
 
         res.json({
             success: true,
             coinsGained,
             newBalance: user.coins,
+            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, xp: user.xp, vipTier: user.vipTier },
             reason,
             symbol: '$SPIN',
             message: `Successfully rewarded ${coinsGained} $SPIN coins!`
