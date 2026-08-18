@@ -188,8 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Initialize Spin Wheel Canvas
     if (window.WheelEngine) {
         try {
-            if (document.getElementById('wheelCanvas')) window.WheelEngine.init('wheelCanvas');
-            if (document.getElementById('mobileWheelCanvas')) new SpinWheelEngine('mobileWheelCanvas');
+            window.WheelEngine.init();
         } catch (e) { console.warn('wheelEngine err:', e); }
     }
 

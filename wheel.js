@@ -107,8 +107,8 @@ class SpinWheelEngine {
         const height = this.canvas.height || 500;
         const centerX = width / 2;
         const centerY = height / 2;
-        const outerRadius = Math.min(width, height) / 2 - 24;
-        const innerRadius = 65;
+        const outerRadius = Math.min(width, height) / 2 - 20;
+        const innerRadius = Math.max(28, Math.round(outerRadius * 0.28));
         const numSlices = this.slices.length;
         const sliceAngle = (2 * Math.PI) / numSlices;
 
@@ -117,8 +117,8 @@ class SpinWheelEngine {
         // 1. Draw Outer Gold Metallic Rim
         this.ctx.save();
         this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, outerRadius + 20, 0, 2 * Math.PI);
-        const rimGrad = this.ctx.createRadialGradient(centerX, centerY, outerRadius, centerX, centerY, outerRadius + 20);
+        this.ctx.arc(centerX, centerY, outerRadius + 18, 0, 2 * Math.PI);
+        const rimGrad = this.ctx.createRadialGradient(centerX, centerY, outerRadius, centerX, centerY, outerRadius + 18);
         rimGrad.addColorStop(0, '#D4AF37');
         rimGrad.addColorStop(0.3, '#FFF5B8');
         rimGrad.addColorStop(0.7, '#AA7C11');
@@ -133,15 +133,15 @@ class SpinWheelEngine {
         const numLeds = 28;
         for (let i = 0; i < numLeds; i++) {
             const ledAngle = (i * 2 * Math.PI) / numLeds;
-            const lx = centerX + (outerRadius + 10) * Math.cos(ledAngle);
-            const ly = centerY + (outerRadius + 10) * Math.sin(ledAngle);
+            const lx = centerX + (outerRadius + 9) * Math.cos(ledAngle);
+            const ly = centerY + (outerRadius + 9) * Math.sin(ledAngle);
             const isLit = (i + this.ledOffset) % 2 === 0;
 
             this.ctx.beginPath();
-            this.ctx.arc(lx, ly, 5.5, 0, 2 * Math.PI);
+            this.ctx.arc(lx, ly, 4.5, 0, 2 * Math.PI);
             this.ctx.fillStyle = isLit ? '#00f0ff' : '#ffd700';
             this.ctx.shadowColor = isLit ? '#00f0ff' : '#ffd700';
-            this.ctx.shadowBlur = isLit ? 14 : 6;
+            this.ctx.shadowBlur = isLit ? 12 : 5;
             this.ctx.fill();
         }
         this.ctx.restore();
@@ -184,12 +184,13 @@ class SpinWheelEngine {
             this.ctx.textBaseline = 'middle';
 
             const rawLabel = String(slice.label || 'WIN').trim();
-            this.ctx.font = slice.type === 'jackpot' ? '900 14px Orbitron, sans-serif' : '700 12px Outfit, sans-serif';
+            const fontSize = Math.max(10, Math.min(13, Math.round(outerRadius * 0.08)));
+            this.ctx.font = slice.type === 'jackpot' ? `900 ${fontSize}px Orbitron, sans-serif` : `700 ${fontSize}px Outfit, sans-serif`;
             this.ctx.fillStyle = slice.text || '#ffffff';
             this.ctx.shadowColor = '#000000';
             this.ctx.shadowBlur = 6;
 
-            this.ctx.fillText(rawLabel, outerRadius - 16, 0);
+            this.ctx.fillText(rawLabel, outerRadius - 14, 0);
             this.ctx.restore();
         }
 
@@ -204,8 +205,8 @@ class SpinWheelEngine {
         // 4. Center Gold Hub & Top Pointer Peg
         this.ctx.save();
         this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, innerRadius - 8, 0, 2 * Math.PI);
-        const centerGrad = this.ctx.createRadialGradient(centerX, centerY, 5, centerX, centerY, innerRadius - 8);
+        this.ctx.arc(centerX, centerY, innerRadius - 6, 0, 2 * Math.PI);
+        const centerGrad = this.ctx.createRadialGradient(centerX, centerY, 4, centerX, centerY, innerRadius - 6);
         centerGrad.addColorStop(0, '#FFF5B8');
         centerGrad.addColorStop(0.6, '#D4AF37');
         centerGrad.addColorStop(1, '#59440E');
@@ -218,16 +219,16 @@ class SpinWheelEngine {
         // Top Gold Pointer Peg Indicator
         const pointerY = centerY - outerRadius - 4;
         this.ctx.beginPath();
-        this.ctx.moveTo(centerX - 16, pointerY - 14);
-        this.ctx.lineTo(centerX + 16, pointerY - 14);
-        this.ctx.lineTo(centerX, pointerY + 18);
+        this.ctx.moveTo(centerX - 14, pointerY - 12);
+        this.ctx.lineTo(centerX + 14, pointerY - 12);
+        this.ctx.lineTo(centerX, pointerY + 16);
         this.ctx.closePath();
         this.ctx.fillStyle = '#FFE066';
         this.ctx.shadowColor = '#FFD700';
-        this.ctx.shadowBlur = 18;
+        this.ctx.shadowBlur = 16;
         this.ctx.fill();
         this.ctx.strokeStyle = '#59440E';
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 2.5;
         this.ctx.stroke();
 
         this.ctx.restore();
@@ -306,37 +307,66 @@ class SpinWheelEngine {
     }
 }
 
-// Global Export Bridge & Auto-Initialization
-let _wheelInstance = null;
+// Global Export Bridge & Multi-Canvas Auto-Initialization
+const _wheelInstances = new Map();
+
+function _getOrInitWheel(canvasId, slices = []) {
+    const el = typeof canvasId === 'string' ? document.getElementById(canvasId) : canvasId;
+    if (!el) return null;
+    const id = el.id || 'wheelCanvas';
+    if (!_wheelInstances.has(id)) {
+        _wheelInstances.set(id, new SpinWheelEngine(el, slices));
+    }
+    return _wheelInstances.get(id);
+}
+
+function _initAllWheels(slices = []) {
+    const canvasIds = ['wheelCanvas', 'mobileWheelCanvas'];
+    canvasIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) _getOrInitWheel(el, slices);
+    });
+}
+
 window.WheelEngine = {
     init(canvasId = 'wheelCanvas', slices = []) {
-        _wheelInstance = new SpinWheelEngine(canvasId, slices);
-        return _wheelInstance;
+        _initAllWheels(slices);
+        return _getOrInitWheel(canvasId, slices);
     },
     setSlices(slices) {
-        if (_wheelInstance) _wheelInstance.updateSlices(slices);
+        _wheelInstances.forEach(inst => {
+            if (inst && typeof inst.updateSlices === 'function') inst.updateSlices(slices);
+        });
     },
     spinToSlice(targetIndex, onComplete) {
-        if (!_wheelInstance) {
-            const canvas = document.getElementById('wheelCanvas') || document.getElementById('mobileWheelCanvas');
-            if (canvas) {
-                _wheelInstance = new SpinWheelEngine(canvas.id);
-            }
-        }
-        if (_wheelInstance) {
-            _wheelInstance.spinToTargetIndex(targetIndex, 3600, onComplete);
-        } else {
+        _initAllWheels();
+
+        const activeInstances = Array.from(_wheelInstances.values()).filter(inst => inst && inst.canvas);
+        if (activeInstances.length === 0) {
+            console.warn('[WheelEngine] No active wheel canvas found to spin!');
             if (typeof onComplete === 'function') setTimeout(onComplete, 1500);
+            return;
         }
+
+        let completed = false;
+        const handleComplete = () => {
+            if (!completed) {
+                completed = true;
+                if (typeof onComplete === 'function') onComplete();
+            }
+        };
+
+        // Spin ALL wheel canvas instances synchronously across desktop & mobile
+        activeInstances.forEach((inst, index) => {
+            inst.soundEnabled = (index === 0);
+            inst.spinToTargetIndex(targetIndex, 3600, handleComplete);
+        });
     }
 };
 
 // Auto-initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        if (!_wheelInstance && (document.getElementById('wheelCanvas') || document.getElementById('mobileWheelCanvas'))) {
-            const id = document.getElementById('wheelCanvas') ? 'wheelCanvas' : 'mobileWheelCanvas';
-            window.WheelEngine.init(id);
-        }
+        _initAllWheels();
     }, 100);
 });
