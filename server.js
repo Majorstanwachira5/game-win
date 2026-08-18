@@ -469,6 +469,31 @@ async function supabaseFetch(table, options = {}) {
     }
 }
 
+const fs = require('fs');
+const os = require('os');
+const USERS_CACHE_FILE = path.join(os.tmpdir(), 'spin_win_users_store.json');
+
+function loadUsersCache() {
+    try {
+        if (fs.existsSync(USERS_CACHE_FILE)) {
+            const raw = fs.readFileSync(USERS_CACHE_FILE, 'utf8');
+            const data = JSON.parse(raw);
+            if (data && typeof data === 'object') {
+                Object.assign(users, data);
+            }
+        }
+    } catch (e) {}
+}
+
+function saveUsersCache() {
+    try {
+        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users), 'utf8');
+    } catch (e) {}
+}
+
+// Initial cache load
+loadUsersCache();
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  AUTH ROUTES & JWT AUTHENTICATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -485,15 +510,16 @@ function extractAuthCredentials(req) {
     const rawPassword = body.password || body.pass || (req.query ? req.query.password : '') || '';
     const rawName = body.name || '';
 
-    const identity = rawIdentity ? rawIdentity.toString().trim().toLowerCase() : ('player_' + Date.now().toString().slice(-4) + '@casino.com');
-    const password = rawPassword ? rawPassword.toString().trim() : 'password123';
-    const name = rawName ? rawName.toString().trim() : identity.split('@')[0];
+    const identity = rawIdentity ? rawIdentity.toString().trim() : '';
+    const password = rawPassword ? rawPassword.toString().trim() : '';
+    const name = rawName ? rawName.toString().trim() : (identity ? identity.split('@')[0] : 'Player');
 
     return { identity, password, name };
 }
 
 app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'], async (req, res) => {
     try {
+        loadUsersCache();
         const { identity, password, name } = extractAuthCredentials(req);
         if (!identity || identity.length < 3) {
             return res.status(400).json({ success: false, error: 'Please enter a valid email or phone number.' });
@@ -502,20 +528,32 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             return res.status(400).json({ success: false, error: 'Password must be at least 4 characters long.' });
         }
         const formattedEmail = identity.toLowerCase();
+        const cleanPhone = identity.replace(/\D/g, '');
 
-        // 1. Check local memory cache
-        let existingKey = Object.keys(users).find(k => 
-            (users[k].email && users[k].email.toLowerCase() === formattedEmail) || 
-            (users[k].phoneRaw === formattedEmail || users[k].phone === formattedEmail)
-        );
+        // 1. Check local memory and disk cache
+        let existingKey = Object.keys(users).find(k => {
+            const u = users[k];
+            if (!u) return false;
+            const uEmail = (u.email || '').toLowerCase();
+            const uPhone = (u.phoneRaw || u.phone || '').toLowerCase();
+            const uCleanPhone = uPhone.replace(/\D/g, '');
+            return uEmail === formattedEmail || uPhone === formattedEmail || (cleanPhone.length >= 9 && uCleanPhone === cleanPhone);
+        });
 
         // 2. Check Supabase Database
         let dbUsers = null;
-        try {
-            dbUsers = await supabaseFetch('players', {
-                query: `or=(email.eq.${encodeURIComponent(formattedEmail)},phone_number.eq.${encodeURIComponent(formattedEmail)})`
-            });
-        } catch (e) {}
+        if (!existingKey) {
+            try {
+                dbUsers = await supabaseFetch('players', {
+                    query: `email=eq.${encodeURIComponent(formattedEmail)}`
+                });
+                if (!dbUsers || dbUsers.length === 0) {
+                    dbUsers = await supabaseFetch('players', {
+                        query: `phone_number=eq.${encodeURIComponent(formattedEmail)}`
+                    });
+                }
+            } catch (e) {}
+        }
 
         if (existingKey || (dbUsers && dbUsers.length > 0)) {
             return res.status(409).json({
@@ -536,10 +574,12 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             balance: isTester ? 250000.00 : 0.00,
             coins: isTester ? 250000 : 200,
             isTester: isTester,
-            xp: 50
+            xp: 50,
+            freeSpins: 1
         });
 
         users[userId] = user;
+        saveUsersCache();
 
         // Persist to Supabase Database (public.players)
         try {
@@ -567,6 +607,7 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
                 email: user.email,
                 balance: user.balance,
                 coins: user.coins,
+                freeSpins: user.freeSpins,
                 vipTier: user.vipTier,
                 xp: user.xp
             }
@@ -578,6 +619,7 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
 
 app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req, res) => {
     try {
+        loadUsersCache();
         const { identity, password } = extractAuthCredentials(req);
         if (!identity) {
             return res.status(400).json({ success: false, error: 'Please enter your email or phone number.' });
@@ -586,21 +628,31 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
             return res.status(400).json({ success: false, error: 'Please enter your password.' });
         }
         const formattedEmail = identity.toLowerCase();
+        const cleanPhone = identity.replace(/\D/g, '');
 
-        // 1. Search in local memory cache
-        let userKey = Object.keys(users).find(k => 
-            (users[k].email && users[k].email.toLowerCase() === formattedEmail) ||
-            (users[k].phoneRaw === formattedEmail || users[k].phone === formattedEmail)
-        );
+        // 1. Search in local memory and disk cache
+        let userKey = Object.keys(users).find(k => {
+            const u = users[k];
+            if (!u) return false;
+            const uEmail = (u.email || '').toLowerCase();
+            const uPhone = (u.phoneRaw || u.phone || '').toLowerCase();
+            const uCleanPhone = uPhone.replace(/\D/g, '');
+            return uEmail === formattedEmail || uPhone === formattedEmail || (cleanPhone.length >= 9 && uCleanPhone === cleanPhone);
+        });
 
         let user = userKey ? users[userKey] : null;
 
-        // 2. Query Supabase Database if not in local memory
+        // 2. Query Supabase Database if not in local cache
         if (!user) {
             try {
-                const dbUsers = await supabaseFetch('players', {
-                    query: `or=(email.eq.${encodeURIComponent(formattedEmail)},phone_number.eq.${encodeURIComponent(formattedEmail)})`
+                let dbUsers = await supabaseFetch('players', {
+                    query: `email=eq.${encodeURIComponent(formattedEmail)}`
                 });
+                if (!dbUsers || dbUsers.length === 0) {
+                    dbUsers = await supabaseFetch('players', {
+                        query: `phone_number=eq.${encodeURIComponent(formattedEmail)}`
+                    });
+                }
                 if (dbUsers && dbUsers.length > 0) {
                     const dbUser = dbUsers[0];
                     const isTester = checkIsTester(dbUser.email || formattedEmail);
@@ -615,9 +667,11 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
                         balance: isTester ? 250000.00 : 0.00,
                         coins: isTester ? 250000 : 200,
                         isTester: isTester,
-                        xp: dbUser.xp_points || 50
+                        xp: dbUser.xp_points || 50,
+                        freeSpins: dbUser.free_spins_count || 1
                     });
                     users[userId] = user;
+                    saveUsersCache();
                 }
             } catch (e) {
                 console.warn('Supabase lookup error during login:', e.message);
@@ -637,12 +691,14 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
                 balance: 250000.00,
                 coins: 250000,
                 isTester: true,
-                xp: 1000
+                xp: 1000,
+                freeSpins: 10
             });
             users[userId] = user;
+            saveUsersCache();
         }
 
-        // 4. Strict Database Verification: Must be registered in database!
+        // 4. Verification: Account must exist!
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -669,6 +725,7 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
                 email: user.email || formattedEmail,
                 balance: user.balance,
                 coins: user.coins,
+                freeSpins: user.freeSpins,
                 vipTier: user.vipTier,
                 xp: user.xp
             }

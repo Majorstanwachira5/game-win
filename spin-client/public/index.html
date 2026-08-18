@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SPIN & WIN — Premium Gaming Hub</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎰</text></svg>">
     <meta name="description"
@@ -121,6 +121,28 @@
                 document.body.style.pointerEvents = 'auto';
             };
 
+            // Mobile Navigation Dropdown Controller
+            window.toggleMobileMenu = function (e) {
+                if (e && e.stopPropagation) e.stopPropagation();
+                var dropdown = document.getElementById('mobileNavDropdown');
+                if (dropdown) dropdown.classList.toggle('open');
+            };
+
+            window.closeMobileMenu = function () {
+                var dropdown = document.getElementById('mobileNavDropdown');
+                if (dropdown) dropdown.classList.remove('open');
+            };
+
+            document.addEventListener('click', function (e) {
+                var dropdown = document.getElementById('mobileNavDropdown');
+                var trigger = document.getElementById('mobileMenuBtn');
+                if (dropdown && dropdown.classList.contains('open')) {
+                    if (!dropdown.contains(e.target) && (!trigger || !trigger.contains(e.target))) {
+                        dropdown.classList.remove('open');
+                    }
+                }
+            });
+
             // Instant session auto-restore on page reload/refresh
             (function () {
                 function restoreSession() {
@@ -135,7 +157,7 @@
                                 user.isTester = true;
                                 try { localStorage.setItem('spin_user_data', JSON.stringify(user)); } catch (e) {}
                             }
-                            window.setAuthenticatedUser(user, token);
+                            if (window.setAuthenticatedUser) window.setAuthenticatedUser(user, token);
                         }
                     } catch (e) { }
                 }
@@ -144,7 +166,9 @@
                 } else {
                     restoreSession();
                 }
-            })();        // Continuous Live Winner Broadcast Looper
+            })();
+
+            // Continuous Live Winner Broadcast Looper
             (function () {
                 var winners = [
                     { prize: 'KSh 10,000', user: 'USER 0714***342', mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN' },
@@ -203,119 +227,6 @@
                     setInterval(runLoop, 2500);
                 }
             })();
-
-            window.handleAuthSubmit = async function (e) {
-                if (e && e.preventDefault) e.preventDefault();
-                if (window._isAuthSubmitting) return false;
-
-                var mode = window._authMode || 'login';
-                var errEl = document.getElementById('authErrorMsg');
-                var btn = document.getElementById('authSubmitBtn');
-                var modal = document.getElementById('authModal');
-
-                if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-                var emailInput = document.getElementById('authEmailInput');
-                var passInput = document.getElementById('authPassInput');
-                var confirmInput = document.getElementById('authConfirmPassInput');
-
-                var email = emailInput ? emailInput.value.trim() : '';
-                var password = passInput ? passInput.value.trim() : '';
-                var confirmPassword = confirmInput ? confirmInput.value.trim() : '';
-
-                if (!email || !password) {
-                    if (errEl) { errEl.textContent = 'Please enter both email address and password.'; errEl.style.display = 'block'; }
-                    return false;
-                }
-
-                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    if (errEl) { errEl.textContent = 'Please enter a valid email address (e.g., player@example.com).'; errEl.style.display = 'block'; }
-                    return false;
-                }
-
-                if (password.length < 6) {
-                    if (errEl) { errEl.textContent = 'Password must be at least 6 characters long.'; errEl.style.display = 'block'; }
-                    return false;
-                }
-
-                if (mode === 'register' && password !== confirmPassword) {
-                    if (errEl) { errEl.textContent = 'Passwords do not match! Please check again.'; errEl.style.display = 'block'; }
-                    return false;
-                }
-
-                var apiBase = 'http://localhost:8080';
-                if (typeof window !== 'undefined' && window.location) {
-                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        apiBase = window.location.protocol + '//' + window.location.hostname + ':8080';
-                    } else {
-                        apiBase = window.location.origin;
-                    }
-                }
-                var endpoint = mode === 'register' ? apiBase + '/api/auth/register' : apiBase + '/api/auth/login';
-                var body = mode === 'register' ? { email: email, password: password, confirmPassword: confirmPassword } : { email: email, password: password };
-
-                window._isAuthSubmitting = true;
-                try {
-                    if (btn) { btn.disabled = true; btn.textContent = 'VERIFYING...'; }
-                    var response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    });
-                    var res = await response.json();
-
-                    if (res && res.success && res.token) {
-                        localStorage.setItem('spin_jwt_token', res.token);
-                        try { localStorage.setItem('spin_user_data', JSON.stringify(res.user)); } catch (e) {}
-                        if (window.setAuthenticatedUser) {
-                            window.setAuthenticatedUser(res.user, res.token);
-                        } else {
-                            location.reload();
-                        }
-                        if (window.showToast) window.showToast((mode === 'register' ? 'Account created! Welcome, ' : 'Welcome back, ') + (res.user.name || 'Player') + '! 200 Free Coins credited 🎉', 'success');
-                        if (window.closeAuthModal) window.closeAuthModal();
-                        if (modal) { modal.style.display = 'none'; modal.setAttribute('style', 'display: none !important'); }
-                    } else {
-                        var fbToken = 'jwt_spin_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-                        var fbUser = {
-                            id: 'usr_' + Date.now(),
-                            name: email.split('@')[0] || 'Player',
-                            email: email,
-                            balance: 0.00,
-                            coins: 200,
-                            vipTier: 'bronze',
-                            xp: 50
-                        };
-                        localStorage.setItem('spin_jwt_token', fbToken);
-                        try { localStorage.setItem('spin_user_data', JSON.stringify(fbUser)); } catch (e) {}
-                        if (window.setAuthenticatedUser) window.setAuthenticatedUser(fbUser, fbToken);
-                        if (window.showToast) window.showToast('Welcome ' + fbUser.name + '! 200 Free Play Coins credited 🎉', 'success');
-                        if (window.closeAuthModal) window.closeAuthModal();
-                        if (modal) { modal.style.display = 'none'; modal.setAttribute('style', 'display: none !important'); }
-                    }
-                } catch (err) {
-                    var fbToken = 'jwt_spin_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-                    var fbUser = {
-                        id: 'usr_' + Date.now(),
-                        name: email.split('@')[0] || 'Player',
-                        email: email,
-                        balance: 0.00,
-                        coins: 200,
-                        vipTier: 'bronze',
-                        xp: 50
-                    };
-                    localStorage.setItem('spin_jwt_token', fbToken);
-                    try { localStorage.setItem('spin_user_data', JSON.stringify(fbUser)); } catch (e) {}
-                    if (window.setAuthenticatedUser) window.setAuthenticatedUser(fbUser, fbToken);
-                    if (window.showToast) window.showToast('Welcome ' + fbUser.name + '! 200 Free Coins credited 🎉', 'success');
-                    if (window.closeAuthModal) window.closeAuthModal();
-                    if (modal) { modal.style.display = 'none'; modal.setAttribute('style', 'display: none !important'); }
-                } finally {
-                    window._isAuthSubmitting = false;
-                    if (btn) { btn.disabled = false; btn.textContent = mode === 'register' ? 'REGISTER & PLAY' : 'LOG IN NOW'; }
-                }
-                return false;
-            };
         })();
     </script>
 </head>
@@ -341,7 +252,8 @@
             </h1>
         </div>
 
-        <div class="header-right-auth">
+        <!-- DESKTOP AUTH CONTROLS (>= 769px) -->
+        <div class="header-right-auth desktop-header-auth">
             <!-- UNAUTHENTICATED GUEST STATE -->
             <div id="unauthHeader" class="auth-btn-row">
                 <div class="top-coins-bonus-pill" onclick="openAuthModal('register')" title="Register now to claim 200 Free Bonus Coins!">
@@ -379,6 +291,70 @@
                     LOG OUT</button>
             </div>
         </div>
+
+        <!-- COMPACT MOBILE ANDROID MENU TRIGGER (< 769px) -->
+        <div class="header-right-mobile">
+            <button id="mobileMenuBtn" class="mobile-menu-trigger" onclick="window.toggleMobileMenu(event)" aria-label="Toggle Navigation Menu">
+                <span class="mobile-menu-icon">☰</span>
+            </button>
+        </div>
+
+        <!-- COMPACT MOBILE ANDROID DROPDOWN -->
+        <nav id="mobileNavDropdown" class="mobile-dropdown-menu" aria-label="Mobile Navigation">
+            <!-- Unauthenticated Menu Items -->
+            <div id="mobMenuUnauth" class="mob-dropdown-group">
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); openAuthModal('login');">
+                    <span class="mob-item-icon">🔑</span>
+                    <span class="mob-item-label">Login</span>
+                </button>
+                <button class="mob-dropdown-item highlight-item" onclick="window.closeMobileMenu(); openAuthModal('register');">
+                    <span class="mob-item-icon">📝</span>
+                    <span class="mob-item-label">Register</span>
+                    <span class="mob-item-badge">+200 Coins</span>
+                </button>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openGameModal) openGameModal('vip'); else openAuthModal('register');">
+                    <span class="mob-item-icon">🎁</span>
+                    <span class="mob-item-label">Rewards</span>
+                </button>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); openAuthModal('login');">
+                    <span class="mob-item-icon">👤</span>
+                    <span class="mob-item-label">Profile</span>
+                </button>
+            </div>
+
+            <!-- Authenticated Menu Items -->
+            <div id="mobMenuAuth" class="mob-dropdown-group" style="display:none;">
+                <div class="mob-user-summary-card">
+                    <div class="mob-summary-avatar">👤</div>
+                    <div class="mob-summary-meta">
+                        <div id="mobSummaryName" class="mob-summary-name">USER 0712***891</div>
+                        <div id="mobSummaryTier" class="mob-summary-tier">BRONZE VIP</div>
+                    </div>
+                </div>
+                <div class="mob-wallet-summary-row">
+                    <div class="mob-wallet-col">
+                        <span class="mob-col-label">CASH</span>
+                        <span id="mobSummaryCash" class="mob-col-val">KSh 0.00</span>
+                    </div>
+                    <div class="mob-wallet-col">
+                        <span class="mob-col-label">COINS</span>
+                        <span id="mobSummaryCoins" class="mob-col-val">200</span>
+                    </div>
+                </div>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openDepositModal) openDepositModal();">
+                    <span class="mob-item-icon">💳</span>
+                    <span class="mob-item-label">Deposit / Wallet</span>
+                </button>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openGameModal) openGameModal('vip');">
+                    <span class="mob-item-icon">🎁</span>
+                    <span class="mob-item-label">Rewards & VIP</span>
+                </button>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.handleLogout) handleLogout(); else { localStorage.clear(); location.reload(); }">
+                    <span class="mob-item-icon">🚪</span>
+                    <span class="mob-item-label">Log Out</span>
+                </button>
+            </div>
+        </nav>
     </header>
 
     <!-- ══════════════ MAIN HUB GRID (DESKTOP LAYOUT >= 768px) ══════════════ -->

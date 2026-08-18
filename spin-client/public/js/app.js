@@ -270,7 +270,12 @@ window.isTesterAccount = function (val) {
 window.setAuthenticatedUser = function (user, token) {
     APP_STATE.token = token;
     APP_STATE.userId = user.id || 'usr_player';
+    APP_STATE.user = user;
     APP_STATE.isAuthenticated = true;
+    APP_STATE.balance = user.balance ?? 0.00;
+    APP_STATE.coins = user.coins ?? 200;
+    APP_STATE.freeSpins = user.freeSpins ?? 0;
+    APP_STATE.vipTier = user.vipTier || 'bronze';
 
     // TESTER ACCOUNT CONFIGURATION FOR brittanycooke98 / britannycooke98
     if (window.isTesterAccount(user)) {
@@ -294,6 +299,21 @@ window.setAuthenticatedUser = function (user, token) {
     if (unauthHeader) unauthHeader.style.display = 'none';
     if (authHeader) authHeader.style.display = 'flex';
     if (chatLockOverlay) chatLockOverlay.style.display = 'none';
+
+    // Mobile Menu Sync
+    const mobMenuUnauth = document.getElementById('mobMenuUnauth');
+    const mobMenuAuth = document.getElementById('mobMenuAuth');
+    const mobSummaryName = document.getElementById('mobSummaryName');
+    const mobSummaryTier = document.getElementById('mobSummaryTier');
+    const mobSummaryCash = document.getElementById('mobSummaryCash');
+    const mobSummaryCoins = document.getElementById('mobSummaryCoins');
+
+    if (mobMenuUnauth) mobMenuUnauth.style.display = 'none';
+    if (mobMenuAuth) mobMenuAuth.style.display = 'flex';
+    if (mobSummaryName) mobSummaryName.textContent = user.name || user.email || 'Player';
+    if (mobSummaryTier) mobSummaryTier.textContent = (user.vipTier || 'BRONZE').toUpperCase() + (user.isTester ? ' TESTER VIP' : ' VIP');
+    if (mobSummaryCash) mobSummaryCash.textContent = `KSh ${Number(user.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (mobSummaryCoins) mobSummaryCoins.textContent = (user.coins || 200).toLocaleString('en-US');
     
     // Automatically close auth modal immediately on authentication success
     if (authModal) {
@@ -354,7 +374,10 @@ window.showTesterWinAnimation = function (amountText, subtitleText) {
 
 window.updateBalanceUI = function (balance = 0, coins = 0) {
     const mobWalletEl = document.getElementById('mobWalletBalance');
+    const userBalanceEl = document.getElementById('userBalanceText');
     const userCoinsEl = document.getElementById('userCoinsText');
+    const mobSummaryCash = document.getElementById('mobSummaryCash');
+    const mobSummaryCoins = document.getElementById('mobSummaryCoins');
 
     let curUser = null;
     try {
@@ -372,7 +395,10 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     const fmtCoins = finalCoins.toLocaleString('en-US');
 
     if (mobWalletEl) mobWalletEl.textContent = `KSh ${fmtBal}`;
-    if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Play Coins`;
+    if (userBalanceEl) userBalanceEl.textContent = `KSh ${fmtBal}`;
+    if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Coins`;
+    if (mobSummaryCash) mobSummaryCash.textContent = `KSh ${fmtBal}`;
+    if (mobSummaryCoins) mobSummaryCoins.textContent = `${fmtCoins}`;
 };
 
 window.toggleCategory = function (id) {
@@ -387,7 +413,10 @@ window.toggleCategory = function (id) {
 
 window.setUnauthenticatedState = function () {
     APP_STATE.token = null;
+    APP_STATE.user = null;
     APP_STATE.isAuthenticated = false;
+    APP_STATE.balance = 0.00;
+    APP_STATE.freeSpins = 0;
     localStorage.removeItem('spin_jwt_token');
 
     const unauthHeader = document.getElementById('unauthHeader');
