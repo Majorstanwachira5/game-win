@@ -53,25 +53,28 @@ class SpinWheelEngine {
         }
     }
 
-    playTickSound() {
+    playTickSound(speedFactor = 1.0) {
         if (!this.soundEnabled || !this.audioCtx) return;
         try {
             if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+            const now = this.audioCtx.currentTime;
             const osc = this.audioCtx.createOscillator();
             const gain = this.audioCtx.createGain();
 
+            const baseFreq = 520 + Math.min(speedFactor * 180, 300);
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(550, this.audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(120, this.audioCtx.currentTime + 0.04);
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.035);
 
-            gain.gain.setValueAtTime(0.18, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.04);
+            const vol = Math.min(0.24, 0.12 + speedFactor * 0.12);
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
 
             osc.connect(gain);
             gain.connect(this.audioCtx.destination);
 
-            osc.start();
-            osc.stop(this.audioCtx.currentTime + 0.04);
+            osc.start(now);
+            osc.stop(now + 0.035);
         } catch (e) {}
     }
 
@@ -244,7 +247,7 @@ class SpinWheelEngine {
         return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
-    spinToTargetIndex(targetIndex, durationMs = 5000, onComplete) {
+    spinToTargetIndex(targetIndex, durationMs = 3600, onComplete) {
         if (this.isSpinning) return;
         this.isSpinning = true;
 
@@ -252,7 +255,9 @@ class SpinWheelEngine {
         const sliceAngle = (2 * Math.PI) / numSlices;
         const sliceCenterAngle = targetIndex * sliceAngle + sliceAngle / 2;
         const targetLandingAngle = (1.5 * Math.PI) - sliceCenterAngle;
-        const extraRevolutions = 6 * 2 * Math.PI;
+        
+        // 18 full fast energetic revolutions for real casino excitement
+        const extraRevolutions = 18 * 2 * Math.PI;
 
         const startAngle = this.currentAngle;
         const currentMod = startAngle % (2 * Math.PI);
@@ -270,7 +275,9 @@ class SpinWheelEngine {
         const animate = (now) => {
             const elapsed = now - startTime;
             const progress = Math.min(elapsed / durationMs, 1);
-            const easeProgress = 1 - Math.pow(1 - progress, 4);
+            
+            // Progressive natural deceleration curve: rapid blur start -> suspenseful slowdown -> crisp peg lock
+            const easeProgress = 1 - Math.pow(1 - progress, 3.6);
 
             this.currentAngle = startAngle + (totalAngleChange * easeProgress);
             this.draw();
@@ -280,7 +287,8 @@ class SpinWheelEngine {
             const currentSliceIndex = Math.floor(pointerAngle / sliceAngle);
 
             if (currentSliceIndex !== lastSliceCrossed) {
-                this.playTickSound();
+                const speedFactor = (1 - progress);
+                this.playTickSound(speedFactor);
                 lastSliceCrossed = currentSliceIndex;
             }
 
@@ -290,7 +298,7 @@ class SpinWheelEngine {
                 this.isSpinning = false;
                 this.currentAngle = endAngle;
                 this.draw();
-                if (onComplete) onComplete();
+                if (typeof onComplete === 'function') onComplete();
             }
         };
 
@@ -316,7 +324,7 @@ window.WheelEngine = {
             }
         }
         if (_wheelInstance) {
-            _wheelInstance.spinToTargetIndex(targetIndex, 4500, onComplete);
+            _wheelInstance.spinToTargetIndex(targetIndex, 3600, onComplete);
         } else {
             if (typeof onComplete === 'function') setTimeout(onComplete, 1500);
         }
