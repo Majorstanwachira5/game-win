@@ -76,6 +76,8 @@ const validateGameAction = [
 ];
 
 const validateAdminLogin = [
+    body('email').optional().isString().trim(),
+    body('adminEmail').optional().isString().trim(),
     body('password').isString().isLength({ min: 6, max: 100 }).trim(),
 ];
 

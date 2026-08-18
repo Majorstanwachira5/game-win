@@ -1,7 +1,7 @@
 /**
- * wheel.js — Luxury Canvas 3D Spin Wheel Engine v2.0
- * Renders smooth metallic gold rim, 28 LED bulbs, vibrant gradient slices, clear typography,
- * and physics-based easing animation.
+ * wheel.js — Luxury Canvas 3D Spin Wheel Engine v3.0 (Permanent Stop Architecture)
+ * Renders metallic gold rim, crisp LED bulbs, vibrant gradient slices, clear typography,
+ * and physics-based easing animation with 100% rock-solid stationary lock when stopped.
  */
 
 class SpinWheelEngine {
@@ -23,11 +23,11 @@ class SpinWheelEngine {
         this.soundEnabled = true;
         this.audioCtx = null;
         this.ledOffset = 0;
-        this.lastLedToggle = performance.now();
         this.spinState = null;
+        this.animFrameId = null;
 
         this.initAudio();
-        this.startMainLoop();
+        // Initial static render (100% stationary, zero idle loop)
         this.draw();
     }
 
@@ -44,7 +44,7 @@ class SpinWheelEngine {
             { id: 'mult_10_0',   label: 'x10 MEGA WIN',  type: 'win',        multiplier: 10.0, color: '#00d2ff', text: '#000000' },
             { id: 'mult_0_2',    label: 'x0.2',          type: 'win',        multiplier: 0.2,  color: '#135c66', text: '#ffffff' },
             { id: 'mult_20_0',   label: 'x20 SUPER WIN', type: 'win',        multiplier: 20.0, color: '#ffb700', text: '#000000' },
-            { id: 'double_win',  label: 'DOUBLE WIN',    type: 'double_next',                  color: '#e63946', text: '#ffffff' },
+            { id: 'double_win',  label: 'DOUBLE SPIN',   type: 'double_next',                  color: '#e63946', text: '#ffffff' },
             { id: 'jackpot_50',  label: 'x50 JACKPOT',   type: 'jackpot',    multiplier: 50.0, color: '#ffe600', text: '#000000' },
             { id: 'mult_1_0',    label: 'x1 DOUBLE UP',  type: 'win',        multiplier: 1.0,  color: '#0a3d62', text: '#ffffff' }
         ];
@@ -89,50 +89,6 @@ class SpinWheelEngine {
         }
     }
 
-    startMainLoop() {
-        const frame = (now) => {
-            if (now - this.lastLedToggle > 250) {
-                this.ledOffset = (this.ledOffset + 1) % 2;
-                this.lastLedToggle = now;
-            }
-
-            if (this.isSpinning && this.spinState) {
-                const { startAngle, totalAngleChange, durationMs, startTime, sliceAngle, onComplete } = this.spinState;
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / durationMs, 1);
-
-                // Dynamic progressive friction deceleration curve
-                const easeProgress = 1 - Math.pow(1 - progress, 3.6);
-                this.currentAngle = startAngle + (totalAngleChange * easeProgress);
-
-                const currentModAngle = (this.currentAngle) % (2 * Math.PI);
-                const pointerAngle = (1.5 * Math.PI - currentModAngle + 4 * Math.PI) % (2 * Math.PI);
-                const currentSliceIndex = Math.floor(pointerAngle / sliceAngle);
-
-                if (currentSliceIndex !== this.spinState.lastSliceCrossed) {
-                    if (this.soundEnabled) {
-                        this.playTickSound(1 - progress);
-                    }
-                    this.spinState.lastSliceCrossed = currentSliceIndex;
-                }
-
-                if (progress >= 1) {
-                    this.isSpinning = false;
-                    this.currentAngle = this.spinState.endAngle;
-                    this.spinState = null;
-                    if (typeof onComplete === 'function') onComplete();
-                }
-            } else {
-                this.currentAngle = (this.currentAngle + 0.0015) % (2 * Math.PI);
-            }
-
-            this.draw();
-            requestAnimationFrame(frame);
-        };
-
-        requestAnimationFrame(frame);
-    }
-
     draw() {
         if (!this.canvas || !this.ctx) return;
         const width = this.canvas.width || 300;
@@ -161,7 +117,7 @@ class SpinWheelEngine {
         this.ctx.lineWidth = 3;
         this.ctx.stroke();
 
-        // 2. 28 Animated Glowing LED Bulbs
+        // 2. 28 LED Bulbs
         const numLeds = 28;
         for (let i = 0; i < numLeds; i++) {
             const ledAngle = (i * 2 * Math.PI) / numLeds;
@@ -173,7 +129,7 @@ class SpinWheelEngine {
             this.ctx.arc(lx, ly, 4.5, 0, 2 * Math.PI);
             this.ctx.fillStyle = isLit ? '#00f0ff' : '#ffd700';
             this.ctx.shadowColor = isLit ? '#00f0ff' : '#ffd700';
-            this.ctx.shadowBlur = isLit ? 12 : 5;
+            this.ctx.shadowBlur = isLit ? 10 : 4;
             this.ctx.fill();
         }
         this.ctx.restore();
@@ -181,12 +137,11 @@ class SpinWheelEngine {
         // 3. Render Slices
         this.ctx.save();
         this.ctx.translate(centerX, centerY);
-        this.ctx.rotate(this.currentAngle);
 
         for (let i = 0; i < numSlices; i++) {
-            const startAngle = i * sliceAngle;
+            const slice = this.slices[i];
+            const startAngle = this.currentAngle + i * sliceAngle;
             const endAngle = startAngle + sliceAngle;
-            const slice = this.slices[i] || {};
 
             this.ctx.beginPath();
             this.ctx.moveTo(0, 0);
@@ -281,6 +236,8 @@ class SpinWheelEngine {
     }
 
     spinToTargetIndex(targetIndex, durationMs = 3600, onComplete) {
+        if (this.isSpinning) return;
+
         const numSlices = this.slices.length;
         const sliceAngle = (2 * Math.PI) / numSlices;
         const sliceCenterAngle = targetIndex * sliceAngle + sliceAngle / 2;
@@ -290,10 +247,11 @@ class SpinWheelEngine {
         const extraRevolutions = 18 * 2 * Math.PI;
 
         const startAngle = this.currentAngle;
-        const currentMod = startAngle % (2 * Math.PI);
-        let angleDiff = targetLandingAngle - currentMod;
-
-        while (angleDiff < 0) {
+        const currentMod = ((startAngle % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
+        const targetMod = ((targetLandingAngle % (2 * Math.PI)) + (2 * Math.PI)) % (2 * Math.PI);
+        
+        let angleDiff = targetMod - currentMod;
+        while (angleDiff <= 0) {
             angleDiff += 2 * Math.PI;
         }
 
@@ -311,6 +269,63 @@ class SpinWheelEngine {
             onComplete
         };
         this.isSpinning = true;
+
+        if (this.animFrameId) {
+            cancelAnimationFrame(this.animFrameId);
+            this.animFrameId = null;
+        }
+
+        const frame = (now) => {
+            if (!this.isSpinning || !this.spinState) {
+                this.draw();
+                return;
+            }
+
+            const elapsed = now - this.spinState.startTime;
+            const progress = Math.min(elapsed / this.spinState.durationMs, 1);
+
+            // Progressive friction deceleration curve (cubic-quartic ease-out)
+            const easeProgress = 1 - Math.pow(1 - progress, 3.8);
+            this.currentAngle = this.spinState.startAngle + (this.spinState.totalAngleChange * easeProgress);
+
+            // Audio tick on crossing slice boundaries
+            const currentModAngle = ((this.currentAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const pointerAngle = (1.5 * Math.PI - currentModAngle + 4 * Math.PI) % (2 * Math.PI);
+            const currentSliceIndex = Math.floor(pointerAngle / this.spinState.sliceAngle) % numSlices;
+
+            if (currentSliceIndex !== this.spinState.lastSliceCrossed) {
+                if (this.soundEnabled) {
+                    this.playTickSound(1 - progress);
+                }
+                this.spinState.lastSliceCrossed = currentSliceIndex;
+            }
+
+            // Rapid LED flashing only during active spin
+            this.ledOffset = Math.floor(now / 90) % 2;
+
+            if (progress >= 1) {
+                // 100% COMPLETE PERMANENT STOP — ZERO DRIFT, LOCKED ROTATION
+                this.isSpinning = false;
+                this.currentAngle = this.spinState.endAngle;
+                this.ledOffset = 0; // Solid stationary LEDs
+                const cb = this.spinState.onComplete;
+                this.spinState = null;
+                this.animFrameId = null;
+
+                // Final static render
+                this.draw();
+
+                if (typeof cb === 'function') {
+                    cb();
+                }
+                return;
+            }
+
+            this.draw();
+            this.animFrameId = requestAnimationFrame(frame);
+        };
+
+        this.animFrameId = requestAnimationFrame(frame);
     }
 }
 
@@ -345,7 +360,7 @@ window.WheelEngine = {
             if (inst && typeof inst.updateSlices === 'function') inst.updateSlices(slices);
         });
     },
-    spinToSlice(targetIndex, onComplete) {
+    spinToSlice(target, onComplete) {
         _initAllWheels();
 
         const activeInstances = Array.from(_wheelInstances.values()).filter(inst => inst && inst.canvas);
@@ -366,7 +381,21 @@ window.WheelEngine = {
         // Spin ALL wheel canvas instances synchronously across desktop & mobile
         activeInstances.forEach((inst, index) => {
             inst.soundEnabled = (index === 0);
-            inst.spinToTargetIndex(targetIndex, 3600, handleComplete);
+            let idx = 0;
+            if (typeof target === 'number') {
+                idx = target;
+            } else if (typeof target === 'string') {
+                const found = inst.slices.findIndex(s => s.id === target);
+                idx = found >= 0 ? found : 0;
+            } else if (typeof target === 'object' && target) {
+                if (target.id) {
+                    const found = inst.slices.findIndex(s => s.id === target.id);
+                    idx = found >= 0 ? found : (typeof target.sliceIndex === 'number' ? target.sliceIndex : 0);
+                } else if (typeof target.sliceIndex === 'number') {
+                    idx = target.sliceIndex;
+                }
+            }
+            inst.spinToTargetIndex(idx, 3600, handleComplete);
         });
     }
 };

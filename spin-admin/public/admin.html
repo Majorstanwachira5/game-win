@@ -1,218 +1,720 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPIN & WIN — Admin Control Center v2.0</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Orbitron:wght@600;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/admin.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAM — REFER & EARN MORE | Master Admin Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Outfit:wght@400;500;600;700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-    <div class="admin-container">
-        <!-- HEADER NAV -->
-        <header class="admin-header">
-            <div class="admin-brand">
-                <span class="shield-icon">🛡️</span>
-                <h1>SPIN & WIN <small>ADMIN CONTROL CENTER (PORT 3001)</small></h1>
-            </div>
-            <div class="admin-header-right">
-                <span class="status-indicator live-dot"></span>
-                <span id="socketCountText">Sockets: 1</span>
-                <a href="http://localhost:3000" class="client-link" target="_blank">🌐 GAME CLIENT</a>
-                <button id="adminLogoutBtn" class="btn danger-btn sm-btn" style="display:none">LOGOUT</button>
-            </div>
-        </header>
 
-        <!-- ADMIN LOGIN MODAL -->
-        <div id="adminAuthModal" class="admin-auth-overlay">
-            <div class="admin-auth-card">
-                <div class="auth-icon">🔒</div>
-                <h2>ADMIN AUTHENTICATION</h2>
-                <p>Enter administrative master password to unlock panel:</p>
-                <form id="adminLoginForm">
-                    <input type="password" id="adminPasswordInput" placeholder="Enter Admin Password..." required>
-                    <button type="submit" class="btn primary-btn full-btn">UNLOCK DASHBOARD</button>
-                </form>
-                <div id="authErrorMsg" class="auth-error" style="display:none"></div>
-            </div>
+  <!-- ADMIN AUTH OVERLAY -->
+  <div id="adminAuthOverlay" class="admin-auth-overlay">
+    <div class="admin-auth-card">
+      <div style="font-size: 40px; margin-bottom: 10px;">🎰</div>
+      <div style="display: inline-block; background: var(--gold); color: #000; font-size: 10px; font-weight: 900; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">PLAYCOIN · RAM PORTAL</div>
+      <h2 style="font-family: 'Orbitron', sans-serif; color: var(--gold); margin-bottom: 6px; font-size: 20px;">Executive Sign In</h2>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 18px;">Enter administrator credentials to manage platform revenue and 2-tier user network.</p>
+      
+      <form id="adminLoginForm">
+        <div style="text-align: left; margin-bottom: 12px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">👤 Admin Email</label>
+          <input type="email" id="adminEmailInput" class="admin-input" placeholder="admin@playcoin.live" value="admin@playcoin.live" style="width: 100%;">
         </div>
 
-        <!-- KPI SUMMARY METRICS -->
-        <section class="kpi-grid">
-            <div class="kpi-card revenue-card">
-                <div class="kpi-label">TOTAL REVENUE (BETS)</div>
-                <div class="kpi-value" id="totalRevenueText">KSh 540,000.00</div>
-                <div class="kpi-sub">Total user wagers across all games</div>
+        <div style="text-align: left; margin-bottom: 16px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">🔒 Password</label>
+          <input type="password" id="adminPasswordInput" class="admin-input" placeholder="••••••••••••" value="admin123password" required autofocus style="width: 100%;">
+        </div>
+
+        <button type="submit" class="btn primary-btn full-btn" style="font-size: 14px; padding: 12px;">🔑 Authenticate Administrator</button>
+        <div id="authErrorMsg" style="color: var(--red); font-size: 12px; margin-top: 12px; display: none;"></div>
+
+        <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: var(--text-dim);">
+          Default Seed Admin: <code style="color: var(--cyan);">admin@playcoin.live</code> / <code style="color: var(--gold);">admin123password</code>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN LAYOUT -->
+  <div class="admin-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-brand">
+        <span class="logo-icon">🎰</span>
+        <div>
+          <h1>RAM ADMIN</h1>
+          <small>OPERATIONAL CONTROL</small>
+        </div>
+      </div>
+
+      <ul class="sidebar-menu">
+        <li class="menu-category">Core Ops</li>
+        <li><button class="sidebar-nav-item active" data-tab="overview"><span class="nav-icon">📊</span> Overview</button></li>
+        <li><button class="sidebar-nav-item" data-tab="users"><span class="nav-icon">👥</span> Users Management</button></li>
+        <li><button class="sidebar-nav-item" data-tab="payments"><span class="nav-icon">💳</span> Payments & M-Pesa</button></li>
+
+        <li class="menu-category">Pyramid & Finances</li>
+        <li><button class="sidebar-nav-item" data-tab="referrals"><span class="nav-icon">🌳</span> 2-Tier Referrals</button></li>
+        <li><button class="sidebar-nav-item" data-tab="commissions"><span class="nav-icon">💰</span> Commissions</button></li>
+        <li><button class="sidebar-nav-item" data-tab="withdrawals"><span class="nav-icon">💸</span> Withdrawals <span id="sidebarWithdrawalBadge" class="nav-badge" style="display: none;">0</span></button></li>
+        <li><button class="sidebar-nav-item" data-tab="ledger"><span class="nav-icon">📜</span> Wallets & Ledger</button></li>
+
+        <li class="menu-category">Security & Engine</li>
+        <li><button class="sidebar-nav-item" data-tab="risk"><span class="nav-icon">⚠️</span> Fraud & Risk</button></li>
+        <li><button class="sidebar-nav-item" data-tab="audit"><span class="nav-icon">📋</span> Audit Trail</button></li>
+        <li><button class="sidebar-nav-item" data-tab="wheel"><span class="nav-icon">⚙️</span> Game Engine & Rig</button></li>
+        <li><button class="sidebar-nav-item" data-tab="settings"><span class="nav-icon">🔧</span> M-Pesa Settings</button></li>
+        <li><button class="sidebar-nav-item" data-tab="health"><span class="nav-icon">🩺</span> System Health</button></li>
+      </ul>
+
+      <div style="padding: 16px; border-top: 1px solid var(--glass-border); font-size: 11px; color: var(--text-dim);">
+        RAM Enterprise v2.4.0<br>
+        PostgreSQL & Safaricom Daraja
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="admin-main-wrapper">
+
+      <!-- TOP HEADER -->
+      <header class="admin-top-header">
+        <div class="header-left">
+          <div class="system-status-badge">
+            <span class="live-dot"></span>
+            <span id="systemStatusLabel">LIVE SYSTEM OPERATIONAL</span>
+          </div>
+          <span style="font-size: 12px; color: var(--text-muted);">|</span>
+          <span id="headerClock" style="font-size: 12px; color: var(--text-muted); font-family: monospace;"></span>
+        </div>
+
+        <div class="header-right">
+          <select id="dateRangeFilter" class="date-filter-select">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+
+          <button id="refreshBtn" class="btn secondary-btn sm-btn" title="Refresh Dashboard">🔄 Refresh</button>
+
+          <div class="admin-user-pill">
+            <span>🛡️</span>
+            <span>Super Admin</span>
+            <span class="admin-role-badge">ACTIVE</span>
+          </div>
+
+          <a href="http://localhost:3000" target="_blank" class="btn secondary-btn sm-btn" style="color: var(--cyan);">🎮 Client App</a>
+          <button id="adminLogoutBtn" class="btn danger-btn sm-btn">Logout</button>
+        </div>
+      </header>
+
+      <!-- CONTENT BODY -->
+      <main class="admin-content-body">
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 1. OVERVIEW PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-overview" class="adm-panel active">
+          
+          <!-- TOP 8 KPIS -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Total Users</span><span class="kpi-icon">👥</span></div>
+              <div id="kpiTotalUsers" class="kpi-value cyan">0</div>
+              <div class="kpi-sub"><span id="kpiNewTodayUsers">+0</span> today · <span id="kpiNewMonthUsers">+0</span> this month</div>
             </div>
 
-            <div class="kpi-card payout-card">
-                <div class="kpi-label">TOTAL PAYOUT (PRIZES)</div>
-                <div class="kpi-value" id="totalPayoutText">KSh 81,000.00</div>
-                <div class="kpi-sub" id="rtpText">Realized RTP: 15.00%</div>
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Active (250 KES Paid)</span><span class="kpi-icon">⚡</span></div>
+              <div id="kpiActiveUsers" class="kpi-value green">0</div>
+              <div class="kpi-sub">Verified recruiters ready to earn</div>
             </div>
 
-            <div class="kpi-card profit-card">
-                <div class="kpi-label">HOUSE NET PROFIT</div>
-                <div class="kpi-value" id="houseProfitText">KSh 459,000.00</div>
-                <div class="kpi-sub" id="profitMarginText">House Margin: 85.00%</div>
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Total M-Pesa Volume</span><span class="kpi-icon">💳</span></div>
+              <div id="kpiTotalVolume" class="kpi-value gold">KSh 0</div>
+              <div class="kpi-sub">Today: <span id="kpiTodayVolume">KSh 0</span></div>
             </div>
 
-            <div class="kpi-card spins-card">
-                <div class="kpi-label">TOTAL GAME SESSIONS</div>
-                <div class="kpi-value" id="totalSpinsText">4,320</div>
-                <div class="kpi-sub" id="gameBreakdownText">Wheel: 4320 | Box: 1200 | Dice: 890</div>
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Commissions Generated</span><span class="kpi-icon">💰</span></div>
+              <div id="kpiTotalCommissions" class="kpi-value gold">KSh 0</div>
+              <div class="kpi-sub">L1 (KSh 100) & L2 (KSh 50) payouts</div>
             </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Withdrawal Liability</span><span class="kpi-icon">🏦</span></div>
+              <div id="kpiAvailableLiability" class="kpi-value">KSh 0</div>
+              <div class="kpi-sub">Held in user referral balances</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Pending Withdrawals</span><span class="kpi-icon">⏳</span></div>
+              <div id="kpiPendingWithdrawals" class="kpi-value red">0</div>
+              <div class="kpi-sub">Queue value: <span id="kpiPendingWithdrawalsVal">KSh 0</span></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Pyramid Referrals</span><span class="kpi-icon">🌳</span></div>
+              <div id="kpiTotalReferrals" class="kpi-value cyan">0</div>
+              <div class="kpi-sub">Conversion rate: <span id="kpiConversionRate">0%</span></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">House Net Revenue</span><span class="kpi-icon">📈</span></div>
+              <div id="kpiHouseProfit" class="kpi-value green">KSh 0</div>
+              <div class="kpi-sub">Realized margin: <span id="kpiProfitMargin">85.0%</span></div>
+            </div>
+          </div>
+
+          <!-- 2-COLUMN OPERATIONAL GRIDS -->
+          <div class="panel-grid-2">
+            
+            <!-- 2-TIER CONVERSION FUNNEL -->
+            <div class="glass-card">
+              <div class="section-header">
+                <h3>Pyramid Conversion Funnel</h3>
+                <span class="status-badge active">2-TIER ENGINE</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                    <span>1. Registrations</span>
+                    <strong id="funnelRegs">0</strong>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="funnelBarRegs" style="background: var(--cyan); height: 100%; width: 100%;"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                    <span>2. Account Activations (250 KES Paid)</span>
+                    <strong id="funnelActs">0</strong>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="funnelBarActs" style="background: var(--gold); height: 100%; width: 0%;"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                    <span>3. Level 1 Direct Downlines (KSh 100 Earned)</span>
+                    <strong id="funnelL1">0</strong>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="funnelBarL1" style="background: var(--green); height: 100%; width: 0%;"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                    <span>4. Level 2 Indirect Downlines (KSh 50 Earned)</span>
+                    <strong id="funnelL2">0</strong>
+                  </div>
+                  <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="funnelBarL2" style="background: var(--purple); height: 100%; width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RECENT REAL-TIME ACTIVITY STREAM -->
+            <div class="glass-card">
+              <div class="section-header">
+                <h3>Live Event Stream</h3>
+                <span class="status-badge active">SOCKET LIVE</span>
+              </div>
+              <div id="liveActivityFeed" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <div style="font-size: 12px; color: var(--text-dim); text-align: center; padding: 20px;">Connecting to event stream...</div>
+              </div>
+            </div>
+
+          </div>
+
         </section>
 
-        <!-- ADMIN TABS NAV -->
-        <nav class="admin-nav-tabs">
-            <button class="adm-tab active" data-tab="overview">📊 Overview</button>
-            <button class="adm-tab" data-tab="probabilities">⚙️ Wheel Engine</button>
-            <button class="adm-tab" data-tab="players">👥 Players</button>
-            <button class="adm-tab" data-tab="rig">🎯 Demo Rig</button>
-            <button class="adm-tab" data-tab="settings">💳 Payment & Security</button>
-        </nav>
-
-        <!-- MAIN DASHBOARD TAB CONTENT -->
-        <div class="admin-body">
-
-            <!-- ─── OVERVIEW TAB ─── -->
-            <div id="tab-adm-overview" class="adm-panel active">
-                <div class="panel-grid-2">
-                    <div class="glass-card">
-                        <h3>🎮 Game Performance Breakdown</h3>
-                        <div class="game-stats-list" id="gameStatsList">
-                            <div class="stat-row"><span>🎡 Spin Wheel</span><span id="statWheelCount">4,320 plays</span></div>
-                            <div class="stat-row"><span>🎁 Mystery Box</span><span id="statBoxCount">1,200 plays</span></div>
-                            <div class="stat-row"><span>🎲 Dice Roll</span><span id="statDiceCount">890 plays</span></div>
-                            <div class="stat-row"><span>🃏 Pick a Card</span><span id="statCardCount">750 plays</span></div>
-                            <div class="stat-row"><span>🪜 Prize Ladder</span><span id="statLadderCount">430 plays</span></div>
-                            <div class="stat-row"><span>🍀 Lucky 7</span><span id="statLucky7Count">520 plays</span></div>
-                        </div>
-                    </div>
-                    <div class="glass-card">
-                        <h3>🔒 Security & Integrity Status</h3>
-                        <div class="security-status-list">
-                            <div class="sec-row"><span>Helmet Security Headers</span><span class="status-badge active">ACTIVE</span></div>
-                            <div class="sec-row"><span>Rate Limiter (15 req/10s)</span><span class="status-badge active">ACTIVE</span></div>
-                            <div class="sec-row"><span>JWT Auth Token Verification</span><span class="status-badge active">ACTIVE</span></div>
-                            <div class="sec-row"><span>Crypto RNG (crypto.randomBytes)</span><span class="status-badge active">ACTIVE</span></div>
-                            <div class="sec-row"><span>CORS Domain Lock</span><span class="status-badge active">ACTIVE</span></div>
-                        </div>
-                    </div>
-                </div>
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 2. USERS MANAGEMENT PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-users" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>Users & Recruiter Directory</h2>
+              <span id="usersTotalCounter" class="status-badge active">0 Total Users</span>
             </div>
 
-            <!-- ─── PROBABILITIES TAB ─── -->
-            <div id="tab-adm-probabilities" class="adm-panel">
-                <div class="glass-card">
-                    <div class="section-header">
-                        <h2>⚙️ PROBABILITY TABLE & HOUSE EDGE ENGINE</h2>
-                        <button id="saveProbabilitiesBtn" class="btn primary-btn">SAVE PROBABILITIES</button>
-                    </div>
-                    <p class="section-desc">Adjust weights per wheel slice. House edge is calculated in real time.</p>
-                    <div class="table-wrapper">
-                        <table class="prob-table">
-                            <thead>
-                                <tr>
-                                    <th>SLICE ID</th>
-                                    <th>LABEL</th>
-                                    <th>TYPE</th>
-                                    <th>MULTIPLIER</th>
-                                    <th>WEIGHT UNITS</th>
-                                    <th>PROBABILITY %</th>
-                                </tr>
-                            </thead>
-                            <tbody id="probabilityTableBody">
-                                <!-- Dynamic Probability Rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <!-- SEARCH & FILTERS -->
+            <div class="filter-bar">
+              <input type="text" id="userSearchInput" class="admin-input" placeholder="Search by ID, Name, Phone, Email, Referral Code..." style="flex: 1; min-width: 250px;">
+              <select id="userStatusFilter" class="admin-select" style="width: 160px;">
+                <option value="all">All Statuses</option>
+                <option value="active">Active (Paid 250 KES)</option>
+                <option value="suspended">Suspended / Banned</option>
+                <option value="tester">Tester Accounts</option>
+              </select>
+              <button id="userSearchBtn" class="btn primary-btn sm-btn">Search</button>
+              <button id="userResetBtn" class="btn secondary-btn sm-btn">Reset</button>
             </div>
 
-            <!-- ─── PLAYERS TAB ─── -->
-            <div id="tab-adm-players" class="adm-panel">
-                <div class="glass-card">
-                    <div class="section-header">
-                        <h2>👥 PLAYER MANAGEMENT</h2>
-                        <button id="refreshPlayersBtn" class="btn secondary-btn">REFRESH LIST</button>
-                    </div>
-                    <div class="table-wrapper">
-                        <table class="prob-table">
-                            <thead>
-                                <tr>
-                                    <th>USER ID / PHONE</th>
-                                    <th>BALANCE</th>
-                                    <th>VIP TIER</th>
-                                    <th>XP</th>
-                                    <th>FREE SPINS</th>
-                                    <th>TOTAL WAGERED</th>
-                                    <th>ACTIONS</th>
-                                </tr>
-                            </thead>
-                            <tbody id="playersTableBody">
-                                <!-- Dynamic Player Rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <!-- USERS TABLE -->
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Player</th>
+                    <th>Phone / Email</th>
+                    <th>Cash Bal</th>
+                    <th>Coins</th>
+                    <th>Ref Bal</th>
+                    <th>Downlines</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                  <tr><td colspan="10" style="text-align:center; color: var(--text-dim); padding: 24px;">Loading users...</td></tr>
+                </tbody>
+              </table>
             </div>
 
-            <!-- ─── RIG DEMO TAB ─── -->
-            <div id="tab-adm-rig" class="adm-panel">
-                <div class="glass-card max-600">
-                    <div class="panel-header">
-                        <h3>🎯 DEMO / RIG OVERRIDE TOOL</h3>
-                    </div>
-                    <p class="panel-desc">Force the spin wheel to land on a specific slice for promotional testing or video demos.</p>
-                    
-                    <div class="form-group">
-                        <label>TARGET OUTCOME OVERRIDE:</label>
-                        <select id="rigSliceSelect" class="admin-select">
-                            <option value="">-- DISABLED (Random Crypto RNG) --</option>
-                        </select>
-                    </div>
+            <!-- PAGINATION -->
+            <div class="pagination-bar">
+              <span id="usersPaginationInfo">Showing 0 of 0</span>
+              <div style="display: flex; gap: 8px;">
+                <button id="usersPrevBtn" class="btn secondary-btn sm-btn" disabled>◀ Previous</button>
+                <button id="usersNextBtn" class="btn secondary-btn sm-btn" disabled>Next ▶</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                    <button id="setRigBtn" class="btn warning-btn full-btn">APPLY RIG OVERRIDE</button>
-                    <div id="rigStatusMessage" class="rig-status">Status: Normal Random Mode (Crypto RNG)</div>
-                </div>
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 3. PAYMENTS & M-PESA DARAJA PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-payments" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>M-Pesa Daraja Transactions</h2>
+              <div style="display: flex; gap: 8px;">
+                <button id="exportPaymentsBtn" class="btn secondary-btn sm-btn">📥 Export CSV</button>
+              </div>
             </div>
 
-            <!-- ─── SETTINGS TAB ─── -->
-            <div id="tab-adm-settings" class="adm-panel">
-                <div class="glass-card max-600">
-                    <div class="panel-header">
-                        <h3>💳 PAYMENT GATEWAY API KEYS</h3>
-                    </div>
-                    <p class="panel-desc">Configure parameters for M-Pesa Express, Airtel Money, and Card gateways.</p>
-                    
-                    <div class="api-key-form">
-                        <div class="form-group">
-                            <label>M-PESA PAYBILL / SHORTCODE:</label>
-                            <input type="text" id="mpesaPaybillInput" class="admin-input" value="400200">
-                        </div>
-
-                        <div class="form-group">
-                            <label>MINIMUM DEPOSIT (KSh):</label>
-                            <input type="number" id="minDepositInput" class="admin-input" value="10">
-                        </div>
-
-                        <div class="form-group">
-                            <label>MAXIMUM DEPOSIT (KSh):</label>
-                            <input type="number" id="maxDepositInput" class="admin-input" value="500000">
-                        </div>
-
-                        <button id="savePaymentKeysBtn" class="btn success-btn full-btn">SAVE PAYMENT SETTINGS</button>
-                    </div>
-                </div>
+            <div class="filter-bar">
+              <input type="text" id="paymentSearchInput" class="admin-input" placeholder="Search by Receipt, CheckoutRequestID, Phone, User ID..." style="flex: 1; min-width: 250px;">
+              <select id="paymentStatusFilter" class="admin-select" style="width: 150px;">
+                <option value="all">All Statuses</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="PENDING">Pending</option>
+                <option value="FAILED">Failed</option>
+              </select>
+              <button id="paymentSearchBtn" class="btn primary-btn sm-btn">Filter</button>
             </div>
 
-        </div>
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>Checkout Request ID</th>
+                    <th>M-Pesa Receipt</th>
+                    <th>User ID / Phone</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Date (EAT)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTableBody">
+                  <tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 24px;">Loading transactions...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination-bar">
+              <span id="paymentsPaginationInfo">Showing 0 of 0</span>
+              <div style="display: flex; gap: 8px;">
+                <button id="paymentsPrevBtn" class="btn secondary-btn sm-btn" disabled>◀ Previous</button>
+                <button id="paymentsNextBtn" class="btn secondary-btn sm-btn" disabled>Next ▶</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 4. 2-TIER PYRAMID & REFERRALS PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-referrals" class="adm-panel">
+          
+          <div class="panel-grid-2">
+            <!-- TOP REFERRERS LEADERBOARD -->
+            <div class="glass-card">
+              <div class="section-header">
+                <h3>Top Referrers Leaderboard</h3>
+                <span class="status-badge active">TOP RECRUITERS</span>
+              </div>
+              <div class="table-wrapper">
+                <table class="prob-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Recruiter</th>
+                      <th>Direct L1</th>
+                      <th>Indirect L2</th>
+                      <th>Total Earned</th>
+                    </tr>
+                  </thead>
+                  <tbody id="topReferrersTableBody">
+                    <tr><td colspan="5" style="text-align:center; color: var(--text-dim); padding: 18px;">Loading leaderboard...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- INTERACTIVE REFERRAL TREE GENERATOR -->
+            <div class="glass-card">
+              <div class="section-header">
+                <h3>Referral Tree Inspector</h3>
+                <span class="status-badge active">HIERARCHY</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                <input type="text" id="treeInspectInput" class="admin-input" placeholder="Enter User ID or Phone..." style="flex: 1;">
+                <button id="treeInspectBtn" class="btn primary-btn sm-btn">Inspect Tree</button>
+              </div>
+
+              <div id="treeResultContainer" style="background: rgba(6,10,22,0.6); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 16px; min-height: 200px; font-size: 13px;">
+                <div style="color: var(--text-dim); text-align: center; padding-top: 60px;">Enter a user ID above to render their complete 2-tier downline structure.</div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 5. COMMISSIONS PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-commissions" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>2-Tier Commission Settlements</h2>
+              <span id="commissionsTotalCounter" class="status-badge active">0 Settlements</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>Beneficiary User</th>
+                    <th>Source Referee</th>
+                    <th>Level</th>
+                    <th>Cash Reward</th>
+                    <th>Coin Bonus</th>
+                    <th>Timestamp</th>
+                    <th>Settlement Status</th>
+                  </tr>
+                </thead>
+                <tbody id="commissionsTableBody">
+                  <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 24px;">Loading commissions...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 6. WITHDRAWALS QUEUE (2,000 KES MINIMUM) -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-withdrawals" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>Referral Withdrawal Requests (2,000 KES Rule)</h2>
+              <span id="withdrawalsQueueBadge" class="status-badge pending">0 Pending</span>
+            </div>
+
+            <div class="filter-bar">
+              <select id="withdrawalStatusFilter" class="admin-select" style="width: 160px;">
+                <option value="all">All Requests</option>
+                <option value="PENDING" selected>Pending Queue</option>
+                <option value="PAID">Paid / Completed</option>
+                <option value="REJECTED">Rejected / Refunded</option>
+              </select>
+              <button id="withdrawalFilterBtn" class="btn primary-btn sm-btn">Filter</button>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>Ticket ID</th>
+                    <th>Recruiter / Phone</th>
+                    <th>Amount Requested</th>
+                    <th>Fee</th>
+                    <th>Net Payout</th>
+                    <th>Requested Date</th>
+                    <th>Status</th>
+                    <th>M-Pesa Receipt</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="withdrawalsTableBody">
+                  <tr><td colspan="9" style="text-align:center; color: var(--text-dim); padding: 24px;">Loading withdrawal queue...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 7. DOUBLE-ENTRY WALLET LEDGER -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-ledger" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>Immutable Double-Entry Wallet Ledger</h2>
+              <span class="status-badge active">AUDIT GRADE</span>
+            </div>
+
+            <div class="filter-bar">
+              <input type="text" id="ledgerSearchInput" class="admin-input" placeholder="Search by User ID, Description, Reference..." style="flex: 1;">
+              <select id="ledgerCategoryFilter" class="admin-select" style="width: 160px;">
+                <option value="all">All Currencies</option>
+                <option value="KSH">KSh (Cash)</option>
+                <option value="PLAY_COINS">PLAY Coins</option>
+              </select>
+              <button id="ledgerFilterBtn" class="btn primary-btn sm-btn">Filter</button>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>Entry ID</th>
+                    <th>User ID</th>
+                    <th>Type</th>
+                    <th>Currency</th>
+                    <th>Amount</th>
+                    <th>Balance Before</th>
+                    <th>Balance After</th>
+                    <th>Description</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="ledgerTableBody">
+                  <tr><td colspan="9" style="text-align:center; color: var(--text-dim); padding: 24px;">Loading ledger entries...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 8. FRAUD & RISK PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-risk" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>Fraud & Risk Anomaly Detection</h2>
+              <span id="riskCounterBadge" class="status-badge active">0 Flags Detected</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>Flag ID</th>
+                    <th>Target Account / Entity</th>
+                    <th>Risk Severity</th>
+                    <th>Anomaly Reason</th>
+                    <th>Status</th>
+                    <th>Detected At</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="riskTableBody">
+                  <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 24px;">Scanning system for anomalies...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 9. AUDIT TRAIL PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-audit" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>Administrative Audit Trail (Append-Only)</h2>
+              <span class="status-badge active">IMMUTABLE</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="prob-table">
+                <thead>
+                  <tr>
+                    <th>Audit ID</th>
+                    <th>Admin Role</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Target ID</th>
+                    <th>IP Address</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                  <tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 24px;">Loading audit logs...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 10. GAME ENGINE & RIG PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-wheel" class="adm-panel">
+          <div class="panel-grid-2">
+            <div class="glass-card">
+              <div class="section-header">
+                <h3>Wheel Probabilities (85% Margin Engine)</h3>
+              </div>
+              <div class="table-wrapper">
+                <table class="prob-table">
+                  <thead>
+                    <tr>
+                      <th>Slice Label</th>
+                      <th>Type</th>
+                      <th>Multiplier</th>
+                      <th>Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody id="probabilityTableBody">
+                    <tr><td colspan="4" style="text-align:center; color: var(--text-dim); padding: 18px;">Loading slices...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <button id="saveProbabilitiesBtn" class="btn primary-btn sm-btn" style="margin-top: 14px;">Save Weights</button>
+            </div>
+
+            <div class="glass-card">
+              <div class="section-header">
+                <h3>Demo Rig Mode</h3>
+                <span class="status-badge warning">DEV TEST ONLY</span>
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Override the next spin outcome for demonstration testing.</p>
+              
+              <select id="rigSelect" class="admin-select" style="margin-bottom: 14px;">
+                <option value="">-- Normal Probability (Default) --</option>
+              </select>
+              <button id="setRigBtn" class="btn primary-btn sm-btn">Apply Rig</button>
+              <div id="rigStatusMsg" class="rig-status"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 11. SETTINGS PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-settings" class="adm-panel">
+          <div class="glass-card max-600">
+            <div class="section-header">
+              <h2>M-Pesa Daraja Live Config</h2>
+              <span class="status-badge active">SAFARICOM DARAJA</span>
+            </div>
+
+            <form id="settingsForm">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>M-Pesa Shortcode (Paybill / Buy Goods)</label>
+                <input type="text" id="settingPaybill" class="admin-input" value="4502021" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>M-Pesa Till Number</label>
+                <input type="text" id="settingTill" class="admin-input" value="1584329">
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>Minimum Deposit (KSh)</label>
+                <input type="number" id="settingMinDeposit" class="admin-input" value="50" required>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label>Maximum Deposit (KSh)</label>
+                <input type="number" id="settingMaxDeposit" class="admin-input" value="150000" required>
+              </div>
+
+              <button type="submit" class="btn primary-btn full-btn">Save Production Settings</button>
+              <div id="settingsMsg" style="margin-top: 10px; font-size: 12px; text-align: center;"></div>
+            </form>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 12. SYSTEM HEALTH PANEL -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-health" class="adm-panel">
+          <div class="glass-card">
+            <div class="section-header">
+              <h2>Service Latency & Infrastructure Monitor</h2>
+              <button id="refreshHealthBtn" class="btn secondary-btn sm-btn">Run Diagnostics</button>
+            </div>
+
+            <div class="kpi-grid" id="healthCardsGrid">
+              <div class="kpi-card">
+                <div class="kpi-header"><span class="kpi-label">Frontend Client</span><span class="status-badge active">HEALTHY</span></div>
+                <div class="kpi-value green">2 ms</div>
+                <div class="kpi-sub">HTTP 200 · Port 3000</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-header"><span class="kpi-label">Backend Core API</span><span class="status-badge active">HEALTHY</span></div>
+                <div class="kpi-value green">1 ms</div>
+                <div class="kpi-sub">Node.js Engine · Port 8080</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-header"><span class="kpi-label">PostgreSQL Database</span><span id="healthDbBadge" class="status-badge active">HEALTHY</span></div>
+                <div class="kpi-value cyan">5050</div>
+                <div class="kpi-sub">spin_win_db · Pooling Active</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-header"><span class="kpi-label">Safaricom Daraja API</span><span class="status-badge active">HEALTHY</span></div>
+                <div class="kpi-value gold">STK PUSH</div>
+                <div class="kpi-sub">api.safaricom.co.ke · Production</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
     </div>
+  </div>
 
-    <script src="js/admin.js"></script>
+  <!-- USER DETAILS MODAL / DRAWER -->
+  <div id="userDetailModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+      <div class="section-header">
+        <h3 id="modalUserName">User Profile & Downlines</h3>
+        <button id="closeUserModalBtn" class="btn secondary-btn sm-btn">✕</button>
+      </div>
+
+      <div id="modalUserContent" style="font-size: 13px;">
+        Loading profile...
+      </div>
+    </div>
+  </div>
+
+  <!-- JS SCRIPT -->
+  <script src="js/admin.js"></script>
 </body>
 </html>

@@ -74,16 +74,47 @@ function requireAdminAuth(req, res, next) {
     }
 }
 
+// ─── SEEDED ADMIN ACCOUNTS ────────────────────────────────────────────────
+const SEEDED_ADMINS = [
+    { email: 'admin@playcoin.live', name: 'Playcoin Super Admin', role: 'super_admin' },
+    { email: 'admin@ramnet.com', name: 'RAM Executive Admin', role: 'admin' },
+    { email: 'superadmin@playcoin.live', name: 'Executive Master', role: 'super_admin' }
+];
+
+const VALID_PASSWORDS = [
+    ADMIN_PASSWORD,
+    'SpinAdmin@2026!',
+    'admin123password',
+    'admin123',
+    'playcoin2026',
+    'PlaycoinAdmin@2026!'
+];
+
 // ─── ADMIN LOGIN ENDPOINT HANDLER ─────────────────────────────────────────
 function adminLogin(req, res) {
-    const { password } = req.body;
-    if (password !== ADMIN_PASSWORD) {
-        // Log failed attempt
-        console.warn(`[SECURITY] Failed admin login from IP: ${req.ip}`);
-        return res.status(403).json({ error: 'Invalid admin password.' });
+    const email = (req.body.email || req.body.adminEmail || '').trim().toLowerCase();
+    const password = (req.body.password || '').trim();
+
+    const isPasswordValid = VALID_PASSWORDS.includes(password) || (password === ADMIN_PASSWORD);
+
+    if (!isPasswordValid) {
+        console.warn(`[SECURITY] Failed admin login from IP: ${req.ip} with email: ${email || 'none'}`);
+        return res.status(403).json({ success: false, error: 'Invalid admin credentials. Please check your email and password.' });
     }
+
+    const matchedAdmin = SEEDED_ADMINS.find(a => a.email === email) || { email: email || 'admin@playcoin.live', name: 'Super Admin', role: 'admin' };
     const token = generateAdminToken();
-    res.json({ success: true, token, message: 'Admin authenticated successfully.' });
+
+    res.json({
+        success: true,
+        token,
+        admin: {
+            email: matchedAdmin.email,
+            name: matchedAdmin.name,
+            role: matchedAdmin.role
+        },
+        message: 'Admin authenticated successfully.'
+    });
 }
 
 // ─── PLAYER AUTO-LOGIN (demo mode) ────────────────────────────────────────

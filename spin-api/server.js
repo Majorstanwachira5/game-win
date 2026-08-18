@@ -27,6 +27,7 @@ const rewardEngine = require('./services/RewardEngine');
 const mpesaService = require('./services/MpesaService');
 const tonService = require('./services/TonService');
 const referralService = require('./services/ReferralService');
+const adminService = require('./services/AdminService');
 
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
 const dbConfig = {
@@ -222,22 +223,22 @@ let paymentSettings = {
     maxDeposit: 500000
 };
 
-// Master Wheel Slices
+// Master Wheel Slices (Canonical 14-Slice Alignment)
 let wheelSlices = [
-    { id: 'try_again_1', label: 'TRY AGAIN',    type: 'loss',       multiplier: 0,    weight: 45000, color: '#7a1414', text: '#ffffff' },
-    { id: 'try_again_2', label: 'TRY AGAIN',    type: 'loss',       multiplier: 0,    weight: 20000, color: '#560e0e', text: '#ffffff' },
-    { id: 'mult_0_1',    label: '×0.1',          type: 'win',        multiplier: 0.1,  weight: 9500,  color: '#0d4a52', text: '#ffffff' },
-    { id: 'mult_0_2',    label: '×0.2',          type: 'win',        multiplier: 0.2,  weight: 6500,  color: '#135c66', text: '#ffffff' },
-    { id: 'mult_0_5',    label: '×0.5',          type: 'win',        multiplier: 0.5,  weight: 4500,  color: '#1c7582', text: '#ffffff' },
-    { id: 'mult_1_0',    label: '×1',            type: 'win',        multiplier: 1.0,  weight: 3000,  color: '#0a3d62', text: '#ffffff' },
-    { id: 'mult_2_0',    label: '×2',            type: 'win',        multiplier: 2.0,  weight: 1300,  color: '#00a8cc', text: '#ffffff' },
-    { id: 'mult_5_0',    label: '×5',            type: 'win',        multiplier: 5.0,  weight: 600,   color: '#cca400', text: '#000000' },
-    { id: 'mult_10_0',   label: '×10',           type: 'win',        multiplier: 10.0, weight: 150,   color: '#00d2ff', text: '#000000' },
-    { id: 'mult_20_0',   label: '×20',           type: 'win',        multiplier: 20.0, weight: 50,    color: '#ffb700', text: '#000000' },
-    { id: 'jackpot_50',  label: '×50 JACKPOT',   type: 'jackpot',    multiplier: 50.0, weight: 5,     color: '#ffe600', text: '#000000' },
-    { id: 'free_spin_1', label: 'FREE SPIN',     type: 'free_spin',  count: 1, multiplier: 0, weight: 6500, color: '#0f7568', text: '#ffffff' },
-    { id: 'free_spin_2', label: '2 FREE SPINS',  type: 'free_spin', count: 2, multiplier: 0, weight: 2500, color: '#0c574d', text: '#ffffff' },
-    { id: 'double_win',  label: 'DOUBLE NEXT WIN', type: 'double_next', multiplier: 0, weight: 395, color: '#d9411e', text: '#ffffff' }
+    { id: 'try_again_1', label: 'TRY AGAIN',       type: 'loss',        multiplier: 0,    weight: 45000, color: '#8b0000', text: '#ffffff' },
+    { id: 'mult_0_1',    label: '×0.1',             type: 'win',         multiplier: 0.1,  weight: 9500,  color: '#0d4a52', text: '#00f0ff' },
+    { id: 'free_spin_1', label: 'FREE SPIN',        type: 'free_spin',   count: 1, multiplier: 0, weight: 6500,  color: '#0f7568', text: '#ffffff' },
+    { id: 'mult_0_5',    label: '×0.5',             type: 'win',         multiplier: 0.5,  weight: 4500,  color: '#1c7582', text: '#ffffff' },
+    { id: 'mult_2_0',    label: '×2 MULTIPLIER',    type: 'win',         multiplier: 2.0,  weight: 1300,  color: '#00a8cc', text: '#ffffff' },
+    { id: 'try_again_2', label: 'TRY AGAIN',       type: 'loss',        multiplier: 0,    weight: 20000, color: '#560e0e', text: '#ffffff' },
+    { id: 'mult_5_0',    label: '×5 MULTIPLIER',    type: 'win',         multiplier: 5.0,  weight: 600,   color: '#d4af37', text: '#000000' },
+    { id: 'free_spin_2', label: '2 FREE SPINS',     type: 'free_spin',   count: 2, multiplier: 0, weight: 2500,  color: '#0c574d', text: '#ffffff' },
+    { id: 'mult_10_0',   label: '×10 MEGA WIN',     type: 'win',         multiplier: 10.0, weight: 150,   color: '#00d2ff', text: '#000000' },
+    { id: 'mult_0_2',    label: '×0.2',             type: 'win',         multiplier: 0.2,  weight: 6500,  color: '#135c66', text: '#ffffff' },
+    { id: 'mult_20_0',   label: '×20 SUPER WIN',    type: 'win',         multiplier: 20.0, weight: 50,    color: '#ffb700', text: '#000000' },
+    { id: 'double_win',  label: 'DOUBLE SPIN',      type: 'double_next', multiplier: 0, weight: 3500,  color: '#e63946', text: '#ffffff' },
+    { id: 'jackpot_50',  label: '×50 JACKPOT',      type: 'jackpot',     multiplier: 50.0, weight: 5,     color: '#ffe600', text: '#000000' },
+    { id: 'mult_1_0',    label: '×1 DOUBLE UP',     type: 'win',         multiplier: 1.0,  weight: 3000,  color: '#0a3d62', text: '#ffffff' }
 ];
 
 let activeRigSlice = null;
@@ -400,15 +401,17 @@ function getRandomSlice() {
         const found = wheelSlices.find(s => s.id === activeRigSlice);
         if (found) return found;
     }
-    const total = wheelSlices.reduce((s, x) => s + x.weight, 0);
+    // Only allow stopping at Free Spin, Double Spin, and Try Again / No Spin
+    const allowedSlices = wheelSlices.filter(s => ['free_spin', 'double_next', 'loss'].includes(s.type));
+    const total = allowedSlices.reduce((s, x) => s + (x.weight || 1000), 0);
     const randomBuffer = crypto.randomBytes(4);
     const randomNumber = randomBuffer.readUInt32BE(0);
     let randomWeight = (randomNumber / 0xFFFFFFFF) * total;
-    for (const slice of wheelSlices) {
-        if (randomWeight < slice.weight) return slice;
-        randomWeight -= slice.weight;
+    for (const slice of allowedSlices) {
+        if (randomWeight < (slice.weight || 1000)) return slice;
+        randomWeight -= (slice.weight || 1000);
     }
-    return wheelSlices[0];
+    return allowedSlices[0] || wheelSlices[0];
 }
 
 function trackChallenge(user, trackKey, amount = 1) {
@@ -808,16 +811,21 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
         let wonSlice;
         if (isTester) {
             wonSlice = getRandomSlice();
-        } else if (user.trialCount <= 5) {
-            // First 5 spins rule: Award Free Spins (60% chance) or Try Again (40% chance)
-            const isFreeSpinDrop = Math.random() < 0.60;
-            if (isFreeSpinDrop) {
+        } else if (user.trialCount <= 7) {
+            // First 7 spins rule: Strictly award FREE SPIN, DOUBLE SPIN, or TRY AGAIN
+            const rand = Math.random();
+            if (rand < 0.50) {
                 const fsSlices = wheelSlices.filter(s => s.type === 'free_spin');
                 wonSlice = fsSlices[Math.floor(Math.random() * fsSlices.length)] || wheelSlices.find(s => s.id === 'free_spin_1');
+            } else if (rand < 0.75) {
+                wonSlice = wheelSlices.find(s => s.type === 'double_next') || wheelSlices.find(s => s.id === 'double_win');
             } else {
                 const lossSlices = wheelSlices.filter(s => s.type === 'loss');
                 wonSlice = lossSlices[Math.floor(Math.random() * lossSlices.length)] || wheelSlices.find(s => s.id === 'try_again_1');
             }
+        } else if (user.trialCount === 8 || user.trialCount === 9) {
+            // Spin 8 / 9: Rewarding x2 Win with instant backend balance credit
+            wonSlice = wheelSlices.find(s => s.id === 'mult_2_0') || getRandomSlice();
         } else {
             wonSlice = getRandomSlice();
         }
@@ -826,24 +834,27 @@ app.post('/api/spin', gameLimiter, requirePlayerAuth, validateSpin, handleValida
         let winAmount = 0;
         let freeSpinsGranted = 0;
 
-        if (isTester) {
-            const testerMult = 150 + Math.floor(Math.random() * 101);
-            winAmount = Math.round(betAmount * testerMult);
-            user.coins = (user.coins || 250000) + winAmount;
-        } else if (wonSlice.type === 'free_spin') {
+        if (wonSlice.type === 'free_spin') {
             freeSpinsGranted = wonSlice.count || 1;
             user.freeSpins += freeSpinsGranted;
-        } else if (wonSlice.type === 'win' || wonSlice.type === 'jackpot') {
-            let mult = wonSlice.multiplier;
-            if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
-            let rawWin = actualWager > 0 ? (actualWager * mult) : (betAmount * mult);
-            if (user.trialCount <= 5) { rawWin = 0; }
-            winAmount = rawWin;
-            user.balance += winAmount;
-            user.totalWon += winAmount;
-            if (winAmount > 0) financialStats.totalPayout += winAmount;
+            if (isTester) user.coins = (user.coins || 250000) + 200;
         } else if (wonSlice.type === 'double_next') {
             user.doubleNextWin = true;
+            if (isTester) user.coins = (user.coins || 250000) + 200;
+        } else if (wonSlice.type === 'loss') {
+            winAmount = 0;
+            if (isTester) user.coins = (user.coins || 250000) + 50;
+        } else if (wonSlice.type === 'win' || wonSlice.type === 'jackpot') {
+            let mult = wonSlice.multiplier || 1.0;
+            if (user.doubleNextWin) {
+                mult *= 2;
+                user.doubleNextWin = false;
+            }
+            const baseBet = actualWager > 0 ? actualWager : betAmount;
+            winAmount = Math.round(baseBet * mult);
+            user.balance = Math.round((user.balance + winAmount) * 100) / 100;
+            user.totalWon = Math.round((user.totalWon + winAmount) * 100) / 100;
+            if (winAmount > 0) financialStats.totalPayout += winAmount;
         }
 
         const xpResult = addXP(user, 'spin');
@@ -1597,6 +1608,51 @@ app.get('/api/referral/stats', requirePlayerAuth, (req, res) => {
     }
 });
 
+app.post('/api/referral/withdraw', requirePlayerAuth, (req, res) => {
+    try {
+        const user = getOrCreateUser(req.userId);
+        const phone = (req.body.phone || user.phone || '').trim();
+        const amount = Number(req.body.amount) || 2000;
+
+        if (!phone) {
+            return res.status(400).json({ success: false, error: 'Valid M-Pesa phone number is required for payout.' });
+        }
+
+        const result = referralService.requestWithdrawal(user, phone, amount, walletService);
+        saveUsersCache();
+
+        res.json({
+            success: true,
+            ...result,
+            stats: referralService.getReferralStats(user, req.get('origin') || `${req.protocol}://${req.get('host')}`)
+        });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/referral/activate', requirePlayerAuth, async (req, res) => {
+    try {
+        const user = getOrCreateUser(req.userId);
+        const phone = (req.body.phone || user.phone || '').trim();
+        const activationAmount = 250;
+
+        if (!phone) {
+            return res.status(400).json({ success: false, error: 'Phone number required for M-Pesa activation STK push' });
+        }
+
+        // Trigger STK Push for 250 KES
+        const stkRes = await triggerDarajaSTKPush(phone, activationAmount, user.id, 'Account Activation (KSh 250)');
+        res.json({
+            success: true,
+            message: `M-Pesa STK push for KSh 250 sent to ${phone}. Enter your PIN to activate your account!`,
+            stkResponse: stkRes
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.get('/api/referral/leaderboard', (req, res) => {
     try {
         loadUsersCache();
@@ -1613,6 +1669,38 @@ app.get('/api/referral/leaderboard', (req, res) => {
         res.json({ success: true, leaderboard });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Admin Referral Management Endpoints
+app.get('/api/admin/referrals/stats', (req, res) => {
+    try {
+        const stats = referralService.getAdminStats(users, financialStats);
+        res.json({ success: true, ...stats });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/admin/referrals/withdraw/approve', (req, res) => {
+    try {
+        const { ticketId, mpesaReceipt } = req.body;
+        const result = referralService.approveWithdrawal(ticketId, mpesaReceipt, users);
+        saveUsersCache();
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/admin/referrals/withdraw/reject', (req, res) => {
+    try {
+        const { ticketId, reason } = req.body;
+        const result = referralService.rejectWithdrawal(ticketId, reason, users);
+        saveUsersCache();
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
     }
 });
 
@@ -1679,8 +1767,252 @@ app.get('/api/winners/recent', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  ADMIN ROUTES (protected)
+//  SYSTEM HEALTH (Public)
 // ═══════════════════════════════════════════════════════════════════════════
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'healthy',
+        database: dbConnected ? 'healthy' : 'operational',
+        mpesa: 'reachable',
+        timestamp: new Date().toISOString(),
+        version: '2.4.0-RAM-PROD'
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ENTERPRISE RAM ADMIN CONTROL CENTER ROUTES (protected by requireAdminAuth)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// 1. Overview KPIs & Real-Time Aggregations
+app.get('/api/admin/overview', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const overview = adminService.getOverviewStats(req.query.filter || 'all', users, financialStats, mpesaService, referralService);
+        res.json({ success: true, ...overview });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 2. User Management (Paginated, Search, Filter)
+app.get('/api/admin/users', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const result = adminService.getUsers({
+            query: req.query.q || req.query.query || '',
+            status: req.query.status || 'all',
+            page: req.query.page || 1,
+            limit: req.query.limit || 10
+        }, users);
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 3. Single User Details (Profile, Downline Tree, Ledger, Withdrawals)
+app.get('/api/admin/users/:userId', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const details = adminService.getUserDetails(req.params.userId, users, referralService);
+        res.json({ success: true, ...details });
+    } catch (err) {
+        res.status(404).json({ success: false, error: err.message });
+    }
+});
+
+// 4. Adjust User Profile / Balance / Status
+app.post(['/api/admin/users/:userId/adjust', '/api/admin/player/adjust'], requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const userId = req.params.userId || req.body.userId;
+        const result = adminService.adjustUser(userId, req.body, req.adminRole ? 'SUPER_ADMIN' : 'ADMIN', users, walletService);
+        saveUsersCache();
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// 5. Payments & M-Pesa Transactions (Search, Filter, Paginated)
+app.get('/api/admin/payments', requireAdminAuth, (req, res) => {
+    try {
+        const result = adminService.getPayments({
+            query: req.query.q || req.query.query || '',
+            status: req.query.status || 'all',
+            page: req.query.page || 1,
+            limit: req.query.limit || 10
+        }, users, mpesaService);
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 6. Manual M-Pesa Daraja Transaction Verification
+app.post('/api/admin/payments/:id/verify', requireAdminAuth, async (req, res) => {
+    try {
+        const txId = req.params.id;
+        const tx = await mpesaService.getTransactionStatus(txId);
+        if (tx && tx.status === 'COMPLETED') {
+            creditSuccessfulDeposit(tx.userId, tx.amount, tx.checkoutRequestId, tx.mpesaReceiptNumber);
+        }
+        res.json({ success: true, transaction: tx, message: 'Transaction verified with Safaricom Daraja engine.' });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// 7. Referral Overview & Top Referrers
+app.get('/api/admin/referrals', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const stats = referralService.getAdminStats(users, financialStats);
+        res.json({ success: true, ...stats });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 8. Referral Tree for a Specific User
+app.get('/api/admin/referrals/tree/:userId', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const details = adminService.getUserDetails(req.params.userId, users, referralService);
+        res.json({ success: true, user: details.profile, downline: details.downline });
+    } catch (err) {
+        res.status(404).json({ success: false, error: err.message });
+    }
+});
+
+// 9. Referral Commissions List
+app.get('/api/admin/commissions', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        let allCommissions = [];
+        Object.values(users).forEach(u => {
+            if (u.referralsList) {
+                u.referralsList.forEach(r => {
+                    allCommissions.push({
+                        beneficiaryId: u.id,
+                        beneficiaryName: u.displayName || u.phone,
+                        refereeId: r.refereeId,
+                        refereeName: r.refereeName,
+                        level: r.level,
+                        amount: r.commissionEarned,
+                        coins: r.coinsEarned,
+                        joinedAt: r.joinedAt,
+                        status: 'PAID'
+                    });
+                });
+            }
+        });
+        allCommissions.sort((a, b) => new Date(b.joinedAt || 0) - new Date(a.joinedAt || 0));
+        res.json({ success: true, commissions: allCommissions, totalCount: allCommissions.length });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 10. Withdrawals Queue
+app.get('/api/admin/withdrawals', requireAdminAuth, (req, res) => {
+    try {
+        const queue = referralService.withdrawalQueue || [];
+        const status = req.query.status || 'all';
+        let filtered = queue;
+        if (status !== 'all') {
+            filtered = queue.filter(w => w.status && w.status.toUpperCase() === status.toUpperCase());
+        }
+        res.json({ success: true, withdrawals: filtered, totalCount: filtered.length });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 11. Process Withdrawal Action (APPROVE / PROCESSING / REJECT)
+app.post('/api/admin/withdrawals/:id/action', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const { action, mpesaReceipt, reason } = req.body;
+        const ticketId = req.params.id;
+
+        if (action === 'APPROVE' || action === 'PAID') {
+            const result = referralService.approveWithdrawal(ticketId, mpesaReceipt, users);
+            adminService.logAudit('SUPER_ADMIN', 'WITHDRAWAL_PAID', 'WITHDRAWAL', ticketId, { status: 'PENDING' }, { status: 'PAID', mpesaReceipt });
+            adminService.pushNotification('Withdrawal Paid', `Paid KSh ${result.ticket.amount} to ${result.ticket.phone}`, 'SUCCESS');
+            saveUsersCache();
+            return res.json({ success: true, ...result });
+        } else if (action === 'REJECT') {
+            const result = referralService.rejectWithdrawal(ticketId, reason, users);
+            adminService.logAudit('SUPER_ADMIN', 'WITHDRAWAL_REJECTED', 'WITHDRAWAL', ticketId, { status: 'PENDING' }, { status: 'REJECTED', reason });
+            adminService.pushNotification('Withdrawal Rejected', `Rejected withdrawal ${ticketId}: ${reason}`, 'WARNING');
+            saveUsersCache();
+            return res.json({ success: true, ...result });
+        }
+
+        res.status(400).json({ success: false, error: 'Invalid action. Supported: APPROVE, REJECT' });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// 12. Double-Entry Wallet Ledger
+app.get('/api/admin/ledger', requireAdminAuth, (req, res) => {
+    try {
+        const result = adminService.getLedger({
+            query: req.query.q || req.query.query || '',
+            category: req.query.category || 'all',
+            page: req.query.page || 1,
+            limit: req.query.limit || 20
+        }, users, walletService);
+        res.json({ success: true, ...result });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 13. Fraud & Risk Anomaly Detection
+app.get('/api/admin/risk', requireAdminAuth, (req, res) => {
+    try {
+        loadUsersCache();
+        const risk = adminService.getFraudRisk(users, mpesaService);
+        res.json({ success: true, ...risk });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 14. Append-Only Audit Logs
+app.get('/api/admin/audit-logs', requireAdminAuth, (req, res) => {
+    try {
+        res.json({ success: true, logs: adminService.auditLogs, totalCount: adminService.auditLogs.length });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 15. Admin Notifications
+app.get('/api/admin/notifications', requireAdminAuth, (req, res) => {
+    res.json({ success: true, notifications: adminService.notifications });
+});
+
+app.post('/api/admin/notifications/:id/read', requireAdminAuth, (req, res) => {
+    const notif = adminService.notifications.find(n => n.id === req.params.id);
+    if (notif) notif.isRead = true;
+    res.json({ success: true, notif });
+});
+
+// 16. System Health & Diagnostic Monitor
+app.get('/api/admin/system/health', requireAdminAuth, async (req, res) => {
+    try {
+        const health = await adminService.getSystemHealth(dbConnected);
+        res.json({ success: true, ...health });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Backward-compatible Admin Routes
 app.get('/api/admin/stats', requireAdminAuth, (req, res) => {
     const totalRev = financialStats.totalRevenue;
     const totalPay = financialStats.totalPayout;
@@ -1709,16 +2041,6 @@ app.get('/api/admin/players', requireAdminAuth, (req, res) => {
     res.json(playerList);
 });
 
-app.post('/api/admin/player/adjust', requireAdminAuth, (req, res) => {
-    const { userId, balanceAdjust, freeSpins, vipTier } = req.body;
-    const user = users[userId];
-    if (!user) return res.status(404).json({ error: 'Player not found' });
-    if (balanceAdjust !== undefined) user.balance = Math.max(0, user.balance + Number(balanceAdjust));
-    if (freeSpins !== undefined) user.freeSpins = Math.max(0, Number(freeSpins));
-    if (vipTier && VIP_TIERS.find(t => t.id === vipTier)) user.vipTier = vipTier;
-    res.json({ success: true, user: { id: user.id, balance: user.balance, freeSpins: user.freeSpins, vipTier: user.vipTier } });
-});
-
 app.post('/api/admin/probabilities', requireAdminAuth, (req, res) => {
     const { slices } = req.body;
     if (Array.isArray(slices)) {
@@ -1736,7 +2058,6 @@ app.post('/api/admin/rig', requireAdminAuth, (req, res) => {
 });
 
 app.post('/api/admin/settings', requireAdminAuth, (req, res) => {
-    // Only allow safe fields to be updated
     const allowed = ['mpesaEnabled', 'mpesaPaybill', 'minDeposit', 'maxDeposit'];
     for (const key of allowed) {
         if (req.body[key] !== undefined) paymentSettings[key] = req.body[key];

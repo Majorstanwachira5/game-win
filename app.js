@@ -1130,7 +1130,7 @@ async function executeSpin(wager) {
 
         // Spin the 3D wheel to target slice index
         if (window.WheelEngine) {
-            window.WheelEngine.spinToSlice(res.sliceIndex, () => {
+            window.WheelEngine.spinToSlice(res.wonSlice || res.sliceIndex, () => {
                 // Spin finished
                 APP_STATE.isSpinning = false;
                 allSpinBtns.forEach(btn => btn.disabled = false);
@@ -1141,7 +1141,7 @@ async function executeSpin(wager) {
                 } else if (res.wonSlice.type === 'free_spin') {
                     showToast(`🎁 You won ${res.freeSpinsGranted || 1} Free Spin(s)!`, 'success');
                 } else if (res.wonSlice.type === 'double_next') {
-                    showToast('⚡ Double Next Win Activated!', 'warning');
+                    showToast('⚡ Double Spin Activated! Next Win 2X Multiplied', 'warning');
                 } else {
                     showToast('TRY AGAIN! Good luck next spin.', 'info');
                 }
@@ -1868,7 +1868,7 @@ function initLiveMiniComponents() {
     }
 }
 
-// ─── REFER & EARN FRONTEND INTEGRATION ────────────────────────────────────
+// ─── REFER & EARN 2-TIER PYRAMID FRONTEND INTEGRATION ──────────────────────
 window.openReferralModal = async function() {
     const modal = document.getElementById('referralModal');
     if (!modal) return;
@@ -1882,42 +1882,110 @@ window.openReferralModal = async function() {
     modal.style.display = 'flex';
     modal.classList.add('open', 'active');
 
-    // Fetch live referral stats
+    // Fetch live pyramid referral stats
     try {
         const res = await apiFetch('/api/referral/stats');
         if (res && res.success) {
+            // 1. Referral Link
             const linkInput = document.getElementById('refLinkInput');
             if (linkInput && res.referralLink) linkInput.value = res.referralLink;
 
-            const totalCountEl = document.getElementById('refTotalCount');
-            if (totalCountEl) totalCountEl.textContent = res.stats.totalCount || 0;
+            // 2. Activation Status / Badge
+            const actBanner = document.getElementById('refActivationBanner');
+            const actBadge = document.getElementById('refActiveBadge');
+            if (res.isActivated) {
+                if (actBanner) actBanner.style.display = 'none';
+                if (actBadge) actBadge.style.display = 'block';
+            } else {
+                if (actBanner) actBanner.style.display = 'block';
+                if (actBadge) actBadge.style.display = 'none';
+            }
 
-            const totalCashEl = document.getElementById('refTotalCash');
-            if (totalCashEl) totalCashEl.textContent = `KSh ${(res.stats.totalEarnings || 0).toLocaleString()}`;
+            // 3. Withdrawable Balance & Progress
+            const balance = Number(res.balance || 0);
+            const target = Number(res.targetWithdrawal || 2000);
+            const progress = Math.min(100, Math.round((balance / target) * 100));
+            const needed = Math.max(0, target - balance);
+            const canWithdraw = res.canWithdraw || balance >= target;
 
-            const totalCoinsEl = document.getElementById('refTotalCoins');
-            if (totalCoinsEl) totalCoinsEl.textContent = (res.stats.totalCoinsEarned || 0).toLocaleString();
+            const balEl = document.getElementById('refWithdrawableBal');
+            if (balEl) balEl.textContent = `KSh ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-            const shareText = encodeURIComponent(`🔥 Join Spin & Win Web3 Casino and get 200 FREE Play Coins instantly! Play & win real cash via M-Pesa & TON: ${res.referralLink}`);
+            const pctEl = document.getElementById('refProgressPct');
+            if (pctEl) pctEl.textContent = `${progress}%`;
+
+            const barEl = document.getElementById('refProgressBar');
+            if (barEl) barEl.style.width = `${progress}%`;
+
+            // 4. Milestone Helper Banner
+            const goalBanner = document.getElementById('refGoalBanner');
+            if (goalBanner) {
+                if (canWithdraw) {
+                    goalBanner.style.background = 'rgba(16,185,129,0.12)';
+                    goalBanner.style.borderColor = 'rgba(16,185,129,0.4)';
+                    goalBanner.innerHTML = `🎉 <strong style="color:#10b981;">CONGRATULATIONS!</strong> You have reached <strong>KSh ${balance.toLocaleString()}</strong>. Click below to withdraw instant cash to M-Pesa!`;
+                } else {
+                    const directNeeded = Math.ceil(needed / 100);
+                    goalBanner.style.background = 'rgba(0,240,255,0.06)';
+                    goalBanner.style.borderColor = 'rgba(0,240,255,0.25)';
+                    goalBanner.innerHTML = `⚡ You need <strong style="color:var(--cyan-accent);">KSh ${needed.toLocaleString()}</strong> more to withdraw! Refer <strong style="color:var(--gold-primary);">${directNeeded} direct friends</strong> (KSh 100 each) to unlock instant cashout.`;
+                }
+            }
+
+            // 5. Withdrawal Button State
+            const withdrawBtn = document.getElementById('refWithdrawBtn');
+            if (withdrawBtn) {
+                if (canWithdraw) {
+                    withdrawBtn.disabled = false;
+                    withdrawBtn.style.opacity = '1';
+                    withdrawBtn.style.boxShadow = '0 0 25px rgba(255,215,0,0.6)';
+                    withdrawBtn.innerHTML = `💰 WITHDRAW KSh ${balance >= 2000 ? balance.toLocaleString() : '2,000'} TO M-PESA NOW`;
+                } else {
+                    withdrawBtn.disabled = true;
+                    withdrawBtn.style.opacity = '0.6';
+                    withdrawBtn.style.boxShadow = 'none';
+                    withdrawBtn.innerHTML = `🔒 WITHDRAW LOCKED (Need KSh ${needed.toLocaleString()} more)`;
+                }
+            }
+
+            // 6. Level 1 & Level 2 Breakdown
+            const dCountEl = document.getElementById('refDirectCount');
+            if (dCountEl) dCountEl.textContent = res.stats.directCount || 0;
+
+            const dCashEl = document.getElementById('refDirectCash');
+            if (dCashEl) dCashEl.textContent = `+KSh ${(res.stats.directEarnings || 0).toLocaleString()}`;
+
+            const iCountEl = document.getElementById('refIndirectCount');
+            if (iCountEl) iCountEl.textContent = res.stats.indirectCount || 0;
+
+            const iCashEl = document.getElementById('refIndirectCash');
+            if (iCashEl) iCashEl.textContent = `+KSh ${(res.stats.indirectEarnings || 0).toLocaleString()}`;
+
+            const allTimeEl = document.getElementById('refTotalEarningsAllTime');
+            if (allTimeEl) allTimeEl.textContent = `KSh ${(res.totalEarnings || 0).toLocaleString()}`;
+
+            // 7. Social Share Buttons
+            const shareText = encodeURIComponent(`🔥 Join me on Spin & Win Casino! Register, activate, and win real cash via M-Pesa. Here is my referral link: ${res.referralLink}`);
             const waBtn = document.getElementById('shareWhatsappBtn');
             if (waBtn) waBtn.href = `https://api.whatsapp.com/send?text=${shareText}`;
 
             const tgBtn = document.getElementById('shareTelegramBtn');
-            if (tgBtn) tgBtn.href = `https://t.me/share/url?url=${encodeURIComponent(res.referralLink)}&text=${encodeURIComponent('Join Spin & Win Casino and get 200 Free Play Coins!')}`;
+            if (tgBtn) tgBtn.href = `https://t.me/share/url?url=${encodeURIComponent(res.referralLink)}&text=${encodeURIComponent('Join Spin & Win Casino and earn real M-Pesa cash!')}`;
 
+            // 8. Recent Earnings Feed
             const listContainer = document.getElementById('refListContainer');
             if (listContainer) {
-                const list = [...(res.directReferrals || []), ...(res.indirectReferrals || [])];
+                const list = res.recentEarnings || [];
                 if (list.length === 0) {
-                    listContainer.innerHTML = '<div style="text-align:center; padding:12px 0; color:var(--text-muted);">No referrals yet. Share your link to start earning!</div>';
+                    listContainer.innerHTML = '<div style="text-align:center; padding:12px 0; color:var(--text-muted);">No referral earnings yet. Share your link to start earning!</div>';
                 } else {
                     listContainer.innerHTML = list.map(r => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
                             <div>
-                                <span style="color:#fff; font-weight:bold;">${r.refereeName}</span>
-                                <span style="font-size:10px; color:var(--cyan-accent); margin-left:4px;">Level ${r.level}</span>
+                                <span style="color:#fff; font-weight:bold;">${r.refereeName || 'Friend'}</span>
+                                <span style="font-size:10px; color:${r.level === 1 ? 'var(--gold-primary)' : 'var(--cyan-accent)'}; margin-left:4px; border:1px solid rgba(255,255,255,0.15); padding:1px 5px; border-radius:4px;">Level ${r.level}</span>
                             </div>
-                            <div style="color:var(--gold-primary); font-weight:bold;">+KSh ${r.commissionEarned} (+${r.coinsEarned} Coins)</div>
+                            <div style="color:${r.level === 1 ? 'var(--gold-primary)' : 'var(--cyan-accent)'}; font-weight:bold;">+KSh ${r.commissionEarned} (+${r.coinsEarned} Coins)</div>
                         </div>
                     `).join('');
                 }
@@ -1945,6 +2013,100 @@ window.copyReferralLink = function() {
     } catch(e) {
         document.execCommand('copy');
         if (window.showToast) window.showToast('📋 Referral link copied!', 'success');
+    }
+};
+
+// ─── WITHDRAWAL PROMPT & EXECUTION ─────────────────────────────────────────
+window.promptReferralWithdrawal = function() {
+    const modal = document.getElementById('referralWithdrawPromptModal');
+    if (!modal) return;
+
+    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+    const phoneInput = document.getElementById('refWithdrawPhoneInput');
+    if (phoneInput && !phoneInput.value) {
+        phoneInput.value = savedUser.phone || savedUser.email || '';
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('open', 'active');
+};
+
+window.executeReferralWithdrawal = async function() {
+    const phoneInput = document.getElementById('refWithdrawPhoneInput');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+
+    if (!phone || phone.length < 9) {
+        if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number!', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('confirmWithdrawSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'PROCESSING WITHDRAWAL...';
+    }
+
+    try {
+        const res = await apiPost('/api/referral/withdraw', { phone, amount: 2000 });
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 CONFIRM & SEND TO M-PESA';
+        }
+
+        if (res && res.success) {
+            const promptModal = document.getElementById('referralWithdrawPromptModal');
+            if (promptModal) {
+                promptModal.style.display = 'none';
+                promptModal.classList.remove('open', 'active');
+            }
+
+            if (typeof triggerConfetti === 'function') triggerConfetti();
+            if (window.showToast) window.showToast(`🎉 ${res.message || 'Withdrawal request of KSh 2,000 submitted successfully!'}`, 'success');
+
+            // Refresh referral dashboard stats
+            if (window.openReferralModal) window.openReferralModal();
+        } else {
+            throw new Error(res.error || 'Withdrawal failed');
+        }
+    } catch(err) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 CONFIRM & SEND TO M-PESA';
+        }
+        if (window.showToast) window.showToast(err.message || 'Failed to submit withdrawal request', 'error');
+    }
+};
+
+// ─── ACCOUNT ACTIVATION TRIGGER ────────────────────────────────────────────
+window.activateReferralAccount = async function() {
+    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+    const phone = savedUser.phone || savedUser.email || prompt('Enter your Safaricom M-Pesa number for KSh 250 Activation (2547XXXXXXXX):');
+    if (!phone) return;
+
+    const btn = document.getElementById('refActivateBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'SENDING STK PUSH (KSh 250)...';
+    }
+
+    try {
+        const res = await apiPost('/api/referral/activate', { phone });
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '⚡ ACTIVATE ACCOUNT (KSh 250 M-PESA)';
+        }
+
+        if (res && res.success) {
+            if (window.showToast) window.showToast(res.message, 'success');
+        } else {
+            throw new Error(res.error || 'Activation request failed');
+        }
+    } catch(err) {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '⚡ ACTIVATE ACCOUNT (KSh 250 M-PESA)';
+        }
+        if (window.showToast) window.showToast(err.message, 'error');
     }
 };
 
