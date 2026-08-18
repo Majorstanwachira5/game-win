@@ -26,6 +26,7 @@ const walletService = require('./spin-api/services/WalletService');
 const rewardEngine = require('./spin-api/services/RewardEngine');
 const mpesaService = require('./spin-api/services/MpesaService');
 const tonService = require('./spin-api/services/TonService');
+const referralService = require('./spin-api/services/ReferralService');
 
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
 const dbConfig = {
@@ -565,6 +566,17 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
 
         const isTester = checkIsTester(formattedEmail);
         const userId = 'usr_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
+        // Capture Referral Code
+        const refCode = (req.body.referralCode || req.body.referredBy || req.body.ref || (req.query ? req.query.ref : '') || '').toString().trim();
+        let referredById = null;
+        if (refCode) {
+            const referrer = Object.values(users).find(u => (u.referralCode && u.referralCode.toUpperCase() === refCode.toUpperCase()) || u.id === refCode);
+            if (referrer) {
+                referredById = referrer.id;
+            }
+        }
+
         const user = createUser({
             id: userId,
             email: formattedEmail,
@@ -576,9 +588,11 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             coins: isTester ? 250000 : 200,
             isTester: isTester,
             xp: 50,
-            freeSpins: 1
+            freeSpins: 1,
+            referredBy: referredById
         });
 
+        user.referralCode = referralService.generateReferralCode(user);
         users[userId] = user;
         saveUsersCache();
 
@@ -1321,7 +1335,14 @@ function creditSuccessfulDeposit(userId, amount, checkoutRequestId = '', receipt
     const xpGained = Math.floor(depositAmount / 20);
     user.xp = (user.xp || 0) + xpGained;
 
-    // 4. Persist immediately to disk store & sync
+    // 4. Automatic Multi-Tier Referral Commission Settlement
+    try {
+        referralService.processReferralDeposit(user, depositAmount, users, walletService);
+    } catch (err) {
+        console.error('[REFERRAL SETTLEMENT ERROR]', err.message);
+    }
+
+    // 5. Persist immediately to disk store & sync
     saveUsersCache();
 
     console.log(`✅ [DEPOSIT SUCCESS] User: ${user.id}, Cash Added: KSh ${depositAmount}, Coins Added: +${coinsGained}, New Total Balance: KSh ${user.balance}, New Total Coins: ${user.coins}`);
@@ -1558,6 +1579,38 @@ app.post('/api/telegram/auth', (req, res) => {
                 tonWalletAddress: user.tonWalletAddress
             }
         });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  REFER & EARN / REFERRAL COMMISSION SYSTEM ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+app.get('/api/referral/stats', requirePlayerAuth, (req, res) => {
+    try {
+        const user = getOrCreateUser(req.userId);
+        const stats = referralService.getReferralStats(user, req.get('origin') || `${req.protocol}://${req.get('host')}`);
+        res.json({ success: true, ...stats });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/referral/leaderboard', (req, res) => {
+    try {
+        loadUsersCache();
+        const leaderboard = Object.values(users)
+            .filter(u => !u.isTester && (u.referralEarnings || u.referralCount))
+            .sort((a, b) => (b.referralEarnings || 0) - (a.referralEarnings || 0))
+            .slice(0, 10)
+            .map(u => ({
+                name: u.displayName || (u.phone ? u.phone.slice(0, 7) + '***' : 'Player'),
+                referralCount: u.referralCount || 0,
+                totalEarned: u.referralEarnings || 0,
+                badge: (u.referralCount || 0) > 10 ? '🔥 Super Affiliate' : '⭐ Referrer'
+            }));
+        res.json({ success: true, leaderboard });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

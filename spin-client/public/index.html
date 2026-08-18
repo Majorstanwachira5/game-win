@@ -286,6 +286,7 @@
                         <div class="coins-value" id="userCoinsText">200 Coins</div>
                     </div>
                 </div>
+                <button id="openReferralBtn" class="hdr-auth-btn" style="background:linear-gradient(135deg, rgba(255,215,0,0.15), rgba(0,240,255,0.15)); border:1px solid var(--gold-primary); color:#fff; font-size:11px; padding:6px 12px;" onclick="if(window.openReferralModal) window.openReferralModal();">👥 REFER & EARN</button>
                 <button id="logoutBtn" class="logout-hdr-btn"
                     onclick="if(window.handleLogout) { window.handleLogout(); } else { localStorage.clear(); location.reload(); }">🚪
                     LOG OUT</button>
@@ -316,6 +317,11 @@
                     <span class="mob-item-icon">🎁</span>
                     <span class="mob-item-label">Rewards</span>
                 </button>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openReferralModal) openReferralModal();">
+                    <span class="mob-item-icon">👥</span>
+                    <span class="mob-item-label">Refer & Earn</span>
+                    <span class="mob-item-badge" style="background:rgba(255,215,0,0.2); color:var(--gold-primary); font-size:10px;">+100 KSh</span>
+                </button>
                 <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); openAuthModal('login');">
                     <span class="mob-item-icon">👤</span>
                     <span class="mob-item-label">Profile</span>
@@ -344,6 +350,11 @@
                 <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openDepositModal) openDepositModal();">
                     <span class="mob-item-icon">💳</span>
                     <span class="mob-item-label">Deposit / Wallet</span>
+                </button>
+                <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openReferralModal) openReferralModal();">
+                    <span class="mob-item-icon">👥</span>
+                    <span class="mob-item-label">Refer & Earn</span>
+                    <span class="mob-item-badge" style="background:rgba(255,215,0,0.2); color:var(--gold-primary); font-size:10px;">Earn KSh</span>
                 </button>
                 <button class="mob-dropdown-item" onclick="window.closeMobileMenu(); if(window.openGameModal) openGameModal('vip');">
                     <span class="mob-item-icon">🎁</span>
@@ -1301,6 +1312,71 @@
             </button>
         </div>
     </div>
+
+    <!-- 👥 REFER & EARN / REFERRAL REWARDS MODAL -->
+    <div id="referralModal" class="game-modal-overlay" style="display:none !important">
+        <div class="game-modal-card glass-modal" style="max-width:520px; width:92%; border:2px solid var(--gold-primary); border-radius:20px; background:linear-gradient(145deg, #0e172a 0%, #080e1a 100%); padding:22px; box-shadow: 0 0 35px rgba(255,215,0,0.3); text-align:center;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.2); padding-bottom:10px; margin-bottom:14px;">
+                <h2 style="font-family:'Orbitron',sans-serif; font-size:17px; color:var(--gold-primary); margin:0;">👥 REFER & EARN CASH & COINS</h2>
+                <button type="button" class="close-modal-btn" onclick="document.getElementById('referralModal').style.display='none'; document.getElementById('referralModal').classList.remove('open','active');" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+
+            <!-- Tiered Reward Banner -->
+            <div style="background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.3); border-radius:12px; padding:12px; margin-bottom:14px; text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:bold; color:var(--gold-primary); margin-bottom:4px;">
+                    <span>⭐ Level 1 (Direct Friend):</span>
+                    <span>KSh 100 + 100 Play Coins</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--cyan-accent);">
+                    <span>🌟 Level 2 (Friend's Friend):</span>
+                    <span>KSh 50 + 50 Play Coins</span>
+                </div>
+                <small style="display:block; color:var(--text-muted); font-size:11px; margin-top:4px;">Commissions are credited automatically to your wallet as soon as your referee deposits.</small>
+            </div>
+
+            <!-- Unique Referral Link Box -->
+            <div style="margin-bottom:14px; text-align:left;">
+                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">YOUR EXCLUSIVE REFERRAL LINK:</label>
+                <div style="display:flex; gap:8px; margin-top:6px;">
+                    <input type="text" id="refLinkInput" readonly value="https://game-win.vercel.app/?ref=SPIN" style="flex:1; padding:10px; background:rgba(6,10,22,0.9); border:1px solid rgba(255,215,0,0.4); border-radius:8px; color:#fff; font-size:13px; font-weight:bold; outline:none;">
+                    <button type="button" id="copyRefLinkBtn" onclick="window.copyReferralLink()" class="spin-gold-btn" style="padding:0 14px; font-size:12px; font-weight:bold; border-radius:8px; cursor:pointer;">📋 COPY</button>
+                </div>
+            </div>
+
+            <!-- Share Buttons -->
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+                <a id="shareWhatsappBtn" href="#" target="_blank" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; background:#25D366; color:#fff; text-decoration:none; font-weight:bold; font-size:13px; border-radius:8px;">
+                    <span>💬 WhatsApp</span>
+                </a>
+                <a id="shareTelegramBtn" href="#" target="_blank" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; background:#0088cc; color:#fff; text-decoration:none; font-weight:bold; font-size:13px; border-radius:8px;">
+                    <span>✈️ Telegram</span>
+                </a>
+            </div>
+
+            <!-- Live Referral Stats Grid -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px;">
+                <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px;">
+                    <div style="font-size:10px; color:var(--text-muted);">REFERRALS</div>
+                    <div id="refTotalCount" style="font-size:17px; font-weight:bold; color:var(--cyan-accent); margin-top:2px;">0</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px;">
+                    <div style="font-size:10px; color:var(--text-muted);">CASH EARNED</div>
+                    <div id="refTotalCash" style="font-size:17px; font-weight:bold; color:var(--gold-primary); margin-top:2px;">KSh 0</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px;">
+                    <div style="font-size:10px; color:var(--text-muted);">COINS EARNED</div>
+                    <div id="refTotalCoins" style="font-size:17px; font-weight:bold; color:#a855f7; margin-top:2px;">0</div>
+                </div>
+            </div>
+
+            <!-- Recent Referrals Container -->
+            <div style="text-align:left;">
+                <div style="font-size:11px; font-weight:bold; color:var(--gold-primary); margin-bottom:6px;">RECENT REFERRED FRIENDS:</div>
+                <div id="refListContainer" style="max-height:120px; overflow-y:auto; background:rgba(6,10,22,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px; font-size:12px; color:var(--text-muted);">
+                    <div style="text-align:center; padding:10px 0;">No referrals yet. Share your link to start earning!</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- SCRIPTS -->

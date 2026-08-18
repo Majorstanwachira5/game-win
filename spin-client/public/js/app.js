@@ -528,7 +528,8 @@ window.handleAuthSubmit = async function (e) {
     }
 
     const endpoint = activeMode === 'register' ? '/api/auth/register' : '/api/auth/login';
-    const body = activeMode === 'register' ? { email, password, confirmPassword } : { email, password };
+    const savedRef = localStorage.getItem('spin_referral_code') || '';
+    const body = activeMode === 'register' ? { email, password, confirmPassword, referralCode: savedRef } : { email, password };
 
     try {
         if (authSubmitBtn) {
@@ -1863,8 +1864,94 @@ function initLiveMiniComponents() {
             r1.textContent = slotSymbols[idx];
             r2.textContent = slotSymbols[(idx + 2) % slotSymbols.length];
             r3.textContent = slotSymbols[(idx + 4) % slotSymbols.length];
-        }, 1200);
-    }
-}
+// ─── REFER & EARN FRONTEND INTEGRATION ────────────────────────────────────
+window.openReferralModal = async function() {
+    const modal = document.getElementById('referralModal');
+    if (!modal) return;
 
-// Pure Daraja STK Push Integration — No legacy bypass functions.
+    if (!APP_STATE.isAuthenticated && !localStorage.getItem('spin_jwt_token')) {
+        if (window.showToast) window.showToast('Please Login or Register to access Refer & Earn!', 'info');
+        if (window.openAuthModal) window.openAuthModal('login');
+        return;
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('open', 'active');
+
+    // Fetch live referral stats
+    try {
+        const res = await apiFetch('/api/referral/stats');
+        if (res && res.success) {
+            const linkInput = document.getElementById('refLinkInput');
+            if (linkInput && res.referralLink) linkInput.value = res.referralLink;
+
+            const totalCountEl = document.getElementById('refTotalCount');
+            if (totalCountEl) totalCountEl.textContent = res.stats.totalCount || 0;
+
+            const totalCashEl = document.getElementById('refTotalCash');
+            if (totalCashEl) totalCashEl.textContent = `KSh ${(res.stats.totalEarnings || 0).toLocaleString()}`;
+
+            const totalCoinsEl = document.getElementById('refTotalCoins');
+            if (totalCoinsEl) totalCoinsEl.textContent = (res.stats.totalCoinsEarned || 0).toLocaleString();
+
+            const shareText = encodeURIComponent(`🔥 Join Spin & Win Web3 Casino and get 200 FREE Play Coins instantly! Play & win real cash via M-Pesa & TON: ${res.referralLink}`);
+            const waBtn = document.getElementById('shareWhatsappBtn');
+            if (waBtn) waBtn.href = `https://api.whatsapp.com/send?text=${shareText}`;
+
+            const tgBtn = document.getElementById('shareTelegramBtn');
+            if (tgBtn) tgBtn.href = `https://t.me/share/url?url=${encodeURIComponent(res.referralLink)}&text=${encodeURIComponent('Join Spin & Win Casino and get 200 Free Play Coins!')}`;
+
+            const listContainer = document.getElementById('refListContainer');
+            if (listContainer) {
+                const list = [...(res.directReferrals || []), ...(res.indirectReferrals || [])];
+                if (list.length === 0) {
+                    listContainer.innerHTML = '<div style="text-align:center; padding:12px 0; color:var(--text-muted);">No referrals yet. Share your link to start earning!</div>';
+                } else {
+                    listContainer.innerHTML = list.map(r => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <span style="color:#fff; font-weight:bold;">${r.refereeName}</span>
+                                <span style="font-size:10px; color:var(--cyan-accent); margin-left:4px;">Level ${r.level}</span>
+                            </div>
+                            <div style="color:var(--gold-primary); font-weight:bold;">+KSh ${r.commissionEarned} (+${r.coinsEarned} Coins)</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+    } catch(err) {
+        console.warn('Referral stats error:', err);
+    }
+};
+
+window.copyReferralLink = function() {
+    const input = document.getElementById('refLinkInput');
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try {
+        navigator.clipboard.writeText(input.value);
+        if (window.showToast) window.showToast('📋 Referral link copied to clipboard!', 'success');
+        const copyBtn = document.getElementById('copyRefLinkBtn');
+        if (copyBtn) {
+            const prev = copyBtn.textContent;
+            copyBtn.textContent = '✅ COPIED!';
+            setTimeout(() => { copyBtn.textContent = prev; }, 2000);
+        }
+    } catch(e) {
+        document.execCommand('copy');
+        if (window.showToast) window.showToast('📋 Referral link copied!', 'success');
+    }
+};
+
+// Check for ?ref= in URL parameter on startup
+(function checkReferralQueryParam() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ref = urlParams.get('ref');
+        if (ref) {
+            localStorage.setItem('spin_referral_code', ref);
+            console.log('[REFERRAL] Captured referral code from link:', ref);
+        }
+    } catch(e) {}
+})();
