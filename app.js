@@ -1864,6 +1864,10 @@ function initLiveMiniComponents() {
             r1.textContent = slotSymbols[idx];
             r2.textContent = slotSymbols[(idx + 2) % slotSymbols.length];
             r3.textContent = slotSymbols[(idx + 4) % slotSymbols.length];
+        }, 1200);
+    }
+}
+
 // ─── REFER & EARN FRONTEND INTEGRATION ────────────────────────────────────
 window.openReferralModal = async function() {
     const modal = document.getElementById('referralModal');
