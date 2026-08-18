@@ -789,12 +789,18 @@ function updateUserState(user, coinsGained = 0) {
     if (user.xp !== undefined) APP_STATE.xp = user.xp;
     if (user.vipTier !== undefined) APP_STATE.vipTier = user.vipTier;
 
+    // Immediately persist updated user to localStorage so refresh or navigation always has current balance
+    try {
+        localStorage.setItem('spin_user_data', JSON.stringify(APP_STATE.user));
+    } catch(e) {}
+
     if (window.updateBalanceUI) {
         window.updateBalanceUI(APP_STATE.balance, APP_STATE.coins);
     }
 
-    if (coinsGained > 0 || (user.coinsGained && user.coinsGained > 0)) {
-        showCoinsGainedBadge(coinsGained || user.coinsGained);
+    const gained = coinsGained || (user.coinsGained ? Number(user.coinsGained) : 0);
+    if (gained > 0) {
+        showCoinsGainedBadge(gained);
     }
 
     const freeSpinBadge = document.getElementById('freeSpinBadge');
@@ -1023,7 +1029,7 @@ window.formatMpesaReason = function (rawReason, code) {
                         }
                         showToast(`Payment Confirmed! Playing now...`, 'success');
                         if (statusRes.user) {
-                            updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
+                            updateUserState(statusRes.user, statusRes.coinsGained || statusRes.amount || amount);
                         }
                         triggerConfetti();
                         setTimeout(() => {
@@ -1266,7 +1272,7 @@ function bindDepositModal() {
                             showToast(`Payment Confirmed!`, 'success');
                             
                             if (statusRes.user) {
-                                updateUserState({ balance: statusRes.user.balance, coins: statusRes.user.coins });
+                                updateUserState(statusRes.user, statusRes.coinsGained || statusRes.amount || amount);
                             }
                             triggerConfetti();
 

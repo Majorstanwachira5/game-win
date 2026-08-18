@@ -46,10 +46,10 @@ class WalletService {
             return true;
         }
 
-        if (assetType === 'PLAY') {
-            user.coins = Math.max(0, (user.coins || 0) - qty);
+        if (assetType === 'PLAY' || assetType === 'PLAY_COINS') {
+            user.coins = Math.max(0, (Number(user.coins) || 0) - qty);
         } else {
-            user.balance = Math.max(0, (user.balance || 0) - qty);
+            user.balance = Math.max(0, (Number(user.balance) || 0) - qty);
         }
         return true;
     }
@@ -63,19 +63,19 @@ class WalletService {
         const qty = Number(amount || 0);
 
         if (isTester) {
-            user.coins = (user.coins || currencyConfig.defaultBalances.testerCoins) + qty;
-            user.balance = (user.balance || currencyConfig.defaultBalances.testerCash);
+            user.coins = (Number(user.coins) || currencyConfig.defaultBalances.testerCoins) + qty;
+            user.balance = (Number(user.balance) || currencyConfig.defaultBalances.testerCash);
         } else {
-            if (assetType === 'PLAY') {
-                user.coins = (user.coins || 0) + qty;
+            if (assetType === 'PLAY' || assetType === 'PLAY_COINS') {
+                user.coins = (Number(user.coins) || 0) + qty;
             } else {
-                user.balance = (user.balance || 0) + qty;
+                user.balance = (Number(user.balance) || 0) + qty;
             }
         }
 
         platformEvents.emitEvent('WALLET_UPDATED', {
             userId: user.id,
-            newBalance: assetType === 'PLAY' ? user.coins : user.balance,
+            newBalance: (assetType === 'PLAY' || assetType === 'PLAY_COINS') ? user.coins : user.balance,
             assetType,
             amountCredited: qty,
             gameSource

@@ -1284,7 +1284,54 @@ app.post(['/api/chat/send', '/chat/send'], (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  DARAJA M-PESA STK PUSH API ROUTE
+//  CENTRALIZED ATOMIC DEPOSIT & COIN CREDITING ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+function creditSuccessfulDeposit(userId, amount, checkoutRequestId = '', receiptNumber = '') {
+    const depositAmount = Math.max(0, Math.round(Number(amount) || 0));
+    if (depositAmount <= 0) return null;
+
+    loadUsersCache();
+    const user = getOrCreateUser(userId);
+    if (!user) return null;
+
+    // Idempotency: Prevent double credit for the same checkoutRequestId or receipt
+    if (!user.creditedTransactions) user.creditedTransactions = [];
+    const txId = (checkoutRequestId || receiptNumber || '').toString().trim();
+    if (txId && user.creditedTransactions.includes(txId)) {
+        console.log(`[DEPOSIT IDEMPOTENT] Already credited transaction ${txId} to user ${user.id}`);
+        return { user, coinsGained: depositAmount, alreadyCredited: true };
+    }
+
+    if (txId) user.creditedTransactions.push(txId);
+
+    const prevBal = user.balance;
+    const prevCoins = user.coins || 0;
+
+    // 1. Credit Cash Balance (1:1 KSh)
+    walletService.creditWallet(user, depositAmount, 'KSH', 'M-Pesa Deposit');
+    walletService.writeLedger(user, depositAmount, 'M-Pesa Deposit', prevBal, 'KSH');
+
+    // 2. Credit Coin Balance (1:1 Bonus Coins: Deposit 100 -> +100 coins, Deposit 250 -> +250 coins, Deposit 1000 -> +1000 coins)
+    const coinsGained = rewardEngine.calculateRewardCoins(depositAmount);
+    walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
+    walletService.writeLedger(user, coinsGained, 'M-Pesa Bonus Coins', prevCoins, 'PLAY_COINS');
+
+    // 3. VIP XP progression (5 XP per 100 KSh deposited)
+    const xpGained = Math.floor(depositAmount / 20);
+    user.xp = (user.xp || 0) + xpGained;
+
+    // 4. Persist immediately to disk store & sync
+    saveUsersCache();
+
+    console.log(`✅ [DEPOSIT SUCCESS] User: ${user.id}, Cash Added: KSh ${depositAmount}, Coins Added: +${coinsGained}, New Total Balance: KSh ${user.balance}, New Total Coins: ${user.coins}`);
+
+    return {
+        user,
+        coinsGained,
+        alreadyCredited: false
+    };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  DARAJA M-PESA PAYMENT & CALLBACK ROUTES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1292,16 +1339,17 @@ app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAu
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { phone = '', amount = 100 } = req.body;
+        const depositAmount = Math.max(1, Math.round(Number(amount) || 100));
         const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
-        const result = await mpesaService.initiateStkPush(userId, phone, amount);
-        const coinsGained = rewardEngine.calculateRewardCoins(amount);
+        const result = await mpesaService.initiateStkPush(userId, phone, depositAmount);
+        const coinsGained = rewardEngine.calculateRewardCoins(depositAmount);
 
-        // Real payment: Funds are credited ONLY upon successful M-Pesa Callback (ResultCode: 0)
+        // Real payment: Funds and coins are credited upon successful M-Pesa confirmation
         res.json({
             ...result,
             coinsGained,
-            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
+            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, xp: user.xp, vipTier: user.vipTier }
         });
     } catch (err) {
         res.status(400).json({ success: false, error: err.message });
@@ -1311,12 +1359,20 @@ app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAu
 app.get('/api/deposit/status/:checkoutRequestId', requirePlayerAuth, async (req, res) => {
     const { checkoutRequestId } = req.params;
     const tx = await mpesaService.getTransactionStatus(checkoutRequestId);
-    const userId = req.userId || req.query.userId || 'demo-user-1';
-    const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+    const userId = req.userId || req.query.userId || tx?.userId || 'demo-user-1';
+    let user = getOrCreateUser(userId, req.userEmail, req.isTester);
+
+    if (tx && tx.status === 'COMPLETED' && tx.amount > 0) {
+        const creditRes = creditSuccessfulDeposit(userId, tx.amount, checkoutRequestId, tx.mpesaReceiptNumber);
+        if (creditRes && creditRes.user) {
+            user = creditRes.user;
+        }
+    }
 
     res.json({
         ...tx,
-        user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
+        coinsGained: tx && tx.status === 'COMPLETED' ? Number(tx.amount) : 0,
+        user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, xp: user.xp, vipTier: user.vipTier }
     });
 });
 
@@ -1325,14 +1381,22 @@ app.post('/api/deposit/authorize-pin', requirePlayerAuth, async (req, res) => {
         const { checkoutRequestId } = req.body;
         const tx = await mpesaService.getTransactionStatus(checkoutRequestId);
         const userId = req.userId || req.body.userId || tx?.userId || 'demo-user-1';
-        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        let user = getOrCreateUser(userId, req.userEmail, req.isTester);
+
+        if (tx && tx.status === 'COMPLETED' && tx.amount > 0) {
+            const creditRes = creditSuccessfulDeposit(userId, tx.amount, checkoutRequestId, tx.mpesaReceiptNumber);
+            if (creditRes && creditRes.user) {
+                user = creditRes.user;
+            }
+        }
 
         res.json({
             success: tx?.status === 'COMPLETED',
             status: tx?.status || 'PENDING',
             reason: tx?.reason || (tx?.status === 'COMPLETED' ? 'Payment confirmed by Safaricom' : 'Awaiting M-Pesa PIN confirmation from phone'),
             amount: tx?.amount || 0,
-            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins }
+            coinsGained: tx?.status === 'COMPLETED' ? Number(tx.amount) : 0,
+            user: { balance: user.balance, coins: user.coins, freeSpins: user.freeSpins, xp: user.xp, vipTier: user.vipTier }
         });
     } catch (err) {
         res.status(400).json({ success: false, error: err.message });
@@ -1344,12 +1408,7 @@ app.post('/api/mpesa/callback', async (req, res) => {
         const outcome = await mpesaService.processCallback(req.body);
         
         if (outcome.success && outcome.resultCode === 0 && outcome.userId && outcome.amount > 0) {
-            const user = getOrCreateUser(outcome.userId);
-            walletService.creditWallet(user, outcome.amount, 'KSH', 'M-Pesa Deposit');
-            walletService.writeLedger(user, outcome.amount, 'M-Pesa Deposit', user.balance, 'KSH');
-            const coinsGained = rewardEngine.calculateRewardCoins(outcome.amount);
-            walletService.creditWallet(user, coinsGained, 'PLAY', 'M-Pesa Bonus Coins');
-            console.log(`[MPESA WALLET CREDITED] User: ${user.id}, Balance: KSh ${user.balance}, Amount: KSh ${outcome.amount}`);
+            creditSuccessfulDeposit(outcome.userId, outcome.amount, outcome.checkoutRequestId || '', outcome.mpesaReceiptNumber || '');
         }
 
         res.json({ ResultCode: 0, ResultDesc: "Callback accepted successfully" });

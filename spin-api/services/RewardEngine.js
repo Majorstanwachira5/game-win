@@ -17,12 +17,11 @@ const VIP_MULTIPLIERS = {
 
 class RewardEngine {
     /**
-     * Calculate PlayCoin bonus reward earned per wager
+     * Calculate PlayCoin bonus reward earned per deposit or wager (1:1 ratio)
+     * e.g. Deposit 100 -> 100 coins, Deposit 250 -> 250 coins, Deposit 1,000 -> 1,000 coins
      */
-    calculateRewardCoins(betAmount) {
-        const bet = Number(betAmount) || 100;
-        if (bet >= 1000) return bet * 4;
-        return bet * 1;
+    calculateRewardCoins(amount) {
+        return Math.max(0, Math.round(Number(amount) || 0));
     }
 
     /**
