@@ -377,7 +377,7 @@ function getOrCreateUser(userId, email, isTesterHint = false) {
             id: userId,
             email: email || (isTester ? 'brittanycooke98@gmail.com' : undefined),
             phone: 'USER 07' + Math.floor(10 + Math.random() * 89) + '***',
-            balance: isTester ? 250000.00 : 1000.00,
+            balance: isTester ? 250000.00 : 0.00,
             coins: isTester ? 250000 : 200,
             isTester: isTester,
             xp: 0

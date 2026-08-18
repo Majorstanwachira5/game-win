@@ -749,9 +749,12 @@ function updateUserState(user, coinsGained = 0) {
         user.coins = (user.coins && Number(user.coins) >= 250000 ? Number(user.coins) : 250000);
     }
 
-    if (user.balance !== undefined) APP_STATE.balance = user.balance;
-    if (user.coins !== undefined) APP_STATE.coins = user.coins;
-    if (user.freeSpins !== undefined) APP_STATE.freeSpins = user.freeSpins;
+    if (!APP_STATE.user) APP_STATE.user = {};
+    Object.assign(APP_STATE.user, user);
+
+    if (user.balance !== undefined) APP_STATE.balance = Number(user.balance);
+    if (user.coins !== undefined) APP_STATE.coins = Number(user.coins);
+    if (user.freeSpins !== undefined) APP_STATE.freeSpins = Number(user.freeSpins);
     if (user.doubleNextWin !== undefined) APP_STATE.doubleNextWin = user.doubleNextWin;
     if (user.mysteryKeys !== undefined) APP_STATE.mysteryKeys = user.mysteryKeys;
     if (user.xp !== undefined) APP_STATE.xp = user.xp;
@@ -798,28 +801,57 @@ function updateUserState(user, coinsGained = 0) {
 function updateSpinButtonState() {
     const costEl = document.getElementById('spinBtnCost');
     const labelEl = document.getElementById('spinBtnLabel');
+    const wagerLabel = document.getElementById('currentWagerLabel');
+    if (wagerLabel) wagerLabel.textContent = APP_STATE.betAmount || 100;
+
+    const mainSpinBtn = document.getElementById('mainSpinBtn');
+    const allHeroSpinBtns = document.querySelectorAll('.hero-spin-btn');
+
     if (APP_STATE.freeSpins > 0) {
         if (labelEl) labelEl.textContent = 'FREE SPIN!';
         if (costEl) costEl.textContent = `🎁 ${APP_STATE.freeSpins} Left`;
+        if (mainSpinBtn) {
+            mainSpinBtn.innerHTML = `<span class="spin-text-main">🎁 FREE SPIN</span><span class="spin-text-sub">${APP_STATE.freeSpins} Available</span>`;
+        }
+        allHeroSpinBtns.forEach(btn => {
+            if (btn.id !== 'mainSpinBtn') btn.textContent = `🎁 FREE SPIN (${APP_STATE.freeSpins} Left)`;
+        });
     } else {
         if (labelEl) labelEl.textContent = 'SPIN NOW';
-        if (costEl) costEl.textContent = `KSh ${APP_STATE.betAmount}`;
+        if (costEl) costEl.textContent = `KSh ${APP_STATE.betAmount || 100}`;
+        if (mainSpinBtn) {
+            mainSpinBtn.innerHTML = `<span class="spin-text-main">SPIN NOW</span><span class="spin-text-sub">KSh <span id="currentWagerLabel">${APP_STATE.betAmount || 100}</span></span>`;
+        }
+        allHeroSpinBtns.forEach(btn => {
+            if (btn.id !== 'mainSpinBtn') btn.textContent = `SPIN NOW (KSh ${APP_STATE.betAmount || 100})`;
+        });
     }
 }
 
 // ─── WHEEL CONTROLS ────────────────────────────────────────────────────────
 function bindWheelControls() {
-    const spinBtn = document.getElementById('spinNowBtn');
-    if (spinBtn) {
-        spinBtn.addEventListener('click', performSpin);
-    }
+    const spinBtns = [
+        document.getElementById('mainSpinBtn'),
+        document.getElementById('spinNowBtn'),
+        ...document.querySelectorAll('.hero-spin-btn')
+    ].filter(Boolean);
 
-    document.querySelectorAll('.controls-bar .bet-chip').forEach(chip => {
+    spinBtns.forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            performSpin();
+        };
+    });
+
+    document.querySelectorAll('.wager-chips .chip-btn, .controls-bar .bet-chip, .mobile-wheel-hero .chip-btn').forEach(chip => {
         chip.addEventListener('click', () => {
-            document.querySelectorAll('.controls-bar .bet-chip').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.wager-chips .chip-btn, .controls-bar .bet-chip, .mobile-wheel-hero .chip-btn').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-            APP_STATE.betAmount = Number(chip.dataset.amount);
-            updateSpinButtonState();
+            const amt = Number(chip.dataset.amount || chip.dataset.amt);
+            if (amt) {
+                APP_STATE.betAmount = amt;
+                updateSpinButtonState();
+            }
         });
     });
 }
@@ -1027,9 +1059,8 @@ async function performSpin() {
         return;
     }
 
-    const user = APP_STATE.user || {};
     const wager = APP_STATE.betAmount || 100;
-    const isFreeSpin = (user.freeSpins || 0) > 0;
+    const isFreeSpin = (APP_STATE.freeSpins || (APP_STATE.user && APP_STATE.user.freeSpins) || 0) > 0;
 
     if (!isFreeSpin && (APP_STATE.balance || 0) < wager) {
         promptDirectMpesaPayAndPlay(wager, 'spin', () => {
@@ -1044,14 +1075,19 @@ async function performSpin() {
 async function executeSpin(wager) {
     if (APP_STATE.isSpinning) return;
 
-    const spinBtn = document.getElementById('spinNowBtn');
+    const allSpinBtns = [
+        document.getElementById('mainSpinBtn'),
+        document.getElementById('spinNowBtn'),
+        ...document.querySelectorAll('.hero-spin-btn')
+    ].filter(Boolean);
+
     APP_STATE.isSpinning = true;
-    if (spinBtn) spinBtn.disabled = true;
+    allSpinBtns.forEach(btn => btn.disabled = true);
 
     try {
         const res = await apiPost('/api/spin', {
             userId: APP_STATE.userId,
-            betAmount: APP_STATE.betAmount
+            betAmount: APP_STATE.betAmount || 100
         });
 
         if (!res.success) throw new Error(res.error || 'Spin failed');
@@ -1061,15 +1097,15 @@ async function executeSpin(wager) {
             window.WheelEngine.spinToSlice(res.sliceIndex, () => {
                 // Spin finished
                 APP_STATE.isSpinning = false;
-                if (spinBtn) spinBtn.disabled = false;
+                allSpinBtns.forEach(btn => btn.disabled = false);
 
                 if (res.winAmount > 0) {
                     showWinModal(`KSh ${res.winAmount.toLocaleString()}`, res.wonSlice.label, res.xpGained);
                     triggerConfetti();
                 } else if (res.wonSlice.type === 'free_spin') {
-                    showToast(`You won ${res.freeSpinsGranted} Free Spin(s)!`, 'success');
+                    showToast(`🎁 You won ${res.freeSpinsGranted || 1} Free Spin(s)!`, 'success');
                 } else if (res.wonSlice.type === 'double_next') {
-                    showToast('Double Next Win Activated!', 'warning');
+                    showToast('⚡ Double Next Win Activated!', 'warning');
                 } else {
                     showToast('TRY AGAIN! Good luck next spin.', 'info');
                 }
@@ -1082,7 +1118,7 @@ async function executeSpin(wager) {
 
     } catch (err) {
         APP_STATE.isSpinning = false;
-        if (spinBtn) spinBtn.disabled = false;
+        allSpinBtns.forEach(btn => btn.disabled = false);
         showToast(err.message, 'error');
     }
 }
