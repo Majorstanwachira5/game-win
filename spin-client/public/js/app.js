@@ -1495,51 +1495,157 @@ function updateSingleWinnerShowcase(winner) {
 }
 
 function startSeededLiveLoop() {
-    const communityFeed = [
-        { user: 'USER 0714***342', text: 'Wueh! KSh 10,000 won on x20 multiplier! Clean payout 🔥', emoji: '🏆', isWin: true },
-        { user: 'USER 0722***891', text: 'Mystery Box platinum chest just dropped 20,000 coins + KSh 25,000! 📦👑', emoji: '🎁', isWin: true },
-        { user: 'USER 0798***104', text: 'Lucky 7 triple 7s hit! KSh 50,000 straight to M-Pesa 💥', emoji: '🎉', isWin: true },
-        { user: 'USER 0701***552', text: '3D Dice Roll triple 6s! Game is super smooth 🎲⚡', emoji: '🎲', isWin: true },
-        { user: 'USER 0788***440', text: 'Received 200 free Web3 coins at registration! Nimeanza na hizo 💰', emoji: '🤑', isWin: false },
-        { user: 'USER 0711***223', text: 'Pick a Card aces up! KSh 3,000 clean 🃏💰', emoji: '🃏', isWin: true },
-        { user: 'USER 0752***889', text: 'M-Pesa deposit 400200 processed in 2 seconds! Round 2 ready 📱', emoji: '📱', isWin: false },
-        { user: 'USER 0726***117', text: 'Free spins granted! Free spin #1 just paid 500 coins 🎁', emoji: '🎁', isWin: true },
-        { user: 'USER 0773***552', text: 'God is good! KSh 15,000 won on Wheel Spin tonight 🙏✨', emoji: '🏆', isWin: true },
-        { user: 'USER 0719***988', text: 'Who else is climbing the VIP tiers? Level 3 Bronze unlocked 👑', emoji: '🚀', isWin: false },
-        { user: 'USER 0762***304', text: 'Double Next Win feature is insane! Next win multiplied by 2x 💥', emoji: '⚡', isWin: true },
-        { user: 'USER 0741***992', text: 'Just redeemed 1,000 Web3 reward coins for free spins! 🚀', emoji: '💰', isWin: false },
-        { user: 'USER 0705***123', text: 'Jackpot entry key unlocked from Prize Ladder level 4! 🔑', emoji: '🗝️', isWin: true },
-        { user: 'USER 0791***774', text: 'Wheel spin x50 jackpot slice came so close! Still won x10 🎰', emoji: '✨', isWin: true },
-        { user: 'USER 0733***812', text: 'Fastest cashout platform in Kenya hands down 💸', emoji: '💎', isWin: false }
+    const KENYAN_PREFIXES = ['0701', '0702', '0703', '0704', '0708', '0710', '0711', '0712', '0714', '0715', '0718', '0719', '0720', '0721', '0722', '0724', '0725', '0728', '0740', '0741', '0742', '0745', '0748', '0757', '0758', '0759', '0768', '0769', '0790', '0791', '0792', '0794', '0797', '0798', '0799', '0110', '0111', '0112', '0113', '0114', '0115'];
+    const REAL_USERNAMES = [
+        'Brian_K', 'Mwangi_001', 'Stacy_W', 'Kevin_Ochi', 'Mama_Jayden', 'Dennis_N', 'Fatuma_K', 
+        'Otieno_99', 'Mercy_W', 'Kamau_Dev', 'Alex_M', 'Faith_Chebet', 'John_M', 'Victor_K', 
+        'Brenda_O', 'Collins_T', 'Sharon_M', 'Sammy_R', 'Esther_N', 'Erick_O', 'Cynthia_K'
     ];
 
-    const winnerFeed = [
-        { prize: 'KSh 10,000', user: 'USER 0714***342', mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN' },
-        { prize: 'KSh 25,000', user: 'USER 0722***891', mult: 'GOLD CHEST', game: 'MYSTERY BOX' },
-        { prize: 'KSh 50,000', user: 'USER 0798***104', mult: 'TRIPLE 7s', game: 'LUCKY 7 SLOTS' },
-        { prize: 'KSh 15,000', user: 'USER 0701***552', mult: 'TRIPLE 6s', game: '3D DICE ROLL' },
-        { prize: 'KSh 100,000', user: 'USER 0788***440', mult: 'x50 JACKPOT', game: 'WHEEL SPIN' },
-        { prize: 'KSh 8,500', user: 'USER 0711***223', mult: 'ACE FAN', game: 'PICK A CARD' },
-        { prize: 'KSh 35,000', user: 'USER 0773***552', mult: 'PLATINUM KEY', game: 'MYSTERY BOX' },
-        { prize: 'KSh 20,000', user: 'USER 0762***304', mult: 'DOUBLE WIN', game: 'WHEEL SPIN' }
-    ];
-
-    let chatIdx = 0;
-    let winnerIdx = 0;
-
-    for (let i = 0; i < 5; i++) {
-        addChatMessage(communityFeed[i]);
+    function getRandomSender() {
+        if (Math.random() < 0.68) {
+            const prefix = KENYAN_PREFIXES[Math.floor(Math.random() * KENYAN_PREFIXES.length)];
+            const suffix = Math.floor(100 + Math.random() * 900);
+            return `USER ${prefix}***${suffix}`;
+        } else {
+            return '@' + REAL_USERNAMES[Math.floor(Math.random() * REAL_USERNAMES.length)];
+        }
     }
 
-    setInterval(() => {
-        chatIdx = (chatIdx + 1) % communityFeed.length;
-        addChatMessage(communityFeed[chatIdx]);
-    }, 3000);
+    const CHAT_TEMPLATES = [
+        { text: 'Wueh! KSh {amount} direct to M-Pesa. Hii platform ni real bana 🔥', emoji: '🏆', isWin: true, min: 2000, max: 15000 },
+        { text: 'Hahaha nilifikiria ni jokes lakini KSh {amount} imeingia kwa M-Pesa immediately! 💸', emoji: '🤑', isWin: true, min: 2000, max: 8000 },
+        { text: 'Who said referral haileti doh? Just hit Level 2 downlines and got KSh {amount} commission 🚀', emoji: '🌳', isWin: true, min: 1500, max: 6500 },
+        { text: 'Spinned 3 times got double win then BOOM x5 multiplier! 💥', emoji: '⚡', isWin: true },
+        { text: 'Withdrawal ya KSh {amount} imeingia instantly with M-Pesa message. Shukran sana PlayCoin 🙏', emoji: '💸', isWin: true, min: 2000, max: 12000 },
+        { text: 'Hii Free Spin ya pili imenipea {coins} coins + cash! 🎁', emoji: '🎁', isWin: true, coinsMin: 500, coinsMax: 3000 },
+        { text: 'Walai hii wheel ni moto! From KSh 250 to KSh {amount} in 10 minutes ⚡', emoji: '🔥', isWin: true, min: 3500, max: 9500 },
+        { text: 'Leo niko na bahati mbaya or what 😂 let me try one more spin', emoji: '😂', isWin: false },
+        { text: 'M-Pesa STK push iko swift sana, 2 seconds tu deposit iko kwa balance 📱', emoji: '📱', isWin: false },
+        { text: 'Nice system, very transparent. Even downline earnings are tracked in real time 📈', emoji: '💎', isWin: false },
+        { text: 'Someone tell me what happens on Level 2 referral? Ahh nimeona, KSh 50 per recruit! Nice 🎉', emoji: '🤝', isWin: false },
+        { text: 'Bro I just woke up and saw 4 people joined through my link... KSh 400 cash added 🤑', emoji: '💰', isWin: true },
+        { text: 'Almost landed on x50 Jackpot! Missed by one slice lakini x10 is still super sweet 🎯', emoji: '✨', isWin: true },
+        { text: 'Nani ako na free spins hapa? Nikitaka kuanza game ya dice inakuwaje?', emoji: '❓', isWin: false },
+        { text: 'Withdrawal received! Safaricom message confirmed RCX772... legit 💯', emoji: '✅', isWin: true },
+        { text: 'That sound effect when the wheel is decelerating gives me adrenaline frfr 🔊', emoji: '🎰', isWin: false },
+        { text: 'Level 1 recruiter badge achieved! Moving to Silver VIP tonight 👑', emoji: '👑', isWin: false },
+        { text: 'Hapa PlayCoin hakuna kubahatisha, payouts ziko on point 💰', emoji: '🏆', isWin: false },
+        { text: 'Mimi na bet yangu ya 100 nimevuta KSh {amount} leo. Asanteni sana 🍻', emoji: '🥳', isWin: true, min: 1500, max: 5000 },
+        { text: 'Just activated my account with 250 KES. Time to recruit the squad! 🤝', emoji: '🚀', isWin: false },
+        { text: 'Nani mwingine ameona hiyo Double Next Win? It doubled my KSh {amount} win to 2X! ⚡', emoji: '💥', isWin: true, min: 1000, max: 4000 },
+        { text: 'Mystery Box platinum chest just dropped {coins} coins + KSh {amount}! 📦👑', emoji: '📦', isWin: true, min: 5000, max: 20000, coinsMin: 5000, coinsMax: 15000 },
+        { text: 'Lucky 7 triple 7s hit! KSh {amount} straight to M-Pesa 💥', emoji: '🎉', isWin: true, min: 15000, max: 50000 },
+        { text: '3D Dice Roll triple 6s! Game is super smooth 🎲⚡', emoji: '🎲', isWin: true },
+        { text: 'Received 200 free reward coins at registration! Nimeanza nazo vizuri 💰', emoji: '🤑', isWin: false },
+        { text: 'Pick a Card aces up! KSh {amount} clean payout 🃏💰', emoji: '🃏', isWin: true, min: 2500, max: 7500 },
+        { text: 'Just requested KSh {amount} withdrawal, received in under 1 minute! ⚡', emoji: '💸', isWin: true, min: 2000, max: 10000 },
+        { text: 'Free spin #2 just saved my round! Won x2 multiplier 🎁', emoji: '🎁', isWin: true },
+        { text: 'God is good! KSh {amount} won on Wheel Spin tonight 🙏✨', emoji: '🙏', isWin: true, min: 4000, max: 18000 },
+        { text: 'Who else is climbing the VIP tiers? Level 3 Bronze unlocked 👑', emoji: '🚀', isWin: false },
+        { text: 'Just shared my referral link on WhatsApp group, 5 guys already joined! 📲', emoji: '🔥', isWin: false },
+        { text: 'The wheel stopping physics are so realistic now! No drifting at all 🎯', emoji: '👌', isWin: false },
+        { text: 'Got 2 FREE SPINS on the wheel! Let us gooo 🚀', emoji: '🎁', isWin: true },
+        { text: 'KSh {amount} won! M-Pesa balance growing slowly but surely 📈', emoji: '💰', isWin: true, min: 1200, max: 6000 },
+        { text: 'Bana hii game imenilipia rent ya hii mwezi! KSh {amount} won 🏠🙏', emoji: '🙌', isWin: true, min: 12000, max: 35000 },
+        { text: 'Is there a limit on how many people I can refer? Need to maximize L1 and L2 💡', emoji: '🤔', isWin: false },
+        { text: 'No limit on referrals bro! I have 18 downlines already earning daily 💵', emoji: '💬', isWin: false },
+        { text: 'That Try Again slice gave me a scare but next spin was x5! Phew 😅', emoji: '🎯', isWin: true },
+        { text: 'Fastest deposit ever, Daraja STK push responded instantly 📲', emoji: '⚡', isWin: false },
+        { text: 'KSh {amount} withdrawal successful! Time for celebrations tonight 🥳🍾', emoji: '🎉', isWin: true, min: 2500, max: 15000 },
+        { text: 'Just hit Silver VIP tier! Free coins bonus credited immediately 🥈', emoji: '✨', isWin: false },
+        { text: 'Love the dark mode UI, very sleek and fast on mobile 📱👌', emoji: '🔥', isWin: false },
+        { text: 'Spin number 8 just dropped x2 win! Balance jumped nicely 🎯', emoji: '⚡', isWin: true },
+        { text: 'KSh 100 bet turned into KSh {amount}! Best feeling ever 🤑', emoji: '🏆', isWin: true, min: 500, max: 2000 },
+        { text: 'Downline commissions are real! KSh {amount} from my recruits today 🌳', emoji: '💵', isWin: true, min: 800, max: 4500 },
+        { text: 'M-Pesa Till 1584329 deposit confirmed in 1 sec. Clean backend 🛡️', emoji: '📱', isWin: false },
+        { text: 'Never thought online spin games could be this reliable. Thumbs up PlayCoin 👍', emoji: '💯', isWin: false },
+        { text: 'Claimed my daily challenge bonus! 500 free coins in the bag 🎒', emoji: '🎁', isWin: false },
+        { text: 'Who has tried the Scratch Cards? Won KSh {amount} on Lucky 777 🎫', emoji: '🎫', isWin: true, min: 1000, max: 5000 },
+        { text: 'Big shoutout to the admin team, 24/7 withdrawals are legit 🚀', emoji: '👑', isWin: false }
+    ];
 
-    setInterval(() => {
-        winnerIdx = (winnerIdx + 1) % winnerFeed.length;
-        updateSingleWinnerShowcase(winnerFeed[winnerIdx]);
-    }, 3500);
+    const WINNER_TEMPLATES = [
+        { mult: 'x20 MULTIPLIER', game: 'WHEEL SPIN', min: 2000, max: 20000 },
+        { mult: 'GOLD CHEST', game: 'MYSTERY BOX', min: 5000, max: 35000 },
+        { mult: 'TRIPLE 7s', game: 'LUCKY 7 SLOTS', min: 10000, max: 50000 },
+        { mult: 'TRIPLE 6s', game: '3D DICE ROLL', min: 3000, max: 18000 },
+        { mult: 'x50 JACKPOT', game: 'WHEEL SPIN', min: 25000, max: 100000 },
+        { mult: 'ACE FAN', game: 'PICK A CARD', min: 2000, max: 9500 },
+        { mult: 'PLATINUM CHEST', game: 'MYSTERY BOX', min: 15000, max: 45000 },
+        { mult: 'DOUBLE WIN x10', game: 'WHEEL SPIN', min: 5000, max: 25000 },
+        { mult: 'x10 MEGA WIN', game: 'WHEEL SPIN', min: 1000, max: 10000 },
+        { mult: 'ROYAL FLUSH', game: 'PICK A CARD', min: 8000, max: 30000 }
+    ];
+
+    // Anti-repeat shuffle memory
+    let recentChatIndices = [];
+    function getNextHumanMessage() {
+        if (recentChatIndices.length >= CHAT_TEMPLATES.length - 8) {
+            recentChatIndices = [];
+        }
+        let idx;
+        do {
+            idx = Math.floor(Math.random() * CHAT_TEMPLATES.length);
+        } while (recentChatIndices.includes(idx));
+        recentChatIndices.push(idx);
+
+        const tmpl = CHAT_TEMPLATES[idx];
+        let text = tmpl.text;
+        if (text.includes('{amount}')) {
+            const amount = Math.floor((tmpl.min || 1000) + Math.random() * ((tmpl.max || 10000) - (tmpl.min || 1000)));
+            const rounded = Math.round(amount / 100) * 100;
+            text = text.replace('{amount}', rounded.toLocaleString());
+        }
+        if (text.includes('{coins}')) {
+            const coins = Math.floor((tmpl.coinsMin || 500) + Math.random() * ((tmpl.coinsMax || 5000) - (tmpl.coinsMin || 500)));
+            text = text.replace('{coins}', (Math.round(coins / 50) * 50).toLocaleString());
+        }
+
+        return {
+            user: getRandomSender(),
+            text: text,
+            emoji: tmpl.emoji || '💬',
+            isWin: tmpl.isWin || false
+        };
+    }
+
+    function getNextWinnerShowcase() {
+        const tmpl = WINNER_TEMPLATES[Math.floor(Math.random() * WINNER_TEMPLATES.length)];
+        const amount = Math.floor(tmpl.min + Math.random() * (tmpl.max - tmpl.min));
+        const rounded = Math.round(amount / 500) * 500;
+        return {
+            prize: `KSh ${rounded.toLocaleString()}`,
+            user: getRandomSender(),
+            mult: tmpl.mult,
+            game: tmpl.game
+        };
+    }
+
+    // Seed initial 5 varied messages
+    for (let i = 0; i < 5; i++) {
+        addChatMessage(getNextHumanMessage());
+    }
+
+    // Dynamic Humanized Chat Loop with variable timing (2.2s to 5.2s)
+    function scheduleNextChat() {
+        const delay = Math.floor(2200 + Math.random() * 3000);
+        setTimeout(() => {
+            addChatMessage(getNextHumanMessage());
+            scheduleNextChat();
+        }, delay);
+    }
+    scheduleNextChat();
+
+    // Dynamic Winner Broadcast Loop with variable timing (3.5s to 6.5s)
+    function scheduleNextWinner() {
+        const delay = Math.floor(3500 + Math.random() * 3000);
+        setTimeout(() => {
+            updateSingleWinnerShowcase(getNextWinnerShowcase());
+            scheduleNextWinner();
+        }, delay);
+    }
+    scheduleNextWinner();
 }
 
 function addChatMessage(msg) {
