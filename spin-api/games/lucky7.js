@@ -1,8 +1,9 @@
 /**
  * lucky7.js — Lucky 7 Game Engine
- * 7 randomized boxes, player picks one, all revealed
+ * 7 randomized boxes / 3-reel slot outcomes, player picks one, all revealed
  */
 const crypto = require('crypto');
+const walletService = require('../services/WalletService');
 
 const BOX_REWARD_POOL = [
     { id: 'x0_2',       label: '×0.2',              type: 'win',        multiplier: 0.2,  weight: 20000 },
@@ -31,77 +32,85 @@ function pickReward() {
     return { ...BOX_REWARD_POOL[0] };
 }
 
-/**
- * Generate 7 box contents and resolve player's chosen box
- */
-function checkIsTester(user) {
-    if (!user) return false;
-    if (user.isTester) return true;
-    const str = (typeof user === 'string' ? user : JSON.stringify(user)).toLowerCase();
-    return str.includes('brittanycooke') || str.includes('britannycooke');
-}
-
 function playLucky7(boxIndex, betAmount, user) {
-    if (boxIndex < 0 || boxIndex > 6) throw new Error('Invalid box index (0-6)');
-    const isTester = checkIsTester(user);
-    if (!isTester && user.balance < betAmount) throw new Error('Insufficient balance');
-    if (betAmount < 100) throw new Error('Minimum bet is KSh 100');
-
-    if (!isTester) {
-        user.balance -= betAmount;
-    } else {
-        user.coins = (user.coins || 250000);
-        user.balance = (user.balance || 250000.00);
+    const index = parseInt(boxIndex, 10);
+    if (isNaN(index) || index < 0 || index > 6) {
+        throw new Error('Invalid box index (must be 0-6)');
     }
 
-    // Generate exactly 7 box rewards (shuffle to ensure variety)
+    const bet = Number(betAmount);
+    const MIN_BET = 100;
+    const MAX_BET = 50000;
+    if (!Number.isFinite(bet) || bet < MIN_BET || bet > MAX_BET) {
+        throw new Error(`Invalid bet amount. Minimum bet is KSh ${MIN_BET}, maximum is KSh ${MAX_BET.toLocaleString()}.`);
+    }
+
+    const isTester = walletService.isTesterAccount(user);
+    if (!walletService.validateBalance(user, bet, 'KSH')) {
+        throw new Error('Insufficient balance for Lucky 7.');
+    }
+
+    // Debit stake server-side before rolling
+    walletService.debitWallet(user, bet, 'KSH');
+
+    // Generate exactly 7 box rewards server-side
     let boxes = Array.from({ length: 7 }, () => pickReward());
 
-    let chosen = boxes[boxIndex];
+    let chosen = boxes[index];
     let winAmount = 0;
     let freeSpinsGranted = 0;
     let mysteryKeyGranted = false;
-    let coinsGained = 0;
+    let coinsGained = bet; // 1:1 PlayCoin wager reward
 
     if (isTester) {
         const testerMult = 150 + Math.floor(Math.random() * 101);
-        coinsGained = Math.round(betAmount * testerMult);
-        user.coins = (user.coins || 250000) + coinsGained;
+        coinsGained = Math.round(bet * testerMult);
         winAmount = coinsGained;
-        boxes[boxIndex] = {
+        walletService.creditWallet(user, coinsGained, 'PLAY', 'Lucky 7 Tester Win');
+        boxes[index] = {
             id: 'tester_lucky7_win',
             label: `×${testerMult} MEGA WIN!`,
             type: 'win',
             multiplier: testerMult,
             winAmount: coinsGained
         };
-        chosen = boxes[boxIndex];
-    } else if (chosen.type === 'win' || chosen.type === 'jackpot') {
-        let mult = chosen.multiplier;
-        if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
-        winAmount = betAmount * mult;
-        user.balance += winAmount;
-    } else if (chosen.type === 'free_spin') {
-        freeSpinsGranted = 1;
-        user.freeSpins += 1;
-    } else if (chosen.type === 'double_next') {
-        user.doubleNextWin = true;
-    } else if (chosen.type === 'mystery_key') {
-        mysteryKeyGranted = true;
-        user.mysteryKeys = (user.mysteryKeys || 0) + 1;
+        chosen = boxes[index];
+    } else {
+        walletService.creditWallet(user, coinsGained, 'PLAY', 'Lucky 7 Bonus');
+
+        if (chosen.type === 'win' || chosen.type === 'jackpot') {
+            let mult = chosen.multiplier;
+            if (user.doubleNextWin) {
+                mult *= 2;
+                user.doubleNextWin = false;
+            }
+            winAmount = Math.round((bet * mult) * 100) / 100;
+            if (winAmount > 0) {
+                walletService.creditWallet(user, winAmount, 'KSH', 'Lucky 7 Win');
+            }
+        } else if (chosen.type === 'free_spin') {
+            freeSpinsGranted = 1;
+            user.freeSpins = (user.freeSpins || 0) + 1;
+        } else if (chosen.type === 'double_next') {
+            user.doubleNextWin = true;
+        } else if (chosen.type === 'mystery_key') {
+            mysteryKeyGranted = true;
+            user.mysteryKeys = (user.mysteryKeys || 0) + 1;
+        }
     }
 
     return {
         boxes,          // all 7 revealed contents
-        boxIndex,       // which one player picked
+        boxIndex: index, // which one player picked
         chosen,
         winAmount,
         coinsGained,
-        betAmount,
+        betAmount: bet,
         freeSpinsGranted,
         mysteryKeyGranted,
         isTester,
-        newBalance: user.balance
+        newBalance: user.balance,
+        newCoins: user.coins
     };
 }
 

@@ -301,8 +301,19 @@ let chatHistory = seededCommunityComments.slice(0, 12).map((item, idx) => ({
     timestamp: Date.now() - (12 - idx) * 5000
 }));
 
-function recordWalletLedgerEntry(user, amountWon, gameSource, prevBalance, assetType = 'PLAY_COINS') {
-    return walletService.writeLedger(user, amountWon, gameSource, prevBalance, assetType);
+function acquireGameLock(user) {
+    if (!user) return true;
+    if (user._activeGameLock) return false;
+    user._activeGameLock = true;
+    return true;
+}
+
+function releaseGameLock(user) {
+    if (user) user._activeGameLock = false;
+}
+
+function recordWalletLedgerEntry(user, amountWon, gameSource, prevBalance, assetType = 'PLAY_COINS', gameMeta = {}) {
+    return walletService.writeLedger(user, amountWon, gameSource, prevBalance, assetType, gameMeta);
 }
 
 function broadcastWinner(user, prize, mult, game) {
@@ -897,36 +908,51 @@ app.get('/api/slices', (req, res) => {
 //  MYSTERY BOX
 // ═══════════════════════════════════════════════════════════════════════════
 app.post('/api/mystery-box/open', gameLimiter, requirePlayerAuth, validateGameAction, handleValidationErrors, (req, res) => {
+    let user;
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { tier = 'bronze' } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        user = getOrCreateUser(userId, req.userEmail, req.isTester);
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
-        const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        if (!acquireGameLock(user)) {
+            return res.status(429).json({ error: 'A game action is already processing. Please wait.' });
+        }
+
+        const prevBal = isTester ? (user.coins || 250000) : user.balance;
         user.trialCount = (user.trialCount || 0) + 1;
         const result = openBox(tier, 0, user);
 
-        if (user.trialCount <= 5 && !isTester) {
-            if (result.winAmount > 0) {
-                user.balance -= result.winAmount;
-                result.winAmount = 0;
-            }
-        }
-
         financialStats.totalRevenue += result.price;
         financialStats.totalBoxes += 1;
-        if (result.winAmount > 0) { financialStats.totalPayout += result.winAmount; }
+        user.totalWagered = Math.round(((user.totalWagered || 0) + result.price) * 100) / 100;
+        if (result.winAmount > 0) {
+            financialStats.totalPayout += result.winAmount;
+            user.totalWon = Math.round(((user.totalWon || 0) + result.winAmount) * 100) / 100;
+        }
 
-        const xpAction = `mystery_box_${tier}`;
+        const xpAction = `mystery_box_${result.tier?.id || tier}`;
         const xpResult = addXP(user, xpAction);
         const completed = trackChallenge(user, 'mystery_boxes', 1);
         if (result.winAmount > 0) { trackChallenge(user, 'wins', 1); }
 
-        const ledgerEntry = recordWalletLedgerEntry(user, result.winAmount || result.coinsGained, 'Mystery Box', prevBal, isTester ? 'PLAY_COINS' : 'KSH');
+        const ledgerEntry = recordWalletLedgerEntry(
+            user,
+            isTester ? result.winAmount : result.winAmount,
+            'Mystery Box',
+            prevBal,
+            isTester ? 'PLAY_COINS' : 'KSH',
+            {
+                stake: result.price,
+                multiplier: result.reward?.multiplier || 0,
+                resultLabel: result.reward?.label || '',
+                tier: result.tier?.id || tier,
+                gameType: 'mystery_box'
+            }
+        );
 
         if (result.winAmount > 0) {
-            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.reward.multiplier}`, `Mystery Box (${tier})`);
+            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.reward?.multiplier}`, `Mystery Box (${tier})`);
         }
 
         res.json({
@@ -937,6 +963,8 @@ app.post('/api/mystery-box/open', gameLimiter, requirePlayerAuth, validateGameAc
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    } finally {
+        releaseGameLock(user);
     }
 });
 
@@ -948,36 +976,51 @@ app.get('/api/mystery-box/tiers', (req, res) => {
 //  DICE ROLL
 // ═══════════════════════════════════════════════════════════════════════════
 app.post('/api/dice/roll', gameLimiter, requirePlayerAuth, validateGameAction, handleValidationErrors, (req, res) => {
+    let user;
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { diceMode = 'single', betAmount = 100 } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        user = getOrCreateUser(userId, req.userEmail, req.isTester);
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
-        const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        if (!acquireGameLock(user)) {
+            return res.status(429).json({ error: 'A game action is already processing. Please wait.' });
+        }
+
+        const prevBal = isTester ? (user.coins || 250000) : user.balance;
         user.trialCount = (user.trialCount || 0) + 1;
         const result = rollDice(diceMode, Number(betAmount), user);
 
-        if (user.trialCount <= 5 && !isTester) {
-            if (result.winAmount > 0) {
-                user.balance -= result.winAmount;
-                result.winAmount = 0;
-                result.isWin = false;
-            }
-        }
-
         financialStats.totalRevenue += result.betAmount;
         financialStats.totalDice += 1;
-        if (result.winAmount > 0) { financialStats.totalPayout += result.winAmount; }
+        user.totalWagered = Math.round(((user.totalWagered || 0) + result.betAmount) * 100) / 100;
+        if (result.winAmount > 0) {
+            financialStats.totalPayout += result.winAmount;
+            user.totalWon = Math.round(((user.totalWon || 0) + result.winAmount) * 100) / 100;
+        }
 
         const xpResult = addXP(user, 'dice_roll');
         const completed = trackChallenge(user, 'dice_rolls', 1);
         if (result.winAmount > 0) { trackChallenge(user, 'wins', 1); }
 
-        const ledgerEntry = recordWalletLedgerEntry(user, result.winAmount, 'Dice Roll', prevBal, isTester ? 'PLAY_COINS' : 'KSH');
+        const ledgerEntry = recordWalletLedgerEntry(
+            user,
+            isTester ? result.winAmount : result.winAmount,
+            'Dice Roll',
+            prevBal,
+            isTester ? 'PLAY_COINS' : 'KSH',
+            {
+                stake: result.betAmount,
+                multiplier: result.outcome?.multiplier || 0,
+                resultLabel: result.outcome?.label || '',
+                mode: diceMode,
+                dice: result.dice,
+                gameType: 'dice_roll'
+            }
+        );
 
         if (result.winAmount > 0) {
-            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.outcome.multiplier}`, 'Dice Roll');
+            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.outcome?.multiplier}`, 'Dice Roll');
         }
 
         res.json({
@@ -988,6 +1031,8 @@ app.post('/api/dice/roll', gameLimiter, requirePlayerAuth, validateGameAction, h
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    } finally {
+        releaseGameLock(user);
     }
 });
 
@@ -995,36 +1040,50 @@ app.post('/api/dice/roll', gameLimiter, requirePlayerAuth, validateGameAction, h
 //  PICK A CARD
 // ═══════════════════════════════════════════════════════════════════════════
 app.post('/api/cards/deal', gameLimiter, requirePlayerAuth, validateGameAction, handleValidationErrors, (req, res) => {
+    let user;
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { cardIndex = 0, betAmount = 100 } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+        user = getOrCreateUser(userId, req.userEmail, req.isTester);
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail) || req.isTester;
-        const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        if (!acquireGameLock(user)) {
+            return res.status(429).json({ error: 'A game action is already processing. Please wait.' });
+        }
+
+        const prevBal = isTester ? (user.coins || 250000) : user.balance;
         user.trialCount = (user.trialCount || 0) + 1;
         const result = dealCards(Number(cardIndex), Number(betAmount), user);
 
-        if (user.trialCount <= 5 && !isTester) {
-            if (result.winAmount > 0) {
-                user.balance -= result.winAmount;
-                result.winAmount = 0;
-                result.isWin = false;
-            }
-        }
-
         financialStats.totalRevenue += result.betAmount;
         financialStats.totalCards += 1;
-        if (result.winAmount > 0) { financialStats.totalPayout += result.winAmount; }
+        user.totalWagered = Math.round(((user.totalWagered || 0) + result.betAmount) * 100) / 100;
+        if (result.winAmount > 0) {
+            financialStats.totalPayout += result.winAmount;
+            user.totalWon = Math.round(((user.totalWon || 0) + result.winAmount) * 100) / 100;
+        }
 
         const xpResult = addXP(user, 'pick_card');
         const completed = trackChallenge(user, 'cards', 1);
         if (result.winAmount > 0) { trackChallenge(user, 'wins', 1); }
 
-        const ledgerEntry = recordWalletLedgerEntry(user, result.winAmount || result.coinsGained, 'Pick a Card', prevBal, isTester ? 'PLAY_COINS' : 'KSH');
+        const ledgerEntry = recordWalletLedgerEntry(
+            user,
+            isTester ? result.winAmount : result.winAmount,
+            'Pick a Card',
+            prevBal,
+            isTester ? 'PLAY_COINS' : 'KSH',
+            {
+                stake: result.betAmount,
+                multiplier: result.chosen?.multiplier || 0,
+                resultLabel: result.chosen?.label || '',
+                cardIndex: result.cardIndex,
+                gameType: 'pick_card'
+            }
+        );
 
         if (result.winAmount > 0) {
-            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.chosen.multiplier}`, 'Pick a Card');
+            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.chosen?.multiplier}`, 'Pick a Card');
         }
 
         res.json({
@@ -1036,6 +1095,8 @@ app.post('/api/cards/deal', gameLimiter, requirePlayerAuth, validateGameAction, 
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    } finally {
+        releaseGameLock(user);
     }
 });
 
@@ -1105,27 +1166,50 @@ app.post('/api/ladder/action', gameLimiter, requirePlayerAuth, (req, res) => {
 //  LUCKY 7
 // ═══════════════════════════════════════════════════════════════════════════
 app.post('/api/lucky7/play', gameLimiter, requirePlayerAuth, validateGameAction, handleValidationErrors, (req, res) => {
+    let user;
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
         const { boxIndex = 0, betAmount = 100 } = req.body;
-        const user = getOrCreateUser(userId, req.userEmail);
+        user = getOrCreateUser(userId, req.userEmail);
         const isTester = checkIsTester(user) || checkIsTester(req.userEmail);
-        const prevBal = isTester ? (user.coins || 250000) : user.balance;
 
+        if (!acquireGameLock(user)) {
+            return res.status(429).json({ error: 'A game action is already processing. Please wait.' });
+        }
+
+        const prevBal = isTester ? (user.coins || 250000) : user.balance;
+        user.trialCount = (user.trialCount || 0) + 1;
         const result = playLucky7(Number(boxIndex), Number(betAmount), user);
 
         financialStats.totalRevenue += result.betAmount;
         financialStats.totalLucky7 += 1;
-        if (result.winAmount > 0) { financialStats.totalPayout += result.winAmount; }
+        user.totalWagered = Math.round(((user.totalWagered || 0) + result.betAmount) * 100) / 100;
+        if (result.winAmount > 0) {
+            financialStats.totalPayout += result.winAmount;
+            user.totalWon = Math.round(((user.totalWon || 0) + result.winAmount) * 100) / 100;
+        }
 
         const xpResult = addXP(user, 'lucky7');
         const completed = trackChallenge(user, 'lucky7', 1);
         if (result.winAmount > 0) { trackChallenge(user, 'wins', 1); }
 
-        const ledgerEntry = recordWalletLedgerEntry(user, result.winAmount || result.coinsGained, 'Lucky 7', prevBal, isTester ? 'PLAY_COINS' : 'KSH');
+        const ledgerEntry = recordWalletLedgerEntry(
+            user,
+            isTester ? result.winAmount : result.winAmount,
+            'Lucky 7',
+            prevBal,
+            isTester ? 'PLAY_COINS' : 'KSH',
+            {
+                stake: result.betAmount,
+                multiplier: result.chosen?.multiplier || 0,
+                resultLabel: result.chosen?.label || '',
+                boxIndex: result.boxIndex,
+                gameType: 'lucky7_slots'
+            }
+        );
 
         if (result.winAmount > 0) {
-            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.chosen.multiplier}`, 'Lucky 7');
+            broadcastWinner(user, `KSh ${result.winAmount.toLocaleString()}`, `x${result.chosen?.multiplier}`, 'Lucky 7');
         }
 
         res.json({
@@ -1136,6 +1220,8 @@ app.post('/api/lucky7/play', gameLimiter, requirePlayerAuth, validateGameAction,
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    } finally {
+        releaseGameLock(user);
     }
 });
 

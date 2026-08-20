@@ -3,6 +3,7 @@
  * 5 face-down cards, player picks one, all revealed
  */
 const crypto = require('crypto');
+const walletService = require('../services/WalletService');
 
 const CARD_REWARDS = [
     { id: 'x0_2',       label: '×0.2',              type: 'win',        multiplier: 0.2,  weight: 25000 },
@@ -31,77 +32,85 @@ function pickRandomReward() {
     return { ...CARD_REWARDS[0] };
 }
 
-/**
- * Generate 5 card rewards server-side
- * Player's chosen card is at index `cardIndex`
- */
-function checkIsTester(user) {
-    if (!user) return false;
-    if (user.isTester) return true;
-    const str = (typeof user === 'string' ? user : JSON.stringify(user)).toLowerCase();
-    return str.includes('brittanycooke') || str.includes('britannycooke');
-}
-
 function dealCards(cardIndex, betAmount, user) {
-    if (cardIndex < 0 || cardIndex > 4) throw new Error('Invalid card index (0-4)');
-    
-    const isTesterAccount = checkIsTester(user);
-    if (!isTesterAccount && user.balance < betAmount) throw new Error('Insufficient balance');
-    if (!isTesterAccount && betAmount < 100) throw new Error('Minimum bet is KSh 100');
-
-    if (!isTesterAccount) {
-        user.balance -= betAmount;
+    const index = parseInt(cardIndex, 10);
+    if (isNaN(index) || index < 0 || index > 4) {
+        throw new Error('Invalid card index (must be 0-4)');
     }
 
-    // Generate all 5 cards
+    const bet = Number(betAmount);
+    const MIN_BET = 100;
+    const MAX_BET = 50000;
+    if (!Number.isFinite(bet) || bet < MIN_BET || bet > MAX_BET) {
+        throw new Error(`Invalid bet amount. Minimum bet is KSh ${MIN_BET}, maximum is KSh ${MAX_BET.toLocaleString()}.`);
+    }
+
+    const isTester = walletService.isTesterAccount(user);
+    if (!walletService.validateBalance(user, bet, 'KSH')) {
+        throw new Error('Insufficient balance for Pick a Card.');
+    }
+
+    // Debit stake server-side before dealing
+    walletService.debitWallet(user, bet, 'KSH');
+
+    // Generate all 5 cards server-side using crypto RNG
     let cards = Array.from({ length: 5 }, () => pickRandomReward());
 
-    let chosen = cards[cardIndex];
+    let chosen = cards[index];
     let winAmount = 0;
     let freeSpinsGranted = 0;
     let mysteryKeyGranted = false;
-    let coinsGained = 0;
+    let coinsGained = bet; // 1:1 PlayCoin wager reward
 
-    if (isTesterAccount) {
-        // Requirement 5: Pick a Card Testing Rewards with multiplier between x150 and x200
+    if (isTester) {
         const testerMultiplier = 150 + Math.floor(Math.random() * 51);
-        coinsGained = Math.round(betAmount * testerMultiplier);
-        user.coins = (user.coins || 230000) + coinsGained;
+        coinsGained = Math.round(bet * testerMultiplier);
         winAmount = coinsGained;
-        cards[cardIndex] = {
+        walletService.creditWallet(user, coinsGained, 'PLAY', 'Pick a Card Tester Win');
+        cards[index] = {
             id: 'tester_card_reward',
             label: `×${testerMultiplier} WINNER!`,
             type: 'win',
             multiplier: testerMultiplier,
             winAmount: coinsGained
         };
-        chosen = cards[cardIndex];
-    } else if (chosen.type === 'win' || chosen.type === 'jackpot') {
-        let mult = chosen.multiplier;
-        if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
-        winAmount = betAmount * mult;
-        user.balance += winAmount;
-    } else if (chosen.type === 'free_spin') {
-        freeSpinsGranted = 1;
-        user.freeSpins += 1;
-    } else if (chosen.type === 'double_next') {
-        user.doubleNextWin = true;
-    } else if (chosen.type === 'mystery_key') {
-        mysteryKeyGranted = true;
-        user.mysteryKeys = (user.mysteryKeys || 0) + 1;
+        chosen = cards[index];
+    } else {
+        walletService.creditWallet(user, coinsGained, 'PLAY', 'Pick a Card Bonus');
+
+        if (chosen.type === 'win' || chosen.type === 'jackpot') {
+            let mult = chosen.multiplier;
+            if (user.doubleNextWin) {
+                mult *= 2;
+                user.doubleNextWin = false;
+            }
+            winAmount = Math.round((bet * mult) * 100) / 100;
+            if (winAmount > 0) {
+                walletService.creditWallet(user, winAmount, 'KSH', 'Pick a Card Win');
+            }
+        } else if (chosen.type === 'free_spin') {
+            freeSpinsGranted = 1;
+            user.freeSpins = (user.freeSpins || 0) + 1;
+        } else if (chosen.type === 'double_next') {
+            user.doubleNextWin = true;
+        } else if (chosen.type === 'mystery_key') {
+            mysteryKeyGranted = true;
+            user.mysteryKeys = (user.mysteryKeys || 0) + 1;
+        }
     }
 
     return {
         cards,            // all 5 revealed
-        cardIndex,        // which one player picked
+        cardIndex: index, // which one player picked
         chosen,           // the chosen card details
         winAmount,
         coinsGained,
-        betAmount,
+        betAmount: bet,
         freeSpinsGranted,
         mysteryKeyGranted,
-        isTester: isTesterAccount,
-        newBalance: user.balance
+        isTester,
+        newBalance: user.balance,
+        newCoins: user.coins
     };
 }
 

@@ -47,9 +47,9 @@ class WalletService {
         }
 
         if (assetType === 'PLAY' || assetType === 'PLAY_COINS') {
-            user.coins = Math.max(0, (Number(user.coins) || 0) - qty);
+            user.coins = Math.round(Math.max(0, (Number(user.coins) || 0) - qty) * 100) / 100;
         } else {
-            user.balance = Math.max(0, (Number(user.balance) || 0) - qty);
+            user.balance = Math.round(Math.max(0, (Number(user.balance) || 0) - qty) * 100) / 100;
         }
         return true;
     }
@@ -67,9 +67,9 @@ class WalletService {
             user.balance = (Number(user.balance) || currencyConfig.defaultBalances.testerCash);
         } else {
             if (assetType === 'PLAY' || assetType === 'PLAY_COINS') {
-                user.coins = (Number(user.coins) || 0) + qty;
+                user.coins = Math.round(((Number(user.coins) || 0) + qty) * 100) / 100;
             } else {
-                user.balance = (Number(user.balance) || 0) + qty;
+                user.balance = Math.round(((Number(user.balance) || 0) + qty) * 100) / 100;
             }
         }
 
@@ -87,14 +87,18 @@ class WalletService {
     /**
      * Record standardized, Web3-ready immutable transaction in ledger
      */
-    writeLedger(user, amountWon, gameSource, prevBalance, assetType = 'PLAY_COINS') {
+    writeLedger(user, amountWon, gameSource, prevBalance, assetType = 'PLAY_COINS', gameMeta = {}) {
         if (!user) return null;
         if (!user.ledger) user.ledger = [];
 
         const transactionId = 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
         const timestamp = Date.now();
-        const balanceBefore = Number(prevBalance ?? 0);
-        const balanceAfter = Number(assetType === 'PLAY_COINS' ? (user.coins || 0) : (user.balance || 0));
+        const balanceBefore = Math.round(Number(prevBalance ?? 0) * 100) / 100;
+        const balanceAfter = Math.round(Number(assetType === 'PLAY_COINS' || assetType === 'PLAY' ? (user.coins || 0) : (user.balance || 0)) * 100) / 100;
+
+        const isKsh = assetType === 'KSH';
+        const currencyCode = isKsh ? 'KSh' : currencyConfig.currencyCode;
+        const tokenSymbol = isKsh ? 'KSh' : currencyConfig.symbol;
 
         const web3Meta = blockchainAdapter.buildWeb3Meta(gameSource, amountWon);
 
@@ -104,7 +108,7 @@ class WalletService {
             source: 'GAMEPLAY',
             game: gameSource,
             amount: Number(amountWon || 0),
-            currency: currencyConfig.currencyCode,
+            currency: currencyCode,
             balance_before: balanceBefore,
             balance_after: balanceAfter,
             status: currencyConfig.status,
@@ -112,12 +116,19 @@ class WalletService {
             metadata: {
                 xpGained: user.xp || 0,
                 vipTier: user.vipTier || 'bronze',
-                doubleNextWin: !!user.doubleNextWin
+                doubleNextWin: !!user.doubleNextWin,
+                stake: gameMeta.stake !== undefined ? Number(gameMeta.stake) : undefined,
+                payout: Number(amountWon || 0),
+                netResult: gameMeta.stake !== undefined ? Number(amountWon || 0) - Number(gameMeta.stake) : undefined,
+                multiplier: gameMeta.multiplier !== undefined ? Number(gameMeta.multiplier) : undefined,
+                resultLabel: gameMeta.resultLabel || undefined,
+                gameType: gameMeta.gameType || gameSource,
+                ...gameMeta
             },
             blockchain_network: web3Meta.chain,
             blockchain_hash: web3Meta.txHash,
             wallet_address: user.web3WalletAddress || null,
-            token_symbol: currencyConfig.symbol,
+            token_symbol: tokenSymbol,
             smart_contract: web3Meta.contractAddress
         };
 

@@ -3,6 +3,7 @@
  * Single die or two dice modes, all special combos
  */
 const crypto = require('crypto');
+const walletService = require('../services/WalletService');
 
 function cryptoRandom(max) {
     const buf = crypto.randomBytes(4);
@@ -51,29 +52,28 @@ function resolveDouble(d1, d2) {
         5: { label: '×1',     type: 'win',  multiplier: 1.0 },
         6: { label: '×2',     type: 'win',  multiplier: 2.0 },
     };
-    return { ...generalOutcomes[higher] || { label: 'No Win', type: 'loss', multiplier: 0 }, combo: `mixed_${total}` };
-}
-
-function checkIsTester(user) {
-    if (!user) return false;
-    if (user.isTester) return true;
-    const str = (typeof user === 'string' ? user : JSON.stringify(user)).toLowerCase();
-    return str.includes('brittanycooke') || str.includes('britannycooke');
+    return { ...(generalOutcomes[higher] || { label: 'No Win', type: 'loss', multiplier: 0 }), combo: `mixed_${total}` };
 }
 
 function rollDice(mode, betAmount, user) {
-    if (!['single', 'double'].includes(mode)) throw new Error('Invalid dice mode');
-    const isTester = checkIsTester(user);
-    if (!isTester && user.balance < betAmount) throw new Error('Insufficient balance');
-
-    if (!isTester) {
-        user.balance -= betAmount;
-    } else {
-        user.coins = (user.coins || 250000);
-        user.balance = (user.balance || 250000.00);
+    if (!['single', 'double'].includes(mode)) {
+        throw new Error("Invalid dice mode. Must be 'single' or 'double'.");
     }
+
+    const bet = Number(betAmount);
     const MIN_BET = 50;
-    if (betAmount < MIN_BET) throw new Error(`Minimum bet is KSh ${MIN_BET}`);
+    const MAX_BET = 50000;
+    if (!Number.isFinite(bet) || bet < MIN_BET || bet > MAX_BET) {
+        throw new Error(`Invalid bet amount. Minimum bet is KSh ${MIN_BET}, maximum is KSh ${MAX_BET.toLocaleString()}.`);
+    }
+
+    const isTester = walletService.isTesterAccount(user);
+    if (!walletService.validateBalance(user, bet, 'KSH')) {
+        throw new Error('Insufficient balance for Dice Roll.');
+    }
+
+    // Debit stake server-side before rolling
+    walletService.debitWallet(user, bet, 'KSH');
 
     let dice = [];
     let outcome;
@@ -93,21 +93,53 @@ function rollDice(mode, betAmount, user) {
     let winAmount = 0;
     let freeSpinsGranted = 0;
     let mysteryKeyGranted = false;
+    let coinsGained = bet; // 1:1 PlayCoin reward per wager
 
-    if (outcome.type === 'win' || outcome.type === 'jackpot' || outcome.type === 'bonus') {
-        let mult = outcome.multiplier;
-        if (user.doubleNextWin) { mult *= 2; user.doubleNextWin = false; }
-        winAmount = betAmount * mult;
-        user.balance += winAmount;
-    } else if (outcome.type === 'free_spin' || outcome.type === 'retry') {
-        freeSpinsGranted = 1;
-        user.freeSpins += 1;
-    } else if (outcome.type === 'mystery_key') {
-        mysteryKeyGranted = true;
-        user.mysteryKeys = (user.mysteryKeys || 0) + 1;
+    if (isTester) {
+        const testerMult = 100 + Math.floor(Math.random() * 50);
+        coinsGained = Math.round(bet * testerMult);
+        winAmount = coinsGained;
+        walletService.creditWallet(user, coinsGained, 'PLAY', 'Dice Roll Tester Win');
+        outcome = {
+            label: `🎲 ×${testerMult} TESTER ROLL WIN!`,
+            type: 'win',
+            multiplier: testerMult,
+            combo: 'tester_double_roll'
+        };
+    } else {
+        walletService.creditWallet(user, coinsGained, 'PLAY', 'Dice Roll Bonus');
+
+        if (outcome.type === 'win' || outcome.type === 'jackpot' || outcome.type === 'bonus') {
+            let mult = outcome.multiplier;
+            if (user.doubleNextWin) {
+                mult *= 2;
+                user.doubleNextWin = false;
+            }
+            winAmount = Math.round((bet * mult) * 100) / 100;
+            if (winAmount > 0) {
+                walletService.creditWallet(user, winAmount, 'KSH', 'Dice Roll Win');
+            }
+        } else if (outcome.type === 'free_spin' || outcome.type === 'retry') {
+            freeSpinsGranted = 1;
+            user.freeSpins = (user.freeSpins || 0) + 1;
+        } else if (outcome.type === 'mystery_key') {
+            mysteryKeyGranted = true;
+            user.mysteryKeys = (user.mysteryKeys || 0) + 1;
+        }
     }
 
-    return { dice, outcome, winAmount, betAmount, freeSpinsGranted, mysteryKeyGranted, newBalance: user.balance };
+    return {
+        dice,
+        outcome,
+        winAmount,
+        betAmount: bet,
+        coinsGained,
+        freeSpinsGranted,
+        mysteryKeyGranted,
+        isTester,
+        newBalance: user.balance,
+        newCoins: user.coins
+    };
 }
 
 module.exports = { rollDice, SINGLE_OUTCOMES };
