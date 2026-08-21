@@ -176,9 +176,9 @@ function createUser(overrides = {}) {
         id: overrides.id || 'demo-user-1',
         phone: overrides.phone || 'USER ' + Math.floor(1000 + Math.random() * 9000) + '***',
         balance: overrides.balance ?? 0.00,
-        coins: overrides.coins ?? 200, // 200 Free Play Coins Granted on Registration!
+        coins: overrides.coins ?? 0,
         currency: 'KSh',
-        freeSpins: overrides.freeSpins ?? 1,
+        freeSpins: overrides.freeSpins ?? 0,
         mysteryKeys: 0,
         jackpotEntries: 0,
         doubleNextWin: false,
@@ -200,7 +200,7 @@ function createUser(overrides = {}) {
 }
 
 const users = {
-    'demo-user-1': createUser({ id: 'demo-user-1', phone: 'USER 0712***891', balance: 0.00, coins: 200, xp: 50 })
+    'demo-user-1': createUser({ id: 'demo-user-1', phone: 'USER 0712***891', balance: 0.00, coins: 0, xp: 0, freeSpins: 0 })
 };
 
 const financialStats = {
@@ -599,10 +599,10 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             phone: formattedEmail,
             password: password,
             balance: isTester ? 250000.00 : 0.00,
-            coins: isTester ? 250000 : 200,
+            coins: isTester ? 250000 : 0,
             isTester: isTester,
             xp: 50,
-            freeSpins: 1,
+            freeSpins: isTester ? 10 : 0,
             referredBy: referredById
         });
 
@@ -619,7 +619,7 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
                     display_name: user.name,
                     phone_number: formattedEmail,
                     xp_points: 50,
-                    free_spins_count: 1
+                    free_spins_count: isTester ? 10 : 0
                 }
             });
         } catch (e) {

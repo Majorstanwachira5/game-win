@@ -267,7 +267,7 @@ window.setAuthenticatedUser = function (user, token) {
     APP_STATE.user = user;
     APP_STATE.isAuthenticated = true;
     APP_STATE.balance = user.balance ?? 0.00;
-    APP_STATE.coins = user.coins ?? 200;
+    APP_STATE.coins = user.coins ?? 0;
     APP_STATE.freeSpins = user.freeSpins ?? 0;
     APP_STATE.vipTier = user.vipTier || 'bronze';
 
@@ -307,7 +307,7 @@ window.setAuthenticatedUser = function (user, token) {
     if (mobSummaryName) mobSummaryName.textContent = user.name || user.email || 'Player';
     if (mobSummaryTier) mobSummaryTier.textContent = (user.vipTier || 'BRONZE').toUpperCase() + (user.isTester ? ' TESTER VIP' : ' VIP');
     if (mobSummaryCash) mobSummaryCash.textContent = `KSh ${Number(user.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (mobSummaryCoins) mobSummaryCoins.textContent = (user.coins || 200).toLocaleString('en-US');
+    if (mobSummaryCoins) mobSummaryCoins.textContent = (user.coins || 0).toLocaleString('en-US');
     
     // Automatically close auth modal immediately on authentication success
     if (authModal) {
@@ -325,7 +325,7 @@ window.setAuthenticatedUser = function (user, token) {
     if (userNameEl) userNameEl.textContent = user.name || user.email || user.phone || 'USER';
     if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + (user.isTester ? ' TESTER VIP' : ' VIP');
 
-    updateBalanceUI(user.balance ?? 0.00, user.coins || 200);
+    updateBalanceUI(user.balance ?? 0.00, user.coins || 0);
 };
 
 window.showTesterWinAnimation = function (amountText, subtitleText) {
@@ -547,8 +547,7 @@ window.handleAuthSubmit = async function (e) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
             if (activeMode === 'register') {
-                if (window.showRegBonusModal) window.showRegBonusModal(true);
-                else showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! 200 Free Play Coins credited 🎉`, 'success');
+                showToast(`Welcome ${res.user.name || res.user.email || 'Player'}! 🎉`, 'success');
             } else {
                 showToast(`Welcome back ${res.user.name || res.user.email || 'Player'}! 🎉`, 'success');
             }
