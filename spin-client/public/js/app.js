@@ -71,13 +71,7 @@
 })();
 
 const getApiBase = () => {
-    if (typeof window !== 'undefined' && window.location) {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return `${window.location.protocol}//${window.location.hostname}:8080`;
-        }
-        return window.location.origin;
-    }
-    return 'http://localhost:8080';
+    return '';
 };
 const API_BASE = getApiBase();
 
