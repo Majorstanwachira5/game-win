@@ -4,11 +4,7 @@
  * server-side pagination, real-time polling, and transactional actions.
  */
 
-const API_BASE = (window.location.port === '8080')
-    ? window.location.origin
-    : ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ? `${window.location.protocol}//${window.location.hostname}:8080`
-        : window.location.origin);
+const API_BASE = window.location.origin;
 let adminToken = localStorage.getItem('ram_admin_jwt') || '';
 let currentTab = 'overview';
 let usersPage = 1;
@@ -52,11 +48,26 @@ function setupAuth() {
         authError.style.display = 'none';
 
         try {
-            const res = await fetch(`${API_BASE}/api/auth/admin`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, adminEmail: email, password: pwd })
-            });
+            let res;
+            try {
+                res = await fetch(`${API_BASE}/api/auth/admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, adminEmail: email, password: pwd })
+                });
+            } catch (netErr) {
+                if (window.location.port !== '8080') {
+                    const fallbackBase = `${window.location.protocol}//${window.location.hostname}:8080`;
+                    res = await fetch(`${fallbackBase}/api/auth/admin`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, adminEmail: email, password: pwd })
+                    });
+                } else {
+                    throw netErr;
+                }
+            }
+
             const data = await res.json();
 
             if (data.success && data.token) {
@@ -89,7 +100,7 @@ function hideAuthOverlay() {
     document.getElementById('adminAuthOverlay').style.display = 'none';
 }
 
-// ─── FETCH HELPER WITH JWT AUTH ──────────────────────────────────────────────
+// ─── FETCH HELPER WITH JWT AUTH & DUAL-ORIGIN RESOLUTION ─────────────────────
 async function adminFetch(endpoint, options = {}) {
     const headers = {
         'Content-Type': 'application/json',
@@ -97,20 +108,32 @@ async function adminFetch(endpoint, options = {}) {
         ...(options.headers || {})
     };
 
+    let res;
     try {
-        const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
-        if (res.status === 401 || res.status === 403) {
-            console.warn('[ADMIN AUTH EXPIRED]');
-            localStorage.removeItem('ram_admin_jwt');
-            adminToken = '';
-            showAuthOverlay();
-            throw new Error('Session expired. Please log in again.');
-        }
-        return await res.json();
+        res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
     } catch (err) {
-        console.error(`[ADMIN FETCH ERROR] ${endpoint}`, err.message);
-        throw err;
+        if (window.location.port !== '8080') {
+            try {
+                const fallbackBase = `${window.location.protocol}//${window.location.hostname}:8080`;
+                res = await fetch(`${fallbackBase}${endpoint}`, { ...options, headers });
+            } catch (fallbackErr) {
+                console.error(`[ADMIN FETCH ERROR] ${endpoint}`, fallbackErr.message);
+                throw fallbackErr;
+            }
+        } else {
+            console.error(`[ADMIN FETCH ERROR] ${endpoint}`, err.message);
+            throw err;
+        }
     }
+
+    if (res.status === 401 || res.status === 403) {
+        console.warn('[ADMIN AUTH EXPIRED]');
+        localStorage.removeItem('ram_admin_jwt');
+        adminToken = '';
+        showAuthOverlay();
+        throw new Error('Session expired. Please log in again.');
+    }
+    return await res.json();
 }
 
 // ─── NAVIGATION & TAB SWITCHING ─────────────────────────────────────────────

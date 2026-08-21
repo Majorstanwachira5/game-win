@@ -218,130 +218,87 @@ while ($listener.IsListening) {
             continue
         }
 
-        # 1. ADMIN PORTAL (PORT 3001)
-        if ($port -eq 3001) {
-            $file = if ($path -eq "/" -or $path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
-                "admin.html"
-            } elseif ($path.StartsWith("/admin/")) {
-                $path.Substring(7)
-            } else {
-                $path.TrimStart("/")
-            }
-            $fullPath = Join-Path $adminPublicDir $file
-            Send-StaticFile $res $fullPath
+        # ─── 0. GLOBAL API & HEALTH ENDPOINTS (SERVED ON ALL PORTS 3000, 3001, 8080) ────
+        if ($path -eq "/health" -or $path -eq "/api/health") {
+            Send-Json $res @{ status = "ok"; uptime = 100; timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); version = "2.0.0" }
             continue
         }
 
-        # 2. GAME CLIENT (PORT 3000)
-        if ($port -eq 3000) {
-            $targetDir = if ($path.StartsWith("/admin") -or $path -eq "/admin.html" -or $path -eq "/dashboard") { $adminPublicDir } else { $clientPublicDir }
-            $file = if ($path -eq "/" -or $path -eq "/index.html") {
-                "index.html"
-            } elseif ($path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
-                "admin.html"
-            } elseif ($path.StartsWith("/admin/")) {
-                $path.Substring(7)
-            } else {
-                $path.TrimStart("/")
-            }
-            $fullPath = Join-Path $targetDir $file
-            if (-not (Test-Path $fullPath -PathType Leaf)) { $fullPath = Join-Path $clientPublicDir $file }
-            Send-StaticFile $res $fullPath
-            continue
-        }
+        # Admin Authentication Endpoint
+        if ($path -eq "/api/auth/admin") {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, $req.ContentEncoding)
+            $body = $reader.ReadToEnd()
+            $reader.Close()
 
-        # 3. BACKEND API & ADMIN ROUTE (PORT 8080)
-        if ($port -eq 8080) {
-            # Admin UI on 8080
-            if ($path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
-                Send-StaticFile $res (Join-Path $adminPublicDir "admin.html")
-                continue
-            }
-            if ($path.StartsWith("/admin/css/") -or $path.StartsWith("/admin/js/")) {
-                Send-StaticFile $res (Join-Path $adminPublicDir ($path.Substring(7)))
-                continue
-            }
+            $jsonObj = if ($body) { $body | ConvertFrom-Json } else { @{} }
+            $email = if ($jsonObj.email) { $jsonObj.email.Trim() } elseif ($jsonObj.adminEmail) { $jsonObj.adminEmail.Trim() } else { "admin@playcoin.live" }
+            $pwd = if ($jsonObj.password) { $jsonObj.password.Trim() } else { "" }
 
-            # Health Check
-            if ($path -eq "/health" -or $path -eq "/api/health") {
-                Send-Json $res @{ status = "ok"; uptime = 100; timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(); version = "2.0.0" }
-                continue
-            }
-
-            # Admin Authentication Endpoint
-            if ($path -eq "/api/auth/admin") {
-                $reader = New-Object System.IO.StreamReader($req.InputStream, $req.ContentEncoding)
-                $body = $reader.ReadToEnd()
-                $reader.Close()
-
-                $jsonObj = if ($body) { $body | ConvertFrom-Json } else { @{} }
-                $email = if ($jsonObj.email) { $jsonObj.email.Trim() } elseif ($jsonObj.adminEmail) { $jsonObj.adminEmail.Trim() } else { "admin@playcoin.live" }
-                $pwd = if ($jsonObj.password) { $jsonObj.password.Trim() } else { "" }
-
-                $validPasswords = @("admin123password", "admin123", "SpinAdmin@2026!", "playcoin2026", "PlaycoinAdmin@2026!")
-                if ($validPasswords -contains $pwd -or $pwd -eq "admin123password") {
-                    $token = "jwt_admin_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-                    Send-Json $res @{
-                        success = $true
-                        token = $token
-                        admin = @{
-                            email = $email
-                            name = "Playcoin Super Admin"
-                            role = "super_admin"
-                        }
-                        message = "Admin authenticated successfully."
-                    }
-                } else {
-                    Send-Json $res @{ success = $false; error = "Invalid admin credentials. Please check your email and password." } 403
-                }
-                continue
-            }
-
-            # 1. Admin Overview KPIs & Funnel & Activity
-            if ($path -eq "/api/admin/overview") {
+            $validPasswords = @("admin123password", "admin123", "SpinAdmin@2026!", "playcoin2026", "PlaycoinAdmin@2026!")
+            if ($validPasswords -contains $pwd -or $pwd -eq "admin123password") {
+                $token = "jwt_admin_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                 Send-Json $res @{
                     success = $true
-                    users = @{
-                        total = 1248
-                        newToday = 14
-                        newThisMonth = 285
-                        active = 890
+                    token = $token
+                    admin = @{
+                        email = $email
+                        name = "Playcoin Super Admin"
+                        role = "super_admin"
                     }
-                    payments = @{
-                        totalVolume = 540000.00
-                        todayVolume = 18500.00
-                    }
-                    commissions = @{
-                        totalGenerated = 124500.00
-                        availableLiability = 34000.00
-                    }
-                    withdrawals = @{
-                        pendingCount = 1
-                        pendingLiability = 2500.00
-                    }
-                    referrals = @{
-                        totalReferrals = 412
-                        conversionRate = "68.4%"
-                        directCount = 280
-                        indirectCount = 132
-                    }
-                    revenue = @{
-                        houseNetProfit = 459000.00
-                        profitMarginPercent = "85.0%"
-                    }
-                    funnel = @{
-                        registrations = 1248
-                        activations = 890
-                    }
-                    recentActivity = @(
-                        @{ badge = "DEPOSIT"; color = "#10b981"; title = "KSh 1,000 via M-Pesa (RCX98127389)"; time = [DateTimeOffset]::UtcNow.AddMinutes(-5).ToString("o") },
-                        @{ badge = "WIN"; color = "#ffd700"; title = "KSh 2,500 on Spin & Win by Demo Player"; time = [DateTimeOffset]::UtcNow.AddMinutes(-12).ToString("o") },
-                        @{ badge = "COMMISSION"; color = "#a855f7"; title = "+KSh 100 L1 Commission to Master Recruiter"; time = [DateTimeOffset]::UtcNow.AddMinutes(-20).ToString("o") },
-                        @{ badge = "REGISTER"; color = "#00f0ff"; title = "New Recruiter joined via code PLAYMASTER"; time = [DateTimeOffset]::UtcNow.AddMinutes(-35).ToString("o") }
-                    )
+                    message = "Admin authenticated successfully."
                 }
-                continue
+            } else {
+                Send-Json $res @{ success = $false; error = "Invalid admin credentials. Please check your email and password." } 403
             }
+            continue
+        }
+
+        # 1. Admin Overview KPIs & Funnel & Activity
+        if ($path -eq "/api/admin/overview") {
+            Send-Json $res @{
+                success = $true
+                users = @{
+                    total = 1248
+                    newToday = 14
+                    newThisMonth = 285
+                    active = 890
+                }
+                payments = @{
+                    totalVolume = 540000.00
+                    todayVolume = 18500.00
+                }
+                commissions = @{
+                    totalGenerated = 124500.00
+                    availableLiability = 34000.00
+                }
+                withdrawals = @{
+                    pendingCount = 1
+                    pendingLiability = 2500.00
+                }
+                referrals = @{
+                    totalReferrals = 412
+                    conversionRate = "68.4%"
+                    directCount = 280
+                    indirectCount = 132
+                }
+                revenue = @{
+                    houseNetProfit = 459000.00
+                    profitMarginPercent = "85.0%"
+                }
+                funnel = @{
+                    registrations = 1248
+                    activations = 890
+                }
+                recentActivity = @(
+                    @{ badge = "DEPOSIT"; color = "#10b981"; title = "KSh 1,000 via M-Pesa (RCX98127389)"; time = [DateTimeOffset]::UtcNow.AddMinutes(-5).ToString("o") },
+                    @{ badge = "WIN"; color = "#ffd700"; title = "KSh 2,500 on Spin & Win by Demo Player"; time = [DateTimeOffset]::UtcNow.AddMinutes(-12).ToString("o") },
+                    @{ badge = "COMMISSION"; color = "#a855f7"; title = "+KSh 100 L1 Commission to Master Recruiter"; time = [DateTimeOffset]::UtcNow.AddMinutes(-20).ToString("o") },
+                    @{ badge = "REGISTER"; color = "#00f0ff"; title = "New Recruiter joined via code PLAYMASTER"; time = [DateTimeOffset]::UtcNow.AddMinutes(-35).ToString("o") }
+                )
+            }
+            continue
+        }
+
 
             # 2. Admin Users List & Pagination
             if ($path -eq "/api/admin/users") {
@@ -631,7 +588,55 @@ while ($listener.IsListening) {
                 continue
             }
 
-            # Default JSON API fallback
+            # If request was an /api/ route not matched above, return standard API response
+            if ($path.StartsWith("/api/")) {
+                Send-Json $res @{ success = $true; status = "ok"; message = "PLAYCOIN Core Services Operational" }
+                continue
+            }
+
+        # ─── STATIC FILE SERVING (NON-API REQUESTS) ───────────────────────────
+        # 1. ADMIN PORTAL (PORT 3001)
+        if ($port -eq 3001) {
+            $file = if ($path -eq "/" -or $path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
+                "admin.html"
+            } elseif ($path.StartsWith("/admin/")) {
+                $path.Substring(7)
+            } else {
+                $path.TrimStart("/")
+            }
+            $fullPath = Join-Path $adminPublicDir $file
+            Send-StaticFile $res $fullPath
+            continue
+        }
+
+        # 2. GAME CLIENT (PORT 3000)
+        if ($port -eq 3000) {
+            $targetDir = if ($path.StartsWith("/admin") -or $path -eq "/admin.html" -or $path -eq "/dashboard") { $adminPublicDir } else { $clientPublicDir }
+            $file = if ($path -eq "/" -or $path -eq "/index.html") {
+                "index.html"
+            } elseif ($path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
+                "admin.html"
+            } elseif ($path.StartsWith("/admin/")) {
+                $path.Substring(7)
+            } else {
+                $path.TrimStart("/")
+            }
+            $fullPath = Join-Path $targetDir $file
+            if (-not (Test-Path $fullPath -PathType Leaf)) { $fullPath = Join-Path $clientPublicDir $file }
+            Send-StaticFile $res $fullPath
+            continue
+        }
+
+        # 3. BACKEND API UI FALLBACK (PORT 8080)
+        if ($port -eq 8080) {
+            if ($path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
+                Send-StaticFile $res (Join-Path $adminPublicDir "admin.html")
+                continue
+            }
+            if ($path.StartsWith("/admin/css/") -or $path.StartsWith("/admin/js/")) {
+                Send-StaticFile $res (Join-Path $adminPublicDir ($path.Substring(7)))
+                continue
+            }
             Send-Json $res @{ success = $true; status = "ok"; message = "PLAYCOIN Core Services Operational" }
             continue
         }
