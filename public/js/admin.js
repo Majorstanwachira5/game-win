@@ -164,62 +164,94 @@ function startAutoRefresh() {
 
 // ─── 1. OVERVIEW KPIS & CHARTS ──────────────────────────────────────────────
 async function loadOverview(silent = false) {
-    const dateFilter = document.getElementById('dateRangeFilter').value;
+    const dateFilterEl = document.getElementById('dateRangeFilter');
+    const dateFilter = dateFilterEl ? dateFilterEl.value : 'all';
     try {
         const data = await adminFetch(`/api/admin/overview?filter=${dateFilter}`);
-        if (!data.success) return;
+        if (!data || !data.success) return;
+
+        const users = data.users || { total: 0, newToday: 0, newThisMonth: 0, active: 0 };
+        const payments = data.payments || { totalVolume: 0, todayVolume: 0 };
+        const commissions = data.commissions || { totalGenerated: 0, availableLiability: 0 };
+        const withdrawals = data.withdrawals || { pendingCount: 0, pendingLiability: 0 };
+        const referrals = data.referrals || { totalReferrals: 0, conversionRate: '0%', directCount: 0, indirectCount: 0 };
+        const revenue = data.revenue || { houseNetProfit: 0, profitMarginPercent: '85.0%' };
+        const funnel = data.funnel || { registrations: 0, activations: 0 };
 
         // KPI Cards
-        document.getElementById('kpiTotalUsers').textContent = Number(data.users.total).toLocaleString();
-        document.getElementById('kpiNewTodayUsers').textContent = `+${data.users.newToday}`;
-        document.getElementById('kpiNewMonthUsers').textContent = `+${data.users.newThisMonth}`;
-        document.getElementById('kpiActiveUsers').textContent = Number(data.users.active).toLocaleString();
+        const kpiTotalUsers = document.getElementById('kpiTotalUsers');
+        if (kpiTotalUsers) kpiTotalUsers.textContent = Number(users.total || 0).toLocaleString();
+        const kpiNewToday = document.getElementById('kpiNewTodayUsers');
+        if (kpiNewToday) kpiNewToday.textContent = `+${users.newToday || 0}`;
+        const kpiNewMonth = document.getElementById('kpiNewMonthUsers');
+        if (kpiNewMonth) kpiNewMonth.textContent = `+${users.newThisMonth || 0}`;
+        const kpiActiveUsers = document.getElementById('kpiActiveUsers');
+        if (kpiActiveUsers) kpiActiveUsers.textContent = Number(users.active || 0).toLocaleString();
 
-        document.getElementById('kpiTotalVolume').textContent = `KSh ${Number(data.payments.totalVolume).toLocaleString()}`;
-        document.getElementById('kpiTodayVolume').textContent = `KSh ${Number(data.payments.todayVolume).toLocaleString()}`;
+        const kpiTotalVol = document.getElementById('kpiTotalVolume');
+        if (kpiTotalVol) kpiTotalVol.textContent = `KSh ${Number(payments.totalVolume || 0).toLocaleString()}`;
+        const kpiTodayVol = document.getElementById('kpiTodayVolume');
+        if (kpiTodayVol) kpiTodayVol.textContent = `KSh ${Number(payments.todayVolume || 0).toLocaleString()}`;
 
-        document.getElementById('kpiTotalCommissions').textContent = `KSh ${Number(data.commissions.totalGenerated).toLocaleString()}`;
-        document.getElementById('kpiAvailableLiability').textContent = `KSh ${Number(data.commissions.availableLiability).toLocaleString()}`;
+        const kpiTotalComm = document.getElementById('kpiTotalCommissions');
+        if (kpiTotalComm) kpiTotalComm.textContent = `KSh ${Number(commissions.totalGenerated || 0).toLocaleString()}`;
+        const kpiAvailLiab = document.getElementById('kpiAvailableLiability');
+        if (kpiAvailLiab) kpiAvailLiab.textContent = `KSh ${Number(commissions.availableLiability || 0).toLocaleString()}`;
 
-        document.getElementById('kpiPendingWithdrawals').textContent = Number(data.withdrawals.pendingCount).toLocaleString();
-        document.getElementById('kpiPendingWithdrawalsVal').textContent = `KSh ${Number(data.withdrawals.pendingLiability).toLocaleString()}`;
+        const kpiPendWith = document.getElementById('kpiPendingWithdrawals');
+        if (kpiPendWith) kpiPendWith.textContent = Number(withdrawals.pendingCount || 0).toLocaleString();
+        const kpiPendWithVal = document.getElementById('kpiPendingWithdrawalsVal');
+        if (kpiPendWithVal) kpiPendWithVal.textContent = `KSh ${Number(withdrawals.pendingLiability || 0).toLocaleString()}`;
         
         const badge = document.getElementById('sidebarWithdrawalBadge');
-        if (data.withdrawals.pendingCount > 0) {
-            badge.textContent = data.withdrawals.pendingCount;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
+        if (badge) {
+            if (withdrawals.pendingCount > 0) {
+                badge.textContent = withdrawals.pendingCount;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
         }
 
-        document.getElementById('kpiTotalReferrals').textContent = Number(data.referrals.totalReferrals).toLocaleString();
-        document.getElementById('kpiConversionRate').textContent = data.referrals.conversionRate || '0%';
+        const kpiTotalRef = document.getElementById('kpiTotalReferrals');
+        if (kpiTotalRef) kpiTotalRef.textContent = Number(referrals.totalReferrals || 0).toLocaleString();
+        const kpiConvRate = document.getElementById('kpiConversionRate');
+        if (kpiConvRate) kpiConvRate.textContent = referrals.conversionRate || '0%';
 
-        document.getElementById('kpiHouseProfit').textContent = `KSh ${Number(data.revenue.houseNetProfit).toLocaleString()}`;
-        document.getElementById('kpiProfitMargin').textContent = data.revenue.profitMarginPercent || '85.0%';
+        const kpiHouseProf = document.getElementById('kpiHouseProfit');
+        if (kpiHouseProf) kpiHouseProf.textContent = `KSh ${Number(revenue.houseNetProfit || 0).toLocaleString()}`;
+        const kpiProfMarg = document.getElementById('kpiProfitMargin');
+        if (kpiProfMarg) kpiProfMarg.textContent = revenue.profitMarginPercent || '85.0%';
 
         // Conversion Funnel Bars
-        const maxFunnel = Math.max(data.funnel.registrations, 1);
-        document.getElementById('funnelRegs').textContent = data.funnel.registrations;
-        document.getElementById('funnelActs').textContent = `${data.funnel.activations} (${Math.round((data.funnel.activations / maxFunnel) * 100)}%)`;
-        document.getElementById('funnelBarActs').style.width = `${Math.min(100, (data.funnel.activations / maxFunnel) * 100)}%`;
+        const maxFunnel = Math.max(funnel.registrations || 1, 1);
+        const funnelRegs = document.getElementById('funnelRegs');
+        if (funnelRegs) funnelRegs.textContent = funnel.registrations || 0;
+        const funnelActs = document.getElementById('funnelActs');
+        if (funnelActs) funnelActs.textContent = `${funnel.activations || 0} (${Math.round(((funnel.activations || 0) / maxFunnel) * 100)}%)`;
+        const funnelBarActs = document.getElementById('funnelBarActs');
+        if (funnelBarActs) funnelBarActs.style.width = `${Math.min(100, ((funnel.activations || 0) / maxFunnel) * 100)}%`;
 
-        document.getElementById('funnelL1').textContent = `${data.referrals.directCount} direct`;
-        document.getElementById('funnelBarL1').style.width = `${Math.min(100, (data.referrals.directCount / maxFunnel) * 100)}%`;
+        const funnelL1 = document.getElementById('funnelL1');
+        if (funnelL1) funnelL1.textContent = `${referrals.directCount || 0} direct`;
+        const funnelBarL1 = document.getElementById('funnelBarL1');
+        if (funnelBarL1) funnelBarL1.style.width = `${Math.min(100, ((referrals.directCount || 0) / maxFunnel) * 100)}%`;
 
-        document.getElementById('funnelL2').textContent = `${data.referrals.indirectCount} indirect`;
-        document.getElementById('funnelBarL2').style.width = `${Math.min(100, (data.referrals.indirectCount / maxFunnel) * 100)}%`;
+        const funnelL2 = document.getElementById('funnelL2');
+        if (funnelL2) funnelL2.textContent = `${referrals.indirectCount || 0} indirect`;
+        const funnelBarL2 = document.getElementById('funnelBarL2');
+        if (funnelBarL2) funnelBarL2.style.width = `${Math.min(100, ((referrals.indirectCount || 0) / maxFunnel) * 100)}%`;
 
         // Live Event Stream
         const feedContainer = document.getElementById('liveActivityFeed');
-        if (data.recentActivity && data.recentActivity.length > 0) {
+        if (feedContainer && data.recentActivity && data.recentActivity.length > 0) {
             feedContainer.innerHTML = data.recentActivity.map(act => `
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: var(--radius-sm); font-size: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="status-badge" style="background: rgba(255,255,255,0.06); color: ${act.color};">${act.badge}</span>
-                        <span>${act.title}</span>
+                        <span class="status-badge" style="background: rgba(255,255,255,0.06); color: ${act.color || 'var(--cyan)'};">${act.badge || 'EVENT'}</span>
+                        <span>${act.title || 'Platform Activity'}</span>
                     </div>
-                    <span style="font-size: 10px; color: var(--text-dim);">${new Date(act.time).toLocaleTimeString()}</span>
+                    <span style="font-size: 10px; color: var(--text-dim);">${new Date(act.time || Date.now()).toLocaleTimeString()}</span>
                 </div>
             `).join('');
         }
@@ -230,44 +262,54 @@ async function loadOverview(silent = false) {
 
 // ─── 2. USERS MANAGEMENT ───────────────────────────────────────────────────
 async function loadUsers() {
-    const q = document.getElementById('userSearchInput').value;
-    const status = document.getElementById('userStatusFilter').value;
+    const qEl = document.getElementById('userSearchInput');
+    const q = qEl ? qEl.value : '';
+    const statusEl = document.getElementById('userStatusFilter');
+    const status = statusEl ? statusEl.value : 'all';
     const tbody = document.getElementById('usersTableBody');
 
     try {
         const data = await adminFetch(`/api/admin/users?q=${encodeURIComponent(q)}&status=${status}&page=${usersPage}&limit=10`);
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        document.getElementById('usersTotalCounter').textContent = `${data.pagination.total} Total Users`;
-        document.getElementById('usersPaginationInfo').textContent = `Showing page ${data.pagination.page} of ${data.pagination.totalPages} (${data.pagination.total} users)`;
+        const pagination = data.pagination || { total: (data.users ? data.users.length : 0), page: 1, totalPages: 1 };
+        const usersList = data.users || [];
 
-        document.getElementById('usersPrevBtn').disabled = (data.pagination.page <= 1);
-        document.getElementById('usersNextBtn').disabled = (data.pagination.page >= data.pagination.totalPages);
+        const totalCounter = document.getElementById('usersTotalCounter');
+        if (totalCounter) totalCounter.textContent = `${pagination.total || usersList.length} Total Users`;
+        const paginInfo = document.getElementById('usersPaginationInfo');
+        if (paginInfo) paginInfo.textContent = `Showing page ${pagination.page || 1} of ${pagination.totalPages || 1} (${pagination.total || usersList.length} users)`;
 
-        if (data.users.length === 0) {
+        const prevBtn = document.getElementById('usersPrevBtn');
+        if (prevBtn) prevBtn.disabled = ((pagination.page || 1) <= 1);
+        const nextBtn = document.getElementById('usersNextBtn');
+        if (nextBtn) nextBtn.disabled = ((pagination.page || 1) >= (pagination.totalPages || 1));
+
+        if (!tbody) return;
+        if (usersList.length === 0) {
             tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color: var(--text-dim); padding: 24px;">No users match your criteria.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.users.map(u => `
+        tbody.innerHTML = usersList.map(u => `
             <tr>
-                <td><code style="color: var(--cyan);">${u.id}</code></td>
-                <td><strong>${u.displayName}</strong> ${u.isTester ? '<span class="status-badge warning">TESTER</span>' : ''}</td>
+                <td><code style="color: var(--cyan);">${u.id || '—'}</code></td>
+                <td><strong>${u.displayName || u.phone || 'Player'}</strong> ${u.isTester ? '<span class="status-badge warning">TESTER</span>' : ''}</td>
                 <td>${u.phone || u.email || '—'}</td>
-                <td><strong>KSh ${u.balance.toLocaleString()}</strong></td>
-                <td style="color: var(--gold);">${u.coins.toLocaleString()}</td>
-                <td style="color: var(--green);">KSh ${u.referralBalance.toLocaleString()}</td>
-                <td><span class="status-badge active">${u.referralCount} Downlines</span></td>
+                <td><strong>KSh ${(u.balance || 0).toLocaleString()}</strong></td>
+                <td style="color: var(--gold);">${(u.coins || 0).toLocaleString()}</td>
+                <td style="color: var(--green);">KSh ${(u.referralBalance || 0).toLocaleString()}</td>
+                <td><span class="status-badge active">${u.referralCount || 0} Downlines</span></td>
                 <td>
-                    <span class="status-badge ${u.isActive ? 'active' : 'danger'}">
-                        ${u.isActive ? (u.isActivated ? 'ACTIVE' : 'REGISTERED') : 'BANNED'}
+                    <span class="status-badge ${u.isActive !== false ? 'active' : 'danger'}">
+                        ${u.isActive !== false ? (u.isActivated ? 'ACTIVE' : 'REGISTERED') : 'BANNED'}
                     </span>
                 </td>
-                <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+                <td>${new Date(u.createdAt || Date.now()).toLocaleDateString()}</td>
                 <td>
                     <div style="display: flex; gap: 4px;">
                         <button class="btn secondary-btn sm-btn" onclick="openUserDetails('${u.id}')">Inspect</button>
-                        ${u.isActive ? 
+                        ${u.isActive !== false ? 
                             `<button class="btn danger-btn sm-btn" onclick="toggleUserStatus('${u.id}', true)">Suspend</button>` :
                             `<button class="btn success-btn sm-btn" onclick="toggleUserStatus('${u.id}', false)">Activate</button>`
                         }
@@ -276,7 +318,7 @@ async function loadUsers() {
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color: var(--red); padding: 24px;">Failed to load users: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color: var(--red); padding: 24px;">Failed to load users: ${e.message}</td></tr>`;
     }
 }
 
@@ -381,31 +423,40 @@ window.toggleUserStatus = async function(userId, suspend) {
 
 // ─── 3. PAYMENTS MANAGEMENT ────────────────────────────────────────────────
 async function loadPayments() {
-    const q = document.getElementById('paymentSearchInput').value;
-    const status = document.getElementById('paymentStatusFilter').value;
+    const qEl = document.getElementById('paymentSearchInput');
+    const q = qEl ? qEl.value : '';
+    const statusEl = document.getElementById('paymentStatusFilter');
+    const status = statusEl ? statusEl.value : 'all';
     const tbody = document.getElementById('paymentsTableBody');
 
     try {
         const data = await adminFetch(`/api/admin/payments?q=${encodeURIComponent(q)}&status=${status}&page=${paymentsPage}&limit=10`);
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        document.getElementById('paymentsPaginationInfo').textContent = `Showing page ${data.pagination.page} of ${data.pagination.totalPages} (${data.pagination.total} payments)`;
-        document.getElementById('paymentsPrevBtn').disabled = (data.pagination.page <= 1);
-        document.getElementById('paymentsNextBtn').disabled = (data.pagination.page >= data.pagination.totalPages);
+        const pagination = data.pagination || { total: (data.transactions ? data.transactions.length : 0), page: 1, totalPages: 1 };
+        const txList = data.transactions || [];
 
-        if (data.payments.length === 0) {
+        const paginInfo = document.getElementById('paymentsPaginationInfo');
+        if (paginInfo) paginInfo.textContent = `Showing page ${pagination.page || 1} of ${pagination.totalPages || 1} (${pagination.total || txList.length} payments)`;
+        const prevBtn = document.getElementById('paymentsPrevBtn');
+        if (prevBtn) prevBtn.disabled = ((pagination.page || 1) <= 1);
+        const nextBtn = document.getElementById('paymentsNextBtn');
+        if (nextBtn) nextBtn.disabled = ((pagination.page || 1) >= (pagination.totalPages || 1));
+
+        if (!tbody) return;
+        if (txList.length === 0) {
             tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--text-dim); padding: 24px;">No transactions recorded yet.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.payments.map(p => `
+        tbody.innerHTML = txList.map(p => `
             <tr>
-                <td><code style="font-size: 11px;">${p.checkoutRequestId || p.id}</code></td>
+                <td><code style="font-size: 11px;">${p.checkoutRequestId || p.id || '—'}</code></td>
                 <td><strong style="color: var(--cyan);">${p.mpesaReceiptNumber || '—'}</strong></td>
                 <td>${p.userId || p.phone || '—'}</td>
-                <td><strong style="color: var(--green);">KSh ${Number(p.amount).toLocaleString()}</strong></td>
+                <td><strong style="color: var(--green);">KSh ${Number(p.amount || 0).toLocaleString()}</strong></td>
                 <td><span class="status-badge" style="background: rgba(0,240,255,0.1); color: var(--cyan);">M-PESA DARAJA</span></td>
-                <td><span class="status-badge ${p.status === 'COMPLETED' ? 'completed' : (p.status === 'FAILED' ? 'failed' : 'pending')}">${p.status}</span></td>
+                <td><span class="status-badge ${p.status === 'COMPLETED' ? 'completed' : (p.status === 'FAILED' ? 'failed' : 'pending')}">${p.status || 'PENDING'}</span></td>
                 <td>${new Date(p.createdAt || Date.now()).toLocaleString()}</td>
                 <td>
                     <button class="btn secondary-btn sm-btn" onclick="verifyDarajaTx('${p.checkoutRequestId || p.id}')">Verify Daraja</button>
@@ -413,7 +464,7 @@ async function loadPayments() {
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--red); padding: 24px;">Failed to load transactions: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--red); padding: 24px;">Failed to load transactions: ${e.message}</td></tr>`;
     }
 }
 
@@ -433,46 +484,51 @@ async function loadReferrals() {
     const tbody = document.getElementById('topReferrersTableBody');
     try {
         const data = await adminFetch('/api/admin/referrals');
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        if (data.topReferrers.length === 0) {
+        const referrers = data.topReferrers || [];
+        if (!tbody) return;
+
+        if (referrers.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-dim); padding: 18px;">No recruiters on leaderboard yet.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.topReferrers.map((r, idx) => `
+        tbody.innerHTML = referrers.map((r, idx) => `
             <tr>
                 <td><strong>#${idx + 1}</strong></td>
-                <td><strong>${r.displayName || r.phone}</strong> (<code style="color: var(--cyan);">${r.referralCode}</code>)</td>
-                <td><span class="status-badge active">${r.directReferrals} L1</span></td>
-                <td><span class="status-badge" style="background: rgba(168,85,247,0.2); color: var(--purple);">${r.indirectReferrals} L2</span></td>
-                <td><strong style="color: var(--gold);">KSh ${Number(r.totalEarnings).toLocaleString()}</strong></td>
+                <td><strong>${r.displayName || r.phone || 'Recruiter'}</strong> (<code style="color: var(--cyan);">${r.referralCode || '—'}</code>)</td>
+                <td><span class="status-badge active">${r.directReferrals || 0} L1</span></td>
+                <td><span class="status-badge" style="background: rgba(168,85,247,0.2); color: var(--purple);">${r.indirectReferrals || 0} L2</span></td>
+                <td><strong style="color: var(--gold);">KSh ${Number(r.totalEarnings || 0).toLocaleString()}</strong></td>
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--red); padding: 18px;">Error: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--red); padding: 18px;">Error: ${e.message}</td></tr>`;
     }
 }
 
 window.inspectReferralTree = async function() {
-    const q = document.getElementById('treeInspectInput').value.trim();
+    const qEl = document.getElementById('treeInspectInput');
+    const q = qEl ? qEl.value.trim() : '';
     const container = document.getElementById('treeResultContainer');
     if (!q) return alert('Please enter a User ID or Phone');
+    if (!container) return;
 
     container.innerHTML = '<div style="text-align:center; padding: 40px;">Generating 2-tier tree...</div>';
 
     try {
         const data = await adminFetch(`/api/admin/referrals/tree/${encodeURIComponent(q)}`);
-        if (!data.success) throw new Error(data.error);
+        if (!data || !data.success) throw new Error((data && data.error) || 'Tree lookup failed');
 
-        const u = data.user;
-        const l1 = data.downline.level1;
-        const l2 = data.downline.level2;
+        const u = data.user || {};
+        const l1 = (data.downline && data.downline.level1) ? data.downline.level1 : [];
+        const l2 = (data.downline && data.downline.level2) ? data.downline.level2 : [];
 
         container.innerHTML = `
             <div style="border-left: 3px solid var(--gold); padding-left: 12px; margin-bottom: 14px;">
-                <div style="font-size: 14px; font-weight: 800; color: var(--gold);">👑 ROOT RECRUITER: ${u.displayName} (${u.id})</div>
-                <div style="font-size: 11px; color: var(--text-dim);">Code: ${u.referralCode} · Referral Bal: KSh ${u.referralBalance.toLocaleString()} · Total Earned: KSh ${u.totalReferralEarnings.toLocaleString()}</div>
+                <div style="font-size: 14px; font-weight: 800; color: var(--gold);">👑 ROOT RECRUITER: ${u.displayName || u.id || 'User'} (${u.id || ''})</div>
+                <div style="font-size: 11px; color: var(--text-dim);">Code: ${u.referralCode || '—'} · Referral Bal: KSh ${(u.referralBalance || 0).toLocaleString()} · Total Earned: KSh ${(u.totalReferralEarnings || 0).toLocaleString()}</div>
             </div>
 
             <div style="margin-left: 20px; border-left: 2px dashed var(--green); padding-left: 12px; margin-bottom: 12px;">
@@ -499,56 +555,63 @@ async function loadCommissions() {
     const tbody = document.getElementById('commissionsTableBody');
     try {
         const data = await adminFetch('/api/admin/commissions');
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        document.getElementById('commissionsTotalCounter').textContent = `${data.totalCount} Settlements`;
+        const commList = data.commissions || [];
+        const totalCounter = document.getElementById('commissionsTotalCounter');
+        if (totalCounter) totalCounter.textContent = `${data.totalCount || commList.length} Settlements`;
 
-        if (data.commissions.length === 0) {
+        if (!tbody) return;
+        if (commList.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 24px;">No commissions distributed yet.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.commissions.map(c => `
+        tbody.innerHTML = commList.map(c => `
             <tr>
                 <td><strong>${c.beneficiaryName}</strong> (<code style="color: var(--cyan);">${c.beneficiaryId}</code>)</td>
                 <td>${c.refereeName} (<code style="color: var(--text-dim);">${c.refereeId}</code>)</td>
                 <td><span class="status-badge" style="background: ${c.level === 1 ? 'rgba(16,185,129,0.2)' : 'rgba(168,85,247,0.2)'}; color: ${c.level === 1 ? 'var(--green)' : 'var(--purple)'};">Level ${c.level}</span></td>
                 <td><strong style="color: var(--green);">+KSh ${c.amount}</strong></td>
-                <td style="color: var(--gold);">+${c.coins} Coins</td>
-                <td>${new Date(c.joinedAt).toLocaleString()}</td>
+                <td style="color: var(--gold);">+${c.coins || 0} Coins</td>
+                <td>${new Date(c.joinedAt || Date.now()).toLocaleString()}</td>
                 <td><span class="status-badge completed">SETTLED</span></td>
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
     }
 }
 
 // ─── 6. WITHDRAWALS QUEUE (2,000 KES MINIMUM) ──────────────────────────────
 async function loadWithdrawals(silent = false) {
-    const status = document.getElementById('withdrawalStatusFilter').value;
+    const statusEl = document.getElementById('withdrawalStatusFilter');
+    const status = statusEl ? statusEl.value : 'all';
     const tbody = document.getElementById('withdrawalsTableBody');
 
     try {
         const data = await adminFetch(`/api/admin/withdrawals?status=${status}`);
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        const pendingCount = data.withdrawals.filter(w => w.status === 'PENDING').length;
-        document.getElementById('withdrawalsQueueBadge').textContent = `${pendingCount} Pending`;
+        const withList = data.withdrawals || [];
+        const pendingCount = withList.filter(w => w.status === 'PENDING').length;
+        const queueBadge = document.getElementById('withdrawalsQueueBadge');
+        if (queueBadge) queueBadge.textContent = `${pendingCount} Pending`;
 
-        if (data.withdrawals.length === 0) {
+        if (!tbody) return;
+        if (withList.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--text-dim); padding: 24px;">No withdrawal requests in queue.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.withdrawals.map(w => `
+        tbody.innerHTML = withList.map(w => `
             <tr>
                 <td><code style="color: var(--gold);">${w.id}</code></td>
-                <td><strong>${w.userName || w.phone}</strong><br><small style="color: var(--cyan);">${w.phone}</small></td>
-                <td><strong style="color: var(--gold);">KSh ${Number(w.amount).toLocaleString()}</strong></td>
+                <td><strong>${w.userName || w.phone}</strong><br><small style="color: var(--cyan);">${w.phone || ''}</small></td>
+                <td><strong style="color: var(--gold);">KSh ${Number(w.amount || 0).toLocaleString()}</strong></td>
                 <td>KSh ${w.fee || 0}</td>
-                <td><strong style="color: var(--green);">KSh ${Number(w.netAmount || w.amount).toLocaleString()}</strong></td>
-                <td>${new Date(w.requestedAt).toLocaleString()}</td>
+                <td><strong style="color: var(--green);">KSh ${Number(w.netAmount || w.amount || 0).toLocaleString()}</strong></td>
+                <td>${new Date(w.requestedAt || Date.now()).toLocaleString()}</td>
                 <td><span class="status-badge ${w.status === 'PAID' ? 'paid' : (w.status === 'REJECTED' ? 'rejected' : 'pending')}">${w.status}</span></td>
                 <td>${w.mpesaReceipt ? `<code style="color: var(--green);">${w.mpesaReceipt}</code>` : '—'}</td>
                 <td>
@@ -562,7 +625,7 @@ async function loadWithdrawals(silent = false) {
             </tr>
         `).join('');
     } catch (e) {
-        if (!silent) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
+        if (!silent && tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
     }
 }
 
@@ -583,12 +646,12 @@ window.processWithdrawal = async function(ticketId, action) {
             method: 'POST',
             body: JSON.stringify({ action, mpesaReceipt: receipt, reason })
         });
-        if (res.success) {
+        if (res && res.success) {
             alert(`Withdrawal ${ticketId} ${action === 'APPROVE' ? 'APPROVED & PAID' : 'REJECTED & REFUNDED'}!`);
             loadWithdrawals();
             loadOverview();
         } else {
-            alert('Error: ' + res.error);
+            alert('Error: ' + ((res && res.error) || 'Unknown error'));
         }
     } catch (err) {
         alert('Action failed: ' + err.message);
@@ -597,20 +660,25 @@ window.processWithdrawal = async function(ticketId, action) {
 
 // ─── 7. WALLET LEDGER ──────────────────────────────────────────────────────
 async function loadLedger() {
-    const q = document.getElementById('ledgerSearchInput').value;
-    const cat = document.getElementById('ledgerCategoryFilter').value;
+    const qEl = document.getElementById('ledgerSearchInput');
+    const q = qEl ? qEl.value : '';
+    const catEl = document.getElementById('ledgerCategoryFilter');
+    const cat = catEl ? catEl.value : 'all';
     const tbody = document.getElementById('ledgerTableBody');
 
     try {
         const data = await adminFetch(`/api/admin/ledger?q=${encodeURIComponent(q)}&category=${cat}`);
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        if (data.ledger.length === 0) {
+        const ledgerList = data.ledger || [];
+        if (!tbody) return;
+
+        if (ledgerList.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--text-dim); padding: 24px;">No ledger records found.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.ledger.map(e => `
+        tbody.innerHTML = ledgerList.map(e => `
             <tr>
                 <td><code style="font-size: 11px;">${e.id}</code></td>
                 <td><strong style="color: var(--cyan);">${e.userId}</strong></td>
@@ -620,11 +688,11 @@ async function loadLedger() {
                 <td>KSh ${e.balanceBefore || 0}</td>
                 <td><strong>KSh ${e.balanceAfter || 0}</strong></td>
                 <td>${e.description || e.category}</td>
-                <td>${new Date(e.timestamp).toLocaleString()}</td>
+                <td>${new Date(e.timestamp || Date.now()).toLocaleString()}</td>
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
     }
 }
 
@@ -633,28 +701,31 @@ async function loadRisk() {
     const tbody = document.getElementById('riskTableBody');
     try {
         const data = await adminFetch('/api/admin/risk');
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        document.getElementById('riskCounterBadge').textContent = `${data.riskCount} Flags Detected`;
+        const flags = data.flags || [];
+        const riskBadge = document.getElementById('riskCounterBadge');
+        if (riskBadge) riskBadge.textContent = `${data.riskCount || flags.length} Flags Detected`;
 
-        if (data.flags.length === 0) {
+        if (!tbody) return;
+        if (flags.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--green); padding: 24px;">✅ No active fraud or anomaly flags detected. System clean.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.flags.map(f => `
+        tbody.innerHTML = flags.map(f => `
             <tr>
                 <td><code style="color: var(--red);">${f.id}</code></td>
                 <td><strong>${f.userName || f.userId}</strong></td>
                 <td><span class="status-badge danger">${f.riskLevel}</span></td>
                 <td>${f.reason}</td>
                 <td><span class="status-badge warning">${f.status}</span></td>
-                <td>${new Date(f.createdAt).toLocaleString()}</td>
+                <td>${new Date(f.createdAt || Date.now()).toLocaleString()}</td>
                 <td><button class="btn danger-btn sm-btn" onclick="toggleUserStatus('${f.userId}', true)">Suspend Account</button></td>
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
     }
 }
 
@@ -663,14 +734,17 @@ async function loadAuditLogs() {
     const tbody = document.getElementById('auditTableBody');
     try {
         const data = await adminFetch('/api/admin/audit-logs');
-        if (!data.success) return;
+        if (!data || !data.success) return;
 
-        if (data.logs.length === 0) {
+        const logs = data.logs || [];
+        if (!tbody) return;
+
+        if (logs.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--text-dim); padding: 24px;">No admin audit actions recorded yet.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = data.logs.map(a => `
+        tbody.innerHTML = logs.map(a => `
             <tr>
                 <td><code>${a.id}</code></td>
                 <td><span class="admin-role-badge">${a.adminId}</span></td>
@@ -678,11 +752,11 @@ async function loadAuditLogs() {
                 <td><span class="status-badge" style="background: rgba(0,240,255,0.1); color: var(--cyan);">${a.entity}</span></td>
                 <td><code>${a.entityId || '—'}</code></td>
                 <td>${a.ipAddress}</td>
-                <td>${new Date(a.createdAt).toLocaleString()}</td>
+                <td>${new Date(a.createdAt || Date.now()).toLocaleString()}</td>
             </tr>
         `).join('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--red); padding: 24px;">Error: ${e.message}</td></tr>`;
     }
 }
 
@@ -690,24 +764,31 @@ async function loadAuditLogs() {
 async function loadWheelEngine() {
     try {
         const data = await adminFetch('/api/admin/stats');
-        if (!data.slices) return;
-        currentSlices = data.slices;
+        if (!data || !data.slices) return;
+        currentSlices = data.slices || [];
 
         const tbody = document.getElementById('probabilityTableBody');
-        tbody.innerHTML = currentSlices.map((s, idx) => `
-            <tr>
-                <td><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${s.color}; margin-right:6px;"></span><strong>${s.label}</strong></td>
-                <td><span class="status-badge">${s.type}</span></td>
-                <td>${s.multiplier}x</td>
-                <td><input type="number" class="admin-input" style="width: 70px; padding: 4px 6px;" value="${s.weight}" onchange="currentSlices[${idx}].weight = Number(this.value)"></td>
-            </tr>
-        `).join('');
+        if (tbody) {
+            tbody.innerHTML = currentSlices.map((s, idx) => `
+                <tr>
+                    <td><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${s.color}; margin-right:6px;"></span><strong>${s.label}</strong></td>
+                    <td><span class="status-badge">${s.type}</span></td>
+                    <td>${s.multiplier}x</td>
+                    <td><input type="number" class="admin-input" style="width: 70px; padding: 4px 6px;" value="${s.weight}" onchange="currentSlices[${idx}].weight = Number(this.value)"></td>
+                </tr>
+            `).join('');
+        }
 
         const rigSelect = document.getElementById('rigSelect');
-        rigSelect.innerHTML = '<option value="">-- Normal Probability (Default) --</option>' + 
-            currentSlices.map(s => `<option value="${s.id}" ${data.activeRigSlice === s.id ? 'selected' : ''}>${s.label} (${s.multiplier}x)</option>`).join('');
+        if (rigSelect) {
+            rigSelect.innerHTML = '<option value="">-- Normal Probability (Default) --</option>' + 
+                currentSlices.map(s => `<option value="${s.id}" ${data.activeRigSlice === s.id ? 'selected' : ''}>${s.label} (${s.multiplier}x)</option>`).join('');
+        }
 
-        document.getElementById('rigStatusMsg').textContent = data.activeRigSlice ? `Current Rig Active: ${data.activeRigSlice}` : 'Normal probability active.';
+        const rigStatusMsg = document.getElementById('rigStatusMsg');
+        if (rigStatusMsg) {
+            rigStatusMsg.textContent = data.activeRigSlice ? `Current Rig Active: ${data.activeRigSlice}` : 'Normal probability active.';
+        }
     } catch (e) {
         console.error('[WHEEL LOAD ERROR]', e.message);
     }
