@@ -276,9 +276,10 @@ while ($listener.IsListening) {
             }
             $totalRefs = $totalDirect + $totalIndirect
 
-            $pendingWithCount = ($script:adminWithdrawals | Where-Object { $_.status -eq "PENDING" }).Count
+            $pendingList = @($script:adminWithdrawals | Where-Object { $_.status -eq "PENDING" })
+            $pendingWithCount = $pendingList.Count
             $pendingWithLiab = 0.00
-            foreach ($w in ($script:adminWithdrawals | Where-Object { $_.status -eq "PENDING" })) {
+            foreach ($w in $pendingList) {
                 $pendingWithLiab += [double]$w.amount
             }
 
