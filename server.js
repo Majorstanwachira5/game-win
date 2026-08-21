@@ -204,14 +204,14 @@ const users = {
 };
 
 const financialStats = {
-    totalRevenue: 540000.00,
-    totalPayout:  81000.00,
-    totalSpins:   4320,
-    totalBoxes:   1200,
-    totalDice:    890,
-    totalCards:   750,
-    totalLadder:  430,
-    totalLucky7:  520
+    totalRevenue: 0.00,
+    totalPayout:  0.00,
+    totalSpins:   0,
+    totalBoxes:   0,
+    totalDice:    0,
+    totalCards:   0,
+    totalLadder:  0,
+    totalLucky7:  0
 };
 
 let paymentSettings = {

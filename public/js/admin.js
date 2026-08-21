@@ -267,16 +267,20 @@ async function loadOverview(silent = false) {
 
         // Live Event Stream
         const feedContainer = document.getElementById('liveActivityFeed');
-        if (feedContainer && data.recentActivity && data.recentActivity.length > 0) {
-            feedContainer.innerHTML = data.recentActivity.map(act => `
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: var(--radius-sm); font-size: 12px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="status-badge" style="background: rgba(255,255,255,0.06); color: ${act.color || 'var(--cyan)'};">${act.badge || 'EVENT'}</span>
-                        <span>${act.title || 'Platform Activity'}</span>
+        if (feedContainer) {
+            if (data.recentActivity && data.recentActivity.length > 0) {
+                feedContainer.innerHTML = data.recentActivity.map(act => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: var(--radius-sm); font-size: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="status-badge" style="background: rgba(255,255,255,0.06); color: ${act.color || 'var(--cyan)'};">${act.badge || 'EVENT'}</span>
+                            <span>${act.title || 'Platform Activity'}</span>
+                        </div>
+                        <span style="font-size: 10px; color: var(--text-dim);">${new Date(act.time || Date.now()).toLocaleTimeString()}</span>
                     </div>
-                    <span style="font-size: 10px; color: var(--text-dim);">${new Date(act.time || Date.now()).toLocaleTimeString()}</span>
-                </div>
-            `).join('');
+                `).join('');
+            } else {
+                feedContainer.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 18px; font-size: 12px;">No recent platform activity.</div>';
+            }
         }
     } catch (e) {
         if (!silent) console.error('[OVERVIEW LOAD ERROR]', e.message);

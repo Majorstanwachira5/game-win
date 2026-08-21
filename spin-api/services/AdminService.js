@@ -91,14 +91,14 @@ class AdminService {
         const pendingTx = transactions.filter(t => t.status === 'PENDING');
         const failedTx = transactions.filter(t => t.status === 'FAILED');
 
-        const totalPaymentVolume = completedTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || (financialStats.totalRevenue || 540000.00);
+        const totalPaymentVolume = completedTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0) + (Number(financialStats.totalRevenue) || 0);
         const todayPaymentVolume = completedTx.filter(t => new Date(t.createdAt || 0) >= startOfToday).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         const monthPaymentVolume = completedTx.filter(t => new Date(t.createdAt || 0) >= startOfMonth).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         // Referral & Commission Metrics
         let allReferralEvents = [];
         allUsers.forEach(u => {
-            if (u.referralsList) allReferralEvents.push(...u.referralsList);
+            if (u.referralsList && Array.isArray(u.referralsList)) allReferralEvents.push(...u.referralsList);
         });
 
         const totalCommissionsEarned = allUsers.reduce((sum, u) => sum + (Number(u.totalReferralEarnings || u.referralEarnings || 0)), 0);
@@ -115,13 +115,13 @@ class AdminService {
 
         // Revenue Calculations
         const grossVolume = totalPaymentVolume;
-        const totalPayout = (financialStats.totalPayout || 81000.00) + totalAmountWithdrawn;
+        const totalPayout = (Number(financialStats.totalPayout) || 0) + totalAmountWithdrawn;
         const houseNetProfit = grossVolume - totalPayout;
-        const profitMargin = grossVolume > 0 ? ((houseNetProfit / grossVolume) * 100).toFixed(2) : '85.00';
-        const realizedRtp = grossVolume > 0 ? ((totalPayout / grossVolume) * 100).toFixed(2) : '15.00';
+        const profitMargin = grossVolume > 0 ? ((houseNetProfit / grossVolume) * 100).toFixed(2) + '%' : '0.00%';
+        const realizedRtp = grossVolume > 0 ? ((totalPayout / grossVolume) * 100).toFixed(2) + '%' : '0.00%';
 
         // Conversion Funnel
-        const visitorsEstimated = Math.max(allUsers.length * 4, 1500);
+        const visitorsEstimated = allUsers.length;
         const registeredCount = allUsers.length;
         const activatedCount = activeUsers.length;
         const qualifyingTxCount = completedTx.length;

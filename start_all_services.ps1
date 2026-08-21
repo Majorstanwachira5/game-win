@@ -253,48 +253,102 @@ while ($listener.IsListening) {
             continue
         }
 
-        # 1. Admin Overview KPIs & Funnel & Activity
+        # 1. Admin Overview KPIs & Funnel & Activity (100% Dynamically Calculated from Real Data)
         if ($path -eq "/api/admin/overview") {
+            $userCount = $script:adminUsers.Count
+            $activeCount = ($script:adminUsers | Where-Object { $_.isActive -eq $true -and ($_.balance -gt 0 -or $_.isActivated -eq $true) }).Count
+            if ($activeCount -eq 0) { $activeCount = ($script:adminUsers | Where-Object { $_.isActive -eq $true }).Count }
+
+            $totalVol = 0.00
+            $todayVol = 0.00
+            foreach ($tx in $script:adminPayments) {
+                if ($tx.status -eq "COMPLETED") {
+                    $totalVol += [double]$tx.amount
+                }
+            }
+
+            $totalComm = 0.00
+            $totalDirect = 0
+            $totalIndirect = 0
+            foreach ($u in $script:adminUsers) {
+                if ($u.totalReferralEarnings) { $totalComm += [double]$u.totalReferralEarnings }
+                if ($u.referralCount) { $totalDirect += [int]$u.referralCount }
+            }
+            $totalRefs = $totalDirect + $totalIndirect
+
+            $pendingWithCount = ($script:adminWithdrawals | Where-Object { $_.status -eq "PENDING" }).Count
+            $pendingWithLiab = 0.00
+            foreach ($w in ($script:adminWithdrawals | Where-Object { $_.status -eq "PENDING" })) {
+                $pendingWithLiab += [double]$w.amount
+            }
+
+            $availLiab = 0.00
+            foreach ($u in $script:adminUsers) {
+                if ($u.referralBalance) { $availLiab += [double]$u.referralBalance }
+            }
+
+            $paidOut = 0.00
+            foreach ($w in ($script:adminWithdrawals | Where-Object { $_.status -eq "PAID" })) {
+                $paidOut += [double]$w.amount
+            }
+
+            $houseProfit = $totalVol - $paidOut - $totalComm
+            $profitMargin = if ($totalVol -gt 0) { "$([math]::Round(($houseProfit / $totalVol) * 100, 2))%" } else { "0.0%" }
+            $convRate = if ($userCount -gt 0) { "$([math]::Round(($activeCount / $userCount) * 100, 1))%" } else { "0%" }
+
+            $activity = @()
+            foreach ($log in $script:adminAuditLogs) {
+                $activity += @{
+                    badge = $log.action
+                    color = "#00f0ff"
+                    title = "$($log.action): $($log.entity) ($($log.entityId))"
+                    time = $log.createdAt
+                }
+            }
+            foreach ($tx in $script:adminPayments) {
+                $activity += @{
+                    badge = "DEPOSIT"
+                    color = "#10b981"
+                    title = "KSh $([double]$tx.amount) via M-Pesa ($($tx.mpesaReceiptNumber))"
+                    time = $tx.createdAt
+                }
+            }
+
             Send-Json $res @{
                 success = $true
                 users = @{
-                    total = 1248
-                    newToday = 14
-                    newThisMonth = 285
-                    active = 890
+                    total = $userCount
+                    newToday = 0
+                    newThisMonth = $userCount
+                    active = $activeCount
                 }
                 payments = @{
-                    totalVolume = 540000.00
-                    todayVolume = 18500.00
+                    totalVolume = $totalVol
+                    todayVolume = $todayVol
                 }
                 commissions = @{
-                    totalGenerated = 124500.00
-                    availableLiability = 34000.00
+                    totalGenerated = $totalComm
+                    availableLiability = $availLiab
                 }
                 withdrawals = @{
-                    pendingCount = 1
-                    pendingLiability = 2500.00
+                    pendingCount = $pendingWithCount
+                    pendingLiability = $pendingWithLiab
                 }
                 referrals = @{
-                    totalReferrals = 412
-                    conversionRate = "68.4%"
-                    directCount = 280
-                    indirectCount = 132
+                    totalReferrals = $totalRefs
+                    conversionRate = $convRate
+                    directCount = $totalDirect
+                    indirectCount = $totalIndirect
                 }
                 revenue = @{
-                    houseNetProfit = 459000.00
-                    profitMarginPercent = "85.0%"
+                    houseNetProfit = $houseProfit
+                    profitMarginPercent = $profitMargin
                 }
                 funnel = @{
-                    registrations = 1248
-                    activations = 890
+                    registrations = $userCount
+                    activations = $activeCount
                 }
-                recentActivity = @(
-                    @{ badge = "DEPOSIT"; color = "#10b981"; title = "KSh 1,000 via M-Pesa (RCX98127389)"; time = [DateTimeOffset]::UtcNow.AddMinutes(-5).ToString("o") },
-                    @{ badge = "WIN"; color = "#ffd700"; title = "KSh 2,500 on Spin & Win by Demo Player"; time = [DateTimeOffset]::UtcNow.AddMinutes(-12).ToString("o") },
-                    @{ badge = "COMMISSION"; color = "#a855f7"; title = "+KSh 100 L1 Commission to Master Recruiter"; time = [DateTimeOffset]::UtcNow.AddMinutes(-20).ToString("o") },
-                    @{ badge = "REGISTER"; color = "#00f0ff"; title = "New Recruiter joined via code PLAYMASTER"; time = [DateTimeOffset]::UtcNow.AddMinutes(-35).ToString("o") }
-                )
+                recentActivity = $activity
             }
             continue
         }
