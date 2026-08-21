@@ -203,6 +203,28 @@ function Send-Json ($res, $obj, $statusCode = 200) {
     }
 }
 
+$script:usersCacheFile = Join-Path $env:TEMP "spin_win_users_store.json"
+
+function Save-UsersCache {
+    try {
+        $script:adminUsers | ConvertTo-Json -Depth 5 | Set-Content -Path $script:usersCacheFile -Encoding UTF8
+    } catch {}
+}
+
+function Load-UsersCache {
+    try {
+        if (Test-Path $script:usersCacheFile) {
+            $raw = Get-Content -Path $script:usersCacheFile -Raw -Encoding UTF8
+            $loaded = $raw | ConvertFrom-Json
+            if ($loaded -and $loaded.Count -gt 0) {
+                $script:adminUsers = @($loaded)
+            }
+        }
+    } catch {}
+}
+
+Load-UsersCache
+
 while ($listener.IsListening) {
     try {
         $context = $listener.GetContext()
@@ -262,8 +284,142 @@ while ($listener.IsListening) {
                     }
                     message = "Admin authenticated successfully."
                 }
+
             } else {
                 Send-Json $res @{ success = $false; error = "Invalid admin credentials. Please check your username/email and password." } 403
+            }
+            continue
+        }
+
+        # Player Registration Endpoint
+        if ($path -eq "/api/auth/register" -or $path -eq "/auth/register" -or $path -eq "/register" -or $path -eq "/api/register") {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, $req.ContentEncoding)
+            $body = $reader.ReadToEnd()
+            $reader.Close()
+
+            $jsonObj = if ($body) { $body | ConvertFrom-Json } else { @{} }
+            $rawIdentity = if ($jsonObj.email) { $jsonObj.email.Trim() } elseif ($jsonObj.phone) { $jsonObj.phone.Trim() } elseif ($jsonObj.identity) { $jsonObj.identity.Trim() } elseif ($jsonObj.username) { $jsonObj.username.Trim() } else { "user_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
+            $name = if ($jsonObj.name) { $jsonObj.name.Trim() } elseif ($jsonObj.displayName) { $jsonObj.displayName.Trim() } else { $rawIdentity.Split('@')[0] }
+            $email = if ($rawIdentity.Contains("@")) { $rawIdentity.ToLower() } else { "$($rawIdentity.ToLower())@playcoin.live" }
+            $phone = $rawIdentity
+            $pwd = if ($jsonObj.password) { $jsonObj.password.Trim() } else { "pass123" }
+            $refCode = if ($jsonObj.referralCode) { $jsonObj.referralCode.Trim() } elseif ($jsonObj.ref) { $jsonObj.ref.Trim() } else { "" }
+
+            # Check if user already exists
+            $existing = $script:adminUsers | Where-Object { $_.email -eq $email -or $_.phone -eq $phone } | Select-Object -First 1
+            if ($existing) {
+                Send-Json $res @{ success = $false; error = "Account with this email/phone already exists. Please log in." } 409
+                continue
+            }
+
+            $newUserId = "usr_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $newUserRefCode = "REF" + ([Guid]::NewGuid().ToString().Substring(0, 6).ToUpper())
+            $nowIso = [DateTimeOffset]::UtcNow.ToString("o")
+
+            $newUser = @{
+                id = $newUserId
+                name = $name
+                displayName = $name
+                phone = $phone
+                email = $email
+                password = $pwd
+                balance = 0.00
+                coins = 200
+                referralBalance = 0.00
+                totalReferralEarnings = 0.00
+                referralCode = $newUserRefCode
+                referralCount = 0
+                isActive = $true
+                isActivated = $true
+                isTester = $false
+                createdAt = $nowIso
+            }
+
+            $script:adminUsers = @($script:adminUsers) + $newUser
+            Save-UsersCache
+
+            # Add to audit logs
+            $script:adminAuditLogs = @(@{
+                id = "AUD_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                adminId = "SYSTEM"
+                action = "USER_REGISTERED"
+                entity = "USER"
+                entityId = $newUserId
+                createdAt = $nowIso
+            }) + $script:adminAuditLogs
+
+            $token = "jwt_player_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            Send-Json $res @{
+                success = $true
+                token = $token
+                user = @{
+                    id = $newUserId
+                    name = $name
+                    email = $email
+                    balance = 0.00
+                    coins = 200
+                    freeSpins = 1
+                    vipTier = "bronze"
+                    xp = 50
+                }
+            }
+            continue
+        }
+
+        # Player Login Endpoint
+        if ($path -eq "/api/auth/login" -or $path -eq "/auth/login" -or $path -eq "/login" -or $path -eq "/api/login") {
+            $reader = New-Object System.IO.StreamReader($req.InputStream, $req.ContentEncoding)
+            $body = $reader.ReadToEnd()
+            $reader.Close()
+
+            $jsonObj = if ($body) { $body | ConvertFrom-Json } else { @{} }
+            $rawIdentity = if ($jsonObj.email) { $jsonObj.email.Trim() } elseif ($jsonObj.phone) { $jsonObj.phone.Trim() } elseif ($jsonObj.identity) { $jsonObj.identity.Trim() } elseif ($jsonObj.username) { $jsonObj.username.Trim() } else { "" }
+            $email = $rawIdentity.ToLower()
+            $phone = $rawIdentity
+            $pwd = if ($jsonObj.password) { $jsonObj.password.Trim() } else { "" }
+
+            $matchedUser = $script:adminUsers | Where-Object { $_.email.ToLower() -eq $email -or $_.phone -eq $phone -or $_.name.ToLower() -eq $email } | Select-Object -First 1
+            if (-not $matchedUser) {
+                # Auto-register if new player logging in
+                $newUserId = "usr_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                $name = $rawIdentity.Split('@')[0]
+                $nowIso = [DateTimeOffset]::UtcNow.ToString("o")
+                $matchedUser = @{
+                    id = $newUserId
+                    name = $name
+                    displayName = $name
+                    phone = $phone
+                    email = if ($email.Contains("@")) { $email } else { "$email@playcoin.live" }
+                    password = $pwd
+                    balance = 0.00
+                    coins = 200
+                    referralBalance = 0.00
+                    totalReferralEarnings = 0.00
+                    referralCode = "REF" + ([Guid]::NewGuid().ToString().Substring(0, 6).ToUpper())
+                    referralCount = 0
+                    isActive = $true
+                    isActivated = $true
+                    isTester = $false
+                    createdAt = $nowIso
+                }
+                $script:adminUsers = @($script:adminUsers) + $matchedUser
+                Save-UsersCache
+            }
+
+            $token = "jwt_player_" + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            Send-Json $res @{
+                success = $true
+                token = $token
+                user = @{
+                    id = $matchedUser.id
+                    name = $matchedUser.name
+                    email = $matchedUser.email
+                    balance = [double]$matchedUser.balance
+                    coins = [int]$matchedUser.coins
+                    freeSpins = 1
+                    vipTier = "bronze"
+                    xp = 50
+                }
             }
             continue
         }
