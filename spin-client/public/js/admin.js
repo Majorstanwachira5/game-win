@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventHandlers();
 
     if (adminToken) {
+        const cachedUser = localStorage.getItem('ram_admin_user');
+        if (cachedUser) {
+            try { updateAdminIdentityDisplay(JSON.parse(cachedUser)); } catch (e) {}
+        }
         hideAuthOverlay();
         loadAllData();
         startAutoRefresh();
@@ -73,6 +77,10 @@ function setupAuth() {
             if (data.success && data.token) {
                 adminToken = data.token;
                 localStorage.setItem('ram_admin_jwt', adminToken);
+                if (data.admin) {
+                    localStorage.setItem('ram_admin_user', JSON.stringify(data.admin));
+                    updateAdminIdentityDisplay(data.admin);
+                }
                 hideAuthOverlay();
                 loadAllData();
                 startAutoRefresh();
@@ -88,9 +96,18 @@ function setupAuth() {
 
     document.getElementById('adminLogoutBtn').addEventListener('click', () => {
         localStorage.removeItem('ram_admin_jwt');
+        localStorage.removeItem('ram_admin_user');
         adminToken = '';
         showAuthOverlay();
     });
+}
+
+function updateAdminIdentityDisplay(admin) {
+    if (!admin) return;
+    const nameEl = document.getElementById('adminUserName');
+    if (nameEl) nameEl.textContent = admin.name || admin.username || admin.email || 'Major Stan';
+    const roleEl = document.getElementById('adminRoleBadge');
+    if (roleEl) roleEl.textContent = (admin.role || 'SUPER_ADMIN').toUpperCase().replace('_', ' ');
 }
 
 function showAuthOverlay() {
