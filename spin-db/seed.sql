@@ -4,7 +4,7 @@ VALUES ('demo-user-1', 'USER 0712***891', 12500.00, 1, FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO platform_stats (id, total_revenue, total_payout, total_spins)
-VALUES (1, 540000.00, 81000.00, 4320)
+VALUES (1, 0.00, 0.00, 0)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO probability_slices (id, label, type, multiplier, count, weight, color, text_color, display_order) VALUES

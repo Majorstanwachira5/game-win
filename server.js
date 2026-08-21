@@ -69,9 +69,9 @@ async function initDB() {
         const statsRes = await client.query('SELECT * FROM platform_stats WHERE id = 1');
         if (statsRes.rows.length > 0) {
             const row = statsRes.rows[0];
-            financialStats.totalRevenue = parseFloat(row.total_revenue || 540000);
-            financialStats.totalPayout = parseFloat(row.total_payout || 81000);
-            financialStats.totalSpins = parseInt(row.total_spins || 4320);
+            financialStats.totalRevenue = parseFloat(row.total_revenue || 0);
+            financialStats.totalPayout = parseFloat(row.total_payout || 0);
+            financialStats.totalSpins = parseInt(row.total_spins || 0);
             if (row.active_rig_slice) activeRigSlice = row.active_rig_slice;
             console.log(`[POSTGRES] Loaded stats: Revenue=${financialStats.totalRevenue}, Payout=${financialStats.totalPayout}`);
         }
@@ -486,7 +486,6 @@ async function supabaseFetch(table, options = {}) {
     }
 }
 
-const fs = require('fs');
 const os = require('os');
 const USERS_CACHE_FILE = path.join(os.tmpdir(), 'spin_win_users_store.json');
 
@@ -1712,6 +1711,66 @@ app.post('/api/referral/withdraw', requirePlayerAuth, (req, res) => {
             success: true,
             ...result,
             stats: referralService.getReferralStats(user, req.get('origin') || `${req.protocol}://${req.get('host')}`)
+        });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+app.post(['/api/wallet/withdraw', '/api/withdraw'], requirePlayerAuth, (req, res) => {
+    try {
+        const user = getOrCreateUser(req.userId);
+        const phone = (req.body.phone || user.phone || '').trim();
+        const amount = Number(req.body.amount);
+        const source = req.body.source || 'balance';
+
+        if (!phone) {
+            return res.status(400).json({ success: false, error: 'Valid M-Pesa phone number is required for payout.' });
+        }
+        if (!amount || amount < 100) {
+            return res.status(400).json({ success: false, error: 'Minimum withdrawal amount is KSh 100.' });
+        }
+
+        if (source === 'referral') {
+            const result = referralService.requestWithdrawal(user, phone, amount, walletService);
+            saveUsersCache();
+            return res.json({ success: true, ...result });
+        }
+
+        const currentBal = Number(user.balance) || 0;
+        if (amount > currentBal) {
+            return res.status(400).json({ success: false, error: `Insufficient funds. Your cash balance is KSh ${currentBal.toLocaleString()}.` });
+        }
+
+        user.balance = Math.max(0, currentBal - amount);
+        const ticketId = 'WTH_' + Date.now().toString().substring(6);
+        const ticket = {
+            id: ticketId,
+            userId: user.id,
+            userName: user.displayName || user.name || user.id,
+            phone: phone,
+            amount: amount,
+            netAmount: amount,
+            fee: 0,
+            status: 'PENDING',
+            source: 'CASH_BALANCE',
+            requestedAt: new Date().toISOString()
+        };
+
+        referralService.withdrawalQueue.unshift(ticket);
+        if (!user.withdrawals) user.withdrawals = [];
+        user.withdrawals.unshift(ticket);
+
+        if (walletService) {
+            walletService.writeLedger(user, -amount, `Cash Balance Withdrawal Request (${ticketId})`, currentBal, 'KSH');
+        }
+
+        saveUsersCache();
+        res.json({
+            success: true,
+            ticket,
+            balance: user.balance,
+            message: `Withdrawal request for KSh ${amount.toLocaleString()} submitted! Admin will send payout to ${phone} shortly.`
         });
     } catch (err) {
         res.status(400).json({ success: false, error: err.message });
