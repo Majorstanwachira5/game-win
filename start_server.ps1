@@ -30,7 +30,15 @@ while ($listener.IsListening) {
     $path = $req.Url.AbsolutePath
 
     $targetDir = if ($path.StartsWith("/admin") -or $path -eq "/admin.html") { $adminDir } else { $clientDir }
-    $file = if ($path -eq "/" -or $path -eq "/index.html") { "index.html" } elseif ($path -eq "/admin.html") { "admin.html" } else { $path.TrimStart("/") }
+    $file = if ($path -eq "/" -or $path -eq "/index.html") {
+        "index.html"
+    } elseif ($path -eq "/admin" -or $path -eq "/admin/" -or $path -eq "/admin.html" -or $path -eq "/dashboard") {
+        "admin.html"
+    } elseif ($path.StartsWith("/admin/")) {
+        $path.Substring(7)
+    } else {
+        $path.TrimStart("/")
+    }
     $fullPath = Join-Path $targetDir $file
 
     if (-not (Test-Path $fullPath -PathType Leaf)) {

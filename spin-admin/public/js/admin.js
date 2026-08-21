@@ -4,9 +4,11 @@
  * server-side pagination, real-time polling, and transactional actions.
  */
 
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? `${window.location.protocol}//${window.location.hostname}:8080`
-    : window.location.origin;
+const API_BASE = (window.location.port === '8080')
+    ? window.location.origin
+    : ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? `${window.location.protocol}//${window.location.hostname}:8080`
+        : window.location.origin);
 let adminToken = localStorage.getItem('ram_admin_jwt') || '';
 let currentTab = 'overview';
 let usersPage = 1;

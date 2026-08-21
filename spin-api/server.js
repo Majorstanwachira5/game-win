@@ -16,6 +16,7 @@ const { Server } = require('socket.io');
 const cors   = require('cors');
 const crypto = require('crypto');
 const path   = require('path');
+const fs     = require('fs');
 const { Pool } = require('pg');
 
 // ─── SERVICES & MODULAR ARCHITECTURE LAYER ─────────────────────────────────
@@ -2566,6 +2567,24 @@ app.get(['/api-docs', '/docs'], (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now(), version: '2.0.0' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ADMIN CONTROL CENTER STATIC SERVING & DASHBOARD ROUTE
+// ═══════════════════════════════════════════════════════════════════════════
+const adminPublicPath = path.join(__dirname, '../spin-admin/public');
+const adminHtmlPath = path.join(adminPublicPath, 'admin.html');
+const fallbackAdminHtml = path.join(__dirname, 'public/admin.html');
+
+app.use('/admin', express.static(adminPublicPath));
+app.use('/spin-admin', express.static(adminPublicPath));
+app.get(['/admin', '/admin.html', '/admin-dashboard', '/dashboard'], (req, res) => {
+    if (fs.existsSync(adminHtmlPath)) {
+        return res.sendFile(adminHtmlPath);
+    } else if (fs.existsSync(fallbackAdminHtml)) {
+        return res.sendFile(fallbackAdminHtml);
+    }
+    res.status(404).send('Admin dashboard asset not found.');
 });
 
 // ─── 404 HANDLER ──────────────────────────────────────────────────────────
