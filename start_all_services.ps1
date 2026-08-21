@@ -16,6 +16,7 @@ $adminPublicDir  = Join-Path $PSScriptRoot "spin-admin\public"
 $script:adminUsers = @(
     @{
         id = "demo-user-1"
+        name = "Demo Player"
         displayName = "Demo Player"
         phone = "0712891234"
         email = "player@playcoin.live"
@@ -32,6 +33,7 @@ $script:adminUsers = @(
     },
     @{
         id = "usr_recruiter1"
+        name = "Master Recruiter"
         displayName = "Master Recruiter"
         phone = "0722112233"
         email = "recruiter@playcoin.live"
@@ -48,6 +50,7 @@ $script:adminUsers = @(
     },
     @{
         id = "usr_tester_vip"
+        name = "Brittany Tester"
         displayName = "Brittany Tester"
         phone = "0733445566"
         email = "brittany@tester.com"
@@ -64,6 +67,7 @@ $script:adminUsers = @(
     },
     @{
         id = "usr_alex"
+        name = "Alex Kip"
         displayName = "Alex Kip"
         phone = "0700998877"
         email = "alex@yahoo.com"
@@ -433,34 +437,40 @@ while ($listener.IsListening) {
 
             # 7. Referrals Leaderboard & Stats
             if ($path -eq "/api/admin/referrals") {
+                $topList = @(
+                    @{
+                        displayName = "Master Recruiter"
+                        name = "Master Recruiter"
+                        phone = "0722112233"
+                        referralCode = "PLAYMASTER"
+                        directReferrals = 42
+                        indirectReferrals = 88
+                        totalEarnings = 18400.00
+                    },
+                    @{
+                        displayName = "Demo Player"
+                        name = "Demo Player"
+                        phone = "0712891234"
+                        referralCode = "PLAYWIN1"
+                        directReferrals = 6
+                        indirectReferrals = 12
+                        totalEarnings = 3500.00
+                    },
+                    @{
+                        displayName = "Alex Kip"
+                        name = "Alex Kip"
+                        phone = "0700998877"
+                        referralCode = "ALEX2026"
+                        directReferrals = 2
+                        indirectReferrals = 3
+                        totalEarnings = 150.00
+                    }
+                )
                 Send-Json $res @{
                     success = $true
-                    topReferrers = @(
-                        @{
-                            displayName = "Master Recruiter"
-                            phone = "0722112233"
-                            referralCode = "PLAYMASTER"
-                            directReferrals = 42
-                            indirectReferrals = 88
-                            totalEarnings = 18400.00
-                        },
-                        @{
-                            displayName = "Demo Player"
-                            phone = "0712891234"
-                            referralCode = "PLAYWIN1"
-                            directReferrals = 6
-                            indirectReferrals = 12
-                            totalEarnings = 3500.00
-                        },
-                        @{
-                            displayName = "Alex Kip"
-                            phone = "0700998877"
-                            referralCode = "ALEX2026"
-                            directReferrals = 2
-                            indirectReferrals = 3
-                            totalEarnings = 150.00
-                        }
-                    )
+                    topReferrers = $topList
+                    topRecruiters = $topList
+                    referrals = $topList
                 }
                 continue
             }
@@ -490,41 +500,43 @@ while ($listener.IsListening) {
 
             # 9. Commissions List
             if ($path -eq "/api/admin/commissions") {
+                $commList = @(
+                    @{
+                        beneficiaryName = "Master Recruiter"
+                        beneficiaryId = "usr_recruiter1"
+                        refereeName = "Demo Player"
+                        refereeId = "demo-user-1"
+                        level = 1
+                        amount = 100.00
+                        coins = 200
+                        joinedAt = "2026-08-21T12:00:00Z"
+                    },
+                    @{
+                        beneficiaryName = "Master Recruiter"
+                        beneficiaryId = "usr_recruiter1"
+                        refereeName = "Alex Kip"
+                        refereeId = "usr_alex"
+                        level = 2
+                        amount = 50.00
+                        coins = 100
+                        joinedAt = "2026-08-21T10:30:00Z"
+                    },
+                    @{
+                        beneficiaryName = "Demo Player"
+                        beneficiaryId = "demo-user-1"
+                        refereeName = "Sub Player 1"
+                        refereeId = "usr_sub1"
+                        level = 1
+                        amount = 100.00
+                        coins = 200
+                        joinedAt = "2026-08-20T14:20:00Z"
+                    }
+                )
                 Send-Json $res @{
                     success = $true
                     totalCount = 3
-                    commissions = @(
-                        @{
-                            beneficiaryName = "Master Recruiter"
-                            beneficiaryId = "usr_recruiter1"
-                            refereeName = "Demo Player"
-                            refereeId = "demo-user-1"
-                            level = 1
-                            amount = 100.00
-                            coins = 200
-                            joinedAt = "2026-08-21T12:00:00Z"
-                        },
-                        @{
-                            beneficiaryName = "Master Recruiter"
-                            beneficiaryId = "usr_recruiter1"
-                            refereeName = "Alex Kip"
-                            refereeId = "usr_alex"
-                            level = 2
-                            amount = 50.00
-                            coins = 100
-                            joinedAt = "2026-08-21T10:30:00Z"
-                        },
-                        @{
-                            beneficiaryName = "Demo Player"
-                            beneficiaryId = "demo-user-1"
-                            refereeName = "Sub Player 1"
-                            refereeId = "usr_sub1"
-                            level = 1
-                            amount = 100.00
-                            coins = 200
-                            joinedAt = "2026-08-20T14:20:00Z"
-                        }
-                    )
+                    commissions = $commList
+                    settlements = $commList
                 }
                 continue
             }
@@ -546,43 +558,45 @@ while ($listener.IsListening) {
 
             # 12. Ledger Exploration
             if ($path -eq "/api/admin/ledger") {
+                $ledgerList = @(
+                    @{
+                        id = "LED_9001"
+                        userId = "demo-user-1"
+                        entryType = "CREDIT"
+                        currency = "KSh"
+                        amount = 1000.00
+                        balanceBefore = 11500.00
+                        balanceAfter = 12500.00
+                        description = "M-Pesa Deposit (RCX98127389)"
+                        timestamp = "2026-08-21T12:30:00Z"
+                    },
+                    @{
+                        id = "LED_9002"
+                        userId = "usr_recruiter1"
+                        entryType = "CREDIT"
+                        currency = "KSh"
+                        amount = 100.00
+                        balanceBefore = 48100.00
+                        balanceAfter = 48200.00
+                        description = "Level 1 Referral Commission (Demo Player)"
+                        timestamp = "2026-08-21T12:00:00Z"
+                    },
+                    @{
+                        id = "LED_9003"
+                        userId = "demo-user-1"
+                        entryType = "DEBIT"
+                        currency = "KSh"
+                        amount = -100.00
+                        balanceBefore = 11600.00
+                        balanceAfter = 11500.00
+                        description = "Spin & Win Wheel Bet"
+                        timestamp = "2026-08-21T11:45:00Z"
+                    }
+                )
                 Send-Json $res @{
                     success = $true
-                    ledger = @(
-                        @{
-                            id = "LED_9001"
-                            userId = "demo-user-1"
-                            entryType = "CREDIT"
-                            currency = "KSh"
-                            amount = 1000.00
-                            balanceBefore = 11500.00
-                            balanceAfter = 12500.00
-                            description = "M-Pesa Deposit (RCX98127389)"
-                            timestamp = "2026-08-21T12:30:00Z"
-                        },
-                        @{
-                            id = "LED_9002"
-                            userId = "usr_recruiter1"
-                            entryType = "CREDIT"
-                            currency = "KSh"
-                            amount = 100.00
-                            balanceBefore = 48100.00
-                            balanceAfter = 48200.00
-                            description = "Level 1 Referral Commission (Demo Player)"
-                            timestamp = "2026-08-21T12:00:00Z"
-                        },
-                        @{
-                            id = "LED_9003"
-                            userId = "demo-user-1"
-                            entryType = "DEBIT"
-                            currency = "KSh"
-                            amount = -100.00
-                            balanceBefore = 11600.00
-                            balanceAfter = 11500.00
-                            description = "Spin & Win Wheel Bet"
-                            timestamp = "2026-08-21T11:45:00Z"
-                        }
-                    )
+                    ledger = $ledgerList
+                    entries = $ledgerList
                 }
                 continue
             }
