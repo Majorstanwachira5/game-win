@@ -1,0 +1,11 @@
+node_modules/
+.env
+spin-api/.env
+spin-client/.env
+spin-admin/.env
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.system_generated/
+scratch/

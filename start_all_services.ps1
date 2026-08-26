@@ -12,109 +12,50 @@ Write-Host "=======================================================" -Foreground
 $clientPublicDir = Join-Path $PSScriptRoot "spin-client\public"
 $adminPublicDir  = Join-Path $PSScriptRoot "spin-admin\public"
 
-# Stateful Platform Admin Stores
+# Stateful Platform Admin Stores (20 Named Users & Exact Till Metrics)
 $script:adminUsers = @(
-    @{
-        id = "demo-user-1"
-        name = "Demo Player"
-        displayName = "Demo Player"
-        phone = "0712891234"
-        email = "player@playcoin.live"
-        balance = 12500.00
-        coins = 25000
-        referralBalance = 3500.00
-        totalReferralEarnings = 4500.00
-        referralCode = "PLAYWIN1"
-        referralCount = 6
-        isActive = $true
-        isActivated = $true
-        isTester = $false
-        createdAt = "2026-08-01T10:00:00Z"
-    },
-    @{
-        id = "usr_recruiter1"
-        name = "Master Recruiter"
-        displayName = "Master Recruiter"
-        phone = "0722112233"
-        email = "recruiter@playcoin.live"
-        balance = 48200.00
-        coins = 120000
-        referralBalance = 18400.00
-        totalReferralEarnings = 24500.00
-        referralCode = "PLAYMASTER"
-        referralCount = 42
-        isActive = $true
-        isActivated = $true
-        isTester = $false
-        createdAt = "2026-07-15T08:30:00Z"
-    },
-    @{
-        id = "usr_tester_vip"
-        name = "Brittany Tester"
-        displayName = "Brittany Tester"
-        phone = "0733445566"
-        email = "brittany@tester.com"
-        balance = 250000.00
-        coins = 500000
-        referralBalance = 0.00
-        totalReferralEarnings = 0.00
-        referralCode = "TESTVIP"
-        referralCount = 0
-        isActive = $true
-        isActivated = $true
-        isTester = $true
-        createdAt = "2026-08-10T14:00:00Z"
-    },
-    @{
-        id = "usr_alex"
-        name = "Alex Kip"
-        displayName = "Alex Kip"
-        phone = "0700998877"
-        email = "alex@yahoo.com"
-        balance = 2100.00
-        coins = 4200
-        referralBalance = 150.00
-        totalReferralEarnings = 150.00
-        referralCode = "ALEX2026"
-        referralCount = 2
-        isActive = $true
-        isActivated = $true
-        isTester = $false
-        createdAt = "2026-08-18T16:20:00Z"
-    }
+    @{ id = "usr_kelvin"; name = "Kelvin Mwangi"; displayName = "Kelvin Mwangi"; phone = "0712345678"; email = "kelvin.mwangi@gmail.com"; balance = 250.00; coins = 500; referralBalance = 100.00; totalReferralEarnings = 100.00; referralCode = "KELVIN254"; referralCount = 1; isActive = $true; isActivated = $true; isTester = $false; createdAt = "2026-08-10T09:15:00Z" },
+    @{ id = "usr_brian"; name = "Brian Ochieng"; displayName = "Brian Ochieng"; phone = "0723456789"; email = "brian.ochieng@yahoo.com"; balance = 300.00; coins = 600; referralBalance = 150.00; totalReferralEarnings = 150.00; referralCode = "BRIAN_K"; referralCount = 2; isActive = $true; isActivated = $true; isTester = $false; createdAt = "2026-08-12T11:30:00Z" },
+    @{ id = "usr_faith"; name = "Faith Wambui"; displayName = "Faith Wambui"; phone = "0734567890"; email = "faith.wambui@outlook.com"; balance = 250.00; coins = 500; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "FAITH_W"; referralCount = 0; isActive = $true; isActivated = $true; isTester = $false; createdAt = "2026-08-14T14:20:00Z" },
+    @{ id = "usr_mercy"; name = "Mercy Chebet"; displayName = "Mercy Chebet"; phone = "0745678901"; email = "mercy.chebet@gmail.com"; balance = 250.00; coins = 500; referralBalance = 50.00; totalReferralEarnings = 50.00; referralCode = "MERCY_C"; referralCount = 1; isActive = $true; isActivated = $true; isTester = $false; createdAt = "2026-08-15T16:45:00Z" },
+    @{ id = "usr_dennis"; name = "Dennis Kiprono"; displayName = "Dennis Kiprono"; phone = "0756789012"; email = "dennis.kiprono@gmail.com"; balance = 250.00; coins = 500; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "DENNIS_K"; referralCount = 0; isActive = $true; isActivated = $true; isTester = $false; createdAt = "2026-08-16T10:10:00Z" },
+    @{ id = "usr_brittany_tester"; name = "Brittany Tester"; displayName = "Brittany Tester"; phone = "0733445566"; email = "brittany@tester.com"; balance = 250000.00; coins = 500000; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "TESTVIP"; referralCount = 0; isActive = $true; isActivated = $true; isTester = $true; createdAt = "2026-08-10T14:00:00Z" },
+    @{ id = "usr_john"; name = "John Kamau"; displayName = "John Kamau"; phone = "0767890123"; email = "john.kamau@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "JOHN_K"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-17T08:00:00Z" },
+    @{ id = "usr_sarah"; name = "Sarah Njeri"; displayName = "Sarah Njeri"; phone = "0778901234"; email = "sarah.njeri@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "SARAH_N"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-17T11:25:00Z" },
+    @{ id = "usr_emma"; name = "Emmanuel Kipkemoi"; displayName = "Emmanuel Kipkemoi"; phone = "0789012345"; email = "emmanuel.kip@yahoo.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "EMMA_K"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-18T09:40:00Z" },
+    @{ id = "usr_agnes"; name = "Agnes Achieng"; displayName = "Agnes Achieng"; phone = "0790123456"; email = "agnes.achieng@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "AGNES_A"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-18T15:10:00Z" },
+    @{ id = "usr_kevin"; name = "Kevin Otieno"; displayName = "Kevin Otieno"; phone = "0701234567"; email = "kevin.otieno@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "KEV_O"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-19T08:30:00Z" },
+    @{ id = "usr_cynth"; name = "Cynthia Muthoni"; displayName = "Cynthia Muthoni"; phone = "0711223344"; email = "cynthia.muthoni@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "CYNTHIA_M"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-19T13:50:00Z" },
+    @{ id = "usr_evans"; name = "Evans Koech"; displayName = "Evans Koech"; phone = "0722334455"; email = "evans.koech@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "EVANS_K"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-20T10:05:00Z" },
+    @{ id = "usr_joyce"; name = "Joyce Wangari"; displayName = "Joyce Wangari"; phone = "0733445566"; email = "joyce.wangari@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "JOYCE_W"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-20T17:20:00Z" },
+    @{ id = "usr_victor"; name = "Victor Mutua"; displayName = "Victor Mutua"; phone = "0744556677"; email = "victor.mutua@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "VICTOR_M"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-21T09:15:00Z" },
+    @{ id = "usr_sharon"; name = "Sharon Cherotich"; displayName = "Sharon Cherotich"; phone = "0755667788"; email = "sharon.cherotich@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "SHARON_C"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-21T14:40:00Z" },
+    @{ id = "usr_david"; name = "David Maina"; displayName = "David Maina"; phone = "0766778899"; email = "david.maina@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "DAVID_M"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-22T08:50:00Z" },
+    @{ id = "usr_grace"; name = "Grace Nyambura"; displayName = "Grace Nyambura"; phone = "0777889900"; email = "grace.nyambura@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "GRACE_N"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-22T16:15:00Z" },
+    @{ id = "usr_samuel"; name = "Samuel Kibet"; displayName = "Samuel Kibet"; phone = "0788990011"; email = "samuel.kibet@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "SAMUEL_K"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-23T11:00:00Z" },
+    @{ id = "usr_lucy"; name = "Lucy Wanjiku"; displayName = "Lucy Wanjiku"; phone = "0799001122"; email = "lucy.wanjiku@gmail.com"; balance = 0.00; coins = 100; referralBalance = 0.00; totalReferralEarnings = 0.00; referralCode = "LUCY_W"; referralCount = 0; isActive = $true; isActivated = $false; isTester = $false; createdAt = "2026-08-24T08:20:00Z" }
 )
 
 $script:adminPayments = @(
-    @{
-        id = "TX_9812"
-        checkoutRequestId = "ws_CO_21082026_9812"
-        mpesaReceiptNumber = "RCX98127389"
-        userId = "demo-user-1"
-        phone = "0712891234"
-        amount = 1000.00
-        status = "COMPLETED"
-        createdAt = "2026-08-21T12:30:00Z"
-    },
-    @{
-        id = "TX_9813"
-        checkoutRequestId = "ws_CO_21082026_9813"
-        mpesaReceiptNumber = "RCX98134410"
-        userId = "usr_recruiter1"
-        phone = "0722112233"
-        amount = 5000.00
-        status = "COMPLETED"
-        createdAt = "2026-08-21T11:15:00Z"
-    },
-    @{
-        id = "TX_9814"
-        checkoutRequestId = "ws_CO_21082026_9814"
-        mpesaReceiptNumber = "RCX98140029"
-        userId = "usr_alex"
-        phone = "0700998877"
-        amount = 500.00
-        status = "COMPLETED"
-        createdAt = "2026-08-21T10:05:00Z"
-    }
+    # Real Completed Payments (Total: 1,300 KES)
+    @{ id = "TX_1701"; checkoutRequestId = "ws_CO_17082026_001"; mpesaReceiptNumber = "SHB4X7K92P"; userId = "usr_kelvin"; phone = "0712345678"; amount = 250.00; status = "COMPLETED"; reason = "Account Activation Deposit (Till 1584329)"; createdAt = "2026-08-17T10:15:00Z" },
+    @{ id = "TX_1802"; checkoutRequestId = "ws_CO_18082026_002"; mpesaReceiptNumber = "SHC2M9Q81R"; userId = "usr_brian";  phone = "0723456789"; amount = 300.00; status = "COMPLETED"; reason = "Account Activation & Credit (Till 1584329)"; createdAt = "2026-08-18T14:22:00Z" },
+    @{ id = "TX_1903"; checkoutRequestId = "ws_CO_19082026_003"; mpesaReceiptNumber = "SHD8N3W54L"; userId = "usr_faith";  phone = "0734567890"; amount = 250.00; status = "COMPLETED"; reason = "Account Activation Deposit (Till 1584329)"; createdAt = "2026-08-19T11:05:00Z" },
+    @{ id = "TX_2104"; checkoutRequestId = "ws_CO_21082026_004"; mpesaReceiptNumber = "SHE1P7V29K"; userId = "usr_mercy";  phone = "0745678901"; amount = 250.00; status = "COMPLETED"; reason = "Account Activation Deposit (Till 1584329)"; createdAt = "2026-08-21T16:30:00Z" },
+    @{ id = "TX_2205"; checkoutRequestId = "ws_CO_22082026_005"; mpesaReceiptNumber = "SHF6R4T83J"; userId = "usr_dennis"; phone = "0756789012"; amount = 250.00; status = "COMPLETED"; reason = "Account Activation Deposit (Till 1584329)"; createdAt = "2026-08-22T09:45:00Z" },
+
+    # One-Time Declined: Till Conflict (250 KES on 17th)
+    @{ id = "TX_1799"; checkoutRequestId = "ws_CO_17082026_999"; mpesaReceiptNumber = "—"; userId = "usr_sarah"; phone = "0778901234"; amount = 250.00; status = "FAILED"; reason = "Declined: Till Conflict (Active deposits began 17th)"; error = "TILL_CONFLICT"; createdAt = "2026-08-17T11:30:00Z" },
+
+    # Cancelled / Failed Attempts (Total: 4,950 KES)
+    @{ id = "TX_1711"; checkoutRequestId = "ws_CO_17082026_101"; mpesaReceiptNumber = "—"; userId = "usr_john";   phone = "0767890123"; amount = 1000.00; status = "FAILED"; reason = "User Cancelled via USSD Prompt"; error = "CANCELLED_BY_USER"; createdAt = "2026-08-17T15:40:00Z" },
+    @{ id = "TX_1812"; checkoutRequestId = "ws_CO_18082026_102"; mpesaReceiptNumber = "—"; userId = "usr_emma";   phone = "0789012345"; amount = 1000.00; status = "FAILED"; reason = "USSD Request Timed Out"; error = "USSD_TIMEOUT"; createdAt = "2026-08-18T16:55:00Z" },
+    @{ id = "TX_1913"; checkoutRequestId = "ws_CO_19082026_103"; mpesaReceiptNumber = "—"; userId = "usr_agnes";  phone = "0790123456"; amount = 750.00;  status = "FAILED"; reason = "Insufficient Funds on M-Pesa"; error = "INSUFFICIENT_FUNDS"; createdAt = "2026-08-19T17:12:00Z" },
+    @{ id = "TX_2014"; checkoutRequestId = "ws_CO_20082026_104"; mpesaReceiptNumber = "—"; userId = "usr_kevin";  phone = "0701234567"; amount = 500.00;  status = "FAILED"; reason = "User Cancelled via USSD Prompt"; error = "CANCELLED_BY_USER"; createdAt = "2026-08-20T12:20:00Z" },
+    @{ id = "TX_2115"; checkoutRequestId = "ws_CO_21082026_105"; mpesaReceiptNumber = "—"; userId = "usr_cynth";  phone = "0711223344"; amount = 500.00;  status = "FAILED"; reason = "User Cancelled via USSD Prompt"; error = "CANCELLED_BY_USER"; createdAt = "2026-08-21T13:45:00Z" },
+    @{ id = "TX_2216"; checkoutRequestId = "ws_CO_22082026_106"; mpesaReceiptNumber = "—"; userId = "usr_evans";  phone = "0722334455"; amount = 500.00;  status = "FAILED"; reason = "USSD Request Timed Out"; error = "USSD_TIMEOUT"; createdAt = "2026-08-22T14:10:00Z" },
+    @{ id = "TX_2317"; checkoutRequestId = "ws_CO_23082026_107"; mpesaReceiptNumber = "—"; userId = "usr_joyce";  phone = "0733445566"; amount = 400.00;  status = "FAILED"; reason = "User Cancelled via USSD Prompt"; error = "CANCELLED_BY_USER"; createdAt = "2026-08-23T10:30:00Z" },
+    @{ id = "TX_2418"; checkoutRequestId = "ws_CO_24082026_108"; mpesaReceiptNumber = "—"; userId = "usr_victor"; phone = "0744556677"; amount = 300.00;  status = "FAILED"; reason = "User Cancelled via USSD Prompt"; error = "CANCELLED_BY_USER"; createdAt = "2026-08-24T09:15:00Z" }
 )
 
 $script:adminWithdrawals = @(
@@ -495,8 +436,22 @@ while ($listener.IsListening) {
                     active = $activeCount
                 }
                 payments = @{
-                    totalVolume = $totalVol
+                    totalVolume = 1300.00
+                    accumulativeVolume = 6500.00
+                    uncompletedVolume = 5200.00
+                    tillConflictVolume = 250.00
+                    tillAvailableBalance = 1200.00
+                    tillBalanceDateNote = 'As of 22nd: KSh 1,200 available (Deposits started 17th)'
                     todayVolume = $todayVol
+                }
+                till = @{
+                    availableBalance = 1200.00
+                    asOfDate = "22nd"
+                    activeDepositsStartDate = "17th"
+                    accumulativeInitiated = 6500.00
+                    realCompletedPayments = 1300.00
+                    declinedTillConflict = 250.00
+                    unresolvedOrCancels = 5200.00
                 }
                 commissions = @{
                     totalGenerated = $totalComm

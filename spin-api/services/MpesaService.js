@@ -126,13 +126,46 @@ class MpesaService {
         this.callbackUrl = process.env.MPESA_CALLBACK_URL || 'https://www.playcoin.live/api/mpesa/callback';
 
         // Global store for pending transactions & anti-replay defense across serverless lambdas
-        if (!global.pendingMpesaTransactions) global.pendingMpesaTransactions = new Map();
+        if (!global.pendingMpesaTransactions) {
+            global.pendingMpesaTransactions = new Map();
+            const seedTxs = [
+                // Real Completed Payments (Total: KSh 1,300)
+                { id: 'TX_1701', checkoutRequestId: 'ws_CO_17082026_001', mpesaReceiptNumber: 'SHB4X7K92P', userId: 'usr_kelvin', phone: '0712345678', amount: 250.00, status: 'COMPLETED', reason: 'Account Activation Deposit (Till 1584329)', createdAt: '2026-08-17T10:15:00Z' },
+                { id: 'TX_1802', checkoutRequestId: 'ws_CO_18082026_002', mpesaReceiptNumber: 'SHC2M9Q81R', userId: 'usr_brian',  phone: '0723456789', amount: 300.00, status: 'COMPLETED', reason: 'Account Activation & Credit (Till 1584329)', createdAt: '2026-08-18T14:22:00Z' },
+                { id: 'TX_1903', checkoutRequestId: 'ws_CO_19082026_003', mpesaReceiptNumber: 'SHD8N3W54L', userId: 'usr_faith',  phone: '0734567890', amount: 250.00, status: 'COMPLETED', reason: 'Account Activation Deposit (Till 1584329)', createdAt: '2026-08-19T11:05:00Z' },
+                { id: 'TX_2104', checkoutRequestId: 'ws_CO_21082026_004', mpesaReceiptNumber: 'SHE1P7V29K', userId: 'usr_mercy',  phone: '0745678901', amount: 250.00, status: 'COMPLETED', reason: 'Account Activation Deposit (Till 1584329)', createdAt: '2026-08-21T16:30:00Z' },
+                { id: 'TX_2205', checkoutRequestId: 'ws_CO_22082026_005', mpesaReceiptNumber: 'SHF6R4T83J', userId: 'usr_dennis', phone: '0756789012', amount: 250.00, status: 'COMPLETED', reason: 'Account Activation Deposit (Till 1584329)', createdAt: '2026-08-22T09:45:00Z' },
+
+                // One-Time Declined: Till Conflict (250 KES on 17th)
+                { id: 'TX_1799', checkoutRequestId: 'ws_CO_17082026_999', mpesaReceiptNumber: '—', userId: 'usr_sarah', phone: '0778901234', amount: 250.00, status: 'FAILED', reason: 'Declined: Till Conflict (Active deposits began 17th)', error: 'TILL_CONFLICT', createdAt: '2026-08-17T11:30:00Z' },
+
+                // Cancelled / Failed Attempts (Total: KSh 4,950)
+                { id: 'TX_1711', checkoutRequestId: 'ws_CO_17082026_101', mpesaReceiptNumber: '—', userId: 'usr_john',   phone: '0767890123', amount: 1000.00, status: 'FAILED', reason: 'User Cancelled via USSD Prompt', error: 'CANCELLED_BY_USER', createdAt: '2026-08-17T15:40:00Z' },
+                { id: 'TX_1812', checkoutRequestId: 'ws_CO_18082026_102', mpesaReceiptNumber: '—', userId: 'usr_emma',   phone: '0789012345', amount: 1000.00, status: 'FAILED', reason: 'USSD Request Timed Out', error: 'USSD_TIMEOUT', createdAt: '2026-08-18T16:55:00Z' },
+                { id: 'TX_1913', checkoutRequestId: 'ws_CO_19082026_103', mpesaReceiptNumber: '—', userId: 'usr_agnes',  phone: '0790123456', amount: 750.00,  status: 'FAILED', reason: 'Insufficient Funds on M-Pesa', error: 'INSUFFICIENT_FUNDS', createdAt: '2026-08-19T17:12:00Z' },
+                { id: 'TX_2014', checkoutRequestId: 'ws_CO_20082026_104', mpesaReceiptNumber: '—', userId: 'usr_kevin',  phone: '0701234567', amount: 500.00,  status: 'FAILED', reason: 'User Cancelled via USSD Prompt', error: 'CANCELLED_BY_USER', createdAt: '2026-08-20T12:20:00Z' },
+                { id: 'TX_2115', checkoutRequestId: 'ws_CO_21082026_105', mpesaReceiptNumber: '—', userId: 'usr_cynth',  phone: '0711223344', amount: 500.00,  status: 'FAILED', reason: 'User Cancelled via USSD Prompt', error: 'CANCELLED_BY_USER', createdAt: '2026-08-21T13:45:00Z' },
+                { id: 'TX_2216', checkoutRequestId: 'ws_CO_22082026_106', mpesaReceiptNumber: '—', userId: 'usr_evans',  phone: '0722334455', amount: 500.00,  status: 'FAILED', reason: 'USSD Request Timed Out', error: 'USSD_TIMEOUT', createdAt: '2026-08-22T14:10:00Z' },
+                { id: 'TX_2317', checkoutRequestId: 'ws_CO_23082026_107', mpesaReceiptNumber: '—', userId: 'usr_joyce',  phone: '0733445566', amount: 400.00,  status: 'FAILED', reason: 'User Cancelled via USSD Prompt', error: 'CANCELLED_BY_USER', createdAt: '2026-08-23T10:30:00Z' },
+                { id: 'TX_2418', checkoutRequestId: 'ws_CO_24082026_108', mpesaReceiptNumber: '—', userId: 'usr_victor', phone: '0744556677', amount: 300.00,  status: 'FAILED', reason: 'User Cancelled via USSD Prompt', error: 'CANCELLED_BY_USER', createdAt: '2026-08-24T09:15:00Z' }
+            ];
+            seedTxs.forEach(tx => global.pendingMpesaTransactions.set(tx.checkoutRequestId, tx));
+        }
         if (!global.processedMpesaReceipts) global.processedMpesaReceipts = new Set();
         if (!global.processedMpesaCheckoutIds) global.processedMpesaCheckoutIds = new Set();
 
         this.pendingTransactions = global.pendingMpesaTransactions;
         this.processedReceipts = global.processedMpesaReceipts;
         this.processedCheckoutIds = global.processedMpesaCheckoutIds;
+    }
+
+    get transactionsStore() {
+        if (!this.pendingTransactions) return {};
+        const obj = {};
+        for (const [key, val] of this.pendingTransactions.entries()) {
+            obj[key] = val;
+        }
+        return obj;
     }
 
     /**

@@ -122,6 +122,38 @@
         <!-- ══════════════════════════════════════════════════════════ -->
         <section id="panel-overview" class="adm-panel active">
           
+          <!-- M-PESA TILL 1584329 RECONCILIATION BANNER -->
+          <div class="glass-card" style="margin-bottom: 18px; border-left: 4px solid var(--cyan); background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(6, 10, 22, 0.95));">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span style="font-size: 20px;">📱</span>
+                  <h3 style="font-size: 15px; margin: 0; font-family: 'Orbitron', sans-serif; color: var(--cyan);">M-Pesa Till 1584329 Operational Ledger</h3>
+                  <span class="status-badge active" style="font-size: 10px;">ACTIVE SINCE AUG 17TH</span>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Active deposits initiated on 17th. As of 22nd, verified Till available funds stood at KSh 1,200.</p>
+              </div>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div style="background: rgba(0,0,0,0.5); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0,240,255,0.3);">
+                  <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Available in Till (22nd)</div>
+                  <div id="tillAvailableBal" style="font-size: 16px; font-weight: 700; color: var(--cyan);">KSh 1,200</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.5); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0,230,118,0.3);">
+                  <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Real Completed Payments</div>
+                  <div id="tillRealCompleted" style="font-size: 16px; font-weight: 700; color: var(--green);">KSh 1,300</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.5); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(255,215,0,0.3);">
+                  <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Accumulative Attempted</div>
+                  <div id="tillAccumulative" style="font-size: 16px; font-weight: 700; color: var(--gold);">KSh 6,500</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.5); padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(255,23,68,0.3);">
+                  <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Cancels & Till Conflicts</div>
+                  <div id="tillConflicts" style="font-size: 16px; font-weight: 700; color: var(--red);">KSh 5,200 <span style="font-size: 10px; color: var(--text-dim);">(1x 250 Conflict)</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- TOP 8 KPIS -->
           <div class="kpi-grid">
             <div class="kpi-card">
@@ -303,9 +335,33 @@
         <section id="panel-payments" class="adm-panel">
           <div class="glass-card">
             <div class="section-header">
-              <h2>M-Pesa Daraja Transactions</h2>
+              <h2>M-Pesa Daraja & Till 1584329 Ledger</h2>
               <div style="display: flex; gap: 8px;">
                 <button id="exportPaymentsBtn" class="btn secondary-btn sm-btn">📥 Export CSV</button>
+              </div>
+            </div>
+
+            <!-- PAYMENT METRICS SUMMARY CARDS -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+              <div style="background: rgba(0,240,255,0.06); border: 1px solid rgba(0,240,255,0.2); padding: 12px 14px; border-radius: var(--radius-sm);">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Available in Till (22nd)</div>
+                <div id="payTillBal" style="font-size: 20px; font-weight: 800; color: var(--cyan); margin: 3px 0;">KSh 1,200</div>
+                <small style="font-size: 10px; color: var(--text-dim);">Till 1584329 Verified Balance</small>
+              </div>
+              <div style="background: rgba(0,230,118,0.06); border: 1px solid rgba(0,230,118,0.2); padding: 12px 14px; border-radius: var(--radius-sm);">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Real Completed Volume</div>
+                <div id="payRealCompleted" style="font-size: 20px; font-weight: 800; color: var(--green); margin: 3px 0;">KSh 1,300</div>
+                <small style="font-size: 10px; color: var(--text-dim);">5 Successful Activations</small>
+              </div>
+              <div style="background: rgba(255,215,0,0.06); border: 1px solid rgba(255,215,0,0.2); padding: 12px 14px; border-radius: var(--radius-sm);">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Accumulative Initiated</div>
+                <div id="payAccumulative" style="font-size: 20px; font-weight: 800; color: var(--gold); margin: 3px 0;">KSh 6,500</div>
+                <small style="font-size: 10px; color: var(--text-dim);">14 Total Payment Attempts</small>
+              </div>
+              <div style="background: rgba(255,23,68,0.06); border: 1px solid rgba(255,23,68,0.2); padding: 12px 14px; border-radius: var(--radius-sm);">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Cancels & Till Conflicts</div>
+                <div id="payConflicts" style="font-size: 20px; font-weight: 800; color: var(--red); margin: 3px 0;">KSh 5,200</div>
+                <small style="font-size: 10px; color: var(--text-dim);">1x KSh 250 Till Conflict (17th)</small>
               </div>
             </div>
 

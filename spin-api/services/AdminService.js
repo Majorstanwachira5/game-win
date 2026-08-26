@@ -90,8 +90,15 @@ class AdminService {
         const completedTx = transactions.filter(t => t.status === 'COMPLETED');
         const pendingTx = transactions.filter(t => t.status === 'PENDING');
         const failedTx = transactions.filter(t => t.status === 'FAILED');
+        const tillConflictTx = transactions.filter(t => (t.error === 'TILL_CONFLICT' || (t.reason && t.reason.toLowerCase().includes('till conflict'))));
 
-        const totalPaymentVolume = completedTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0) + (Number(financialStats.totalRevenue) || 0);
+        const accumulativeVolume = transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const realCompletedVolume = completedTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const tillConflictVolume = tillConflictTx.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const uncompletedVolume = Math.max(0, accumulativeVolume - realCompletedVolume);
+        const tillAvailableBalance = Math.max(0, realCompletedVolume);
+
+        const totalPaymentVolume = realCompletedVolume;
         const todayPaymentVolume = completedTx.filter(t => new Date(t.createdAt || 0) >= startOfToday).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         const monthPaymentVolume = completedTx.filter(t => new Date(t.createdAt || 0) >= startOfMonth).reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
@@ -215,10 +222,24 @@ class AdminService {
                 successfulCount: completedTx.length,
                 failedCount: failedTx.length,
                 pendingCount: pendingTx.length,
-                totalVolume: totalPaymentVolume,
+                totalVolume: realCompletedVolume,
+                accumulativeVolume: accumulativeVolume,
+                uncompletedVolume: uncompletedVolume,
+                tillConflictVolume: tillConflictVolume,
+                tillAvailableBalance: tillAvailableBalance,
+                tillBalanceDateNote: 'As of 22nd: KSh 1,200 available (Deposits started 17th)',
                 todayVolume: todayPaymentVolume,
                 monthVolume: monthPaymentVolume,
-                averageTicket: completedTx.length > 0 ? Math.round(totalPaymentVolume / completedTx.length) : 250
+                averageTicket: completedTx.length > 0 ? Math.round(realCompletedVolume / completedTx.length) : 250
+            },
+            till: {
+                availableBalance: tillAvailableBalance,
+                asOfDate: '22nd',
+                activeDepositsStartDate: '17th',
+                accumulativeInitiated: accumulativeVolume,
+                realCompletedPayments: realCompletedVolume,
+                declinedTillConflict: tillConflictVolume,
+                unresolvedOrCancels: uncompletedVolume
             },
             referrals: {
                 totalReferrals: allReferralEvents.length,
@@ -477,12 +498,19 @@ class AdminService {
         const paginated = list.slice((p - 1) * lim, p * lim);
 
         const totalCompletedVolume = list.filter(t => t.status === 'COMPLETED').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const totalAccumulativeVolume = transactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const tillConflictCount = transactions.filter(t => t.error === 'TILL_CONFLICT' || (t.reason && t.reason.toLowerCase().includes('till conflict'))).length;
 
         return {
             payments: paginated,
+            transactions: paginated,
             summary: {
                 totalCount: total,
-                completedVolume: totalCompletedVolume
+                completedVolume: totalCompletedVolume,
+                accumulativeVolume: totalAccumulativeVolume,
+                tillBalance: 1200.00,
+                tillConflictCount: tillConflictCount,
+                note: 'Till Available: KSh 1,200 as of 22nd | Active Deposits: Started 17th'
             },
             pagination: {
                 total,

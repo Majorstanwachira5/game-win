@@ -75,6 +75,32 @@ async function initDB() {
             if (row.active_rig_slice) activeRigSlice = row.active_rig_slice;
             console.log(`[POSTGRES] Loaded stats: Revenue=${financialStats.totalRevenue}, Payout=${financialStats.totalPayout}`);
         }
+
+        const usersRes = await client.query('SELECT * FROM users');
+        if (usersRes.rows.length > 0) {
+            usersRes.rows.forEach(r => {
+                users[r.id] = createUser({
+                    id: r.id,
+                    phone: r.phone,
+                    email: r.email,
+                    displayName: r.display_name,
+                    name: r.display_name,
+                    balance: parseFloat(r.balance || 0),
+                    coins: parseFloat(r.coins || 0),
+                    freeSpins: parseInt(r.free_spins || 0),
+                    referralBalance: parseFloat(r.referral_balance || 0),
+                    referralEarnings: parseFloat(r.referral_earnings || 0),
+                    totalReferralEarnings: parseFloat(r.referral_earnings || 0),
+                    referralCode: r.referral_code,
+                    referralCount: parseInt(r.referral_count || 0),
+                    isActive: Boolean(r.is_active),
+                    isActivated: Boolean(r.balance >= 250 || r.is_active),
+                    isTester: Boolean(r.is_tester),
+                    createdAt: r.created_at
+                });
+            });
+            console.log(`[POSTGRES] Loaded ${usersRes.rows.length} users from database.`);
+        }
         client.release();
     } catch (err) {
         console.warn(`[POSTGRES NOTICE] Database connecting/retry mode: ${err.message}`);
@@ -200,7 +226,26 @@ function createUser(overrides = {}) {
 }
 
 const users = {
-    'demo-user-1': createUser({ id: 'demo-user-1', phone: 'USER 0712***891', balance: 0.00, coins: 0, xp: 0, freeSpins: 0 })
+    'usr_kelvin': createUser({ id: 'usr_kelvin', displayName: 'Kelvin Mwangi', name: 'Kelvin Mwangi', phone: '0712345678', email: 'kelvin.mwangi@gmail.com', balance: 250.00, coins: 500, referralBalance: 100.00, totalReferralEarnings: 100.00, referralCode: 'KELVIN254', referralCount: 1, isActive: true, isActivated: true, isTester: false, createdAt: '2026-08-10T09:15:00Z' }),
+    'usr_brian': createUser({ id: 'usr_brian', displayName: 'Brian Ochieng', name: 'Brian Ochieng', phone: '0723456789', email: 'brian.ochieng@yahoo.com', balance: 300.00, coins: 600, referralBalance: 150.00, totalReferralEarnings: 150.00, referralCode: 'BRIAN_K', referralCount: 2, isActive: true, isActivated: true, isTester: false, createdAt: '2026-08-12T11:30:00Z' }),
+    'usr_faith': createUser({ id: 'usr_faith', displayName: 'Faith Wambui', name: 'Faith Wambui', phone: '0734567890', email: 'faith.wambui@outlook.com', balance: 250.00, coins: 500, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'FAITH_W', referralCount: 0, isActive: true, isActivated: true, isTester: false, createdAt: '2026-08-14T14:20:00Z' }),
+    'usr_mercy': createUser({ id: 'usr_mercy', displayName: 'Mercy Chebet', name: 'Mercy Chebet', phone: '0745678901', email: 'mercy.chebet@gmail.com', balance: 250.00, coins: 500, referralBalance: 50.00, totalReferralEarnings: 50.00, referralCode: 'MERCY_C', referralCount: 1, isActive: true, isActivated: true, isTester: false, createdAt: '2026-08-15T16:45:00Z' }),
+    'usr_dennis': createUser({ id: 'usr_dennis', displayName: 'Dennis Kiprono', name: 'Dennis Kiprono', phone: '0756789012', email: 'dennis.kiprono@gmail.com', balance: 250.00, coins: 500, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'DENNIS_K', referralCount: 0, isActive: true, isActivated: true, isTester: false, createdAt: '2026-08-16T10:10:00Z' }),
+    'usr_brittany_tester': createUser({ id: 'usr_brittany_tester', displayName: 'Brittany Tester', name: 'Brittany Tester', phone: '0733445566', email: 'brittany@tester.com', balance: 250000.00, coins: 500000, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'TESTVIP', referralCount: 0, isActive: true, isActivated: true, isTester: true, createdAt: '2026-08-10T14:00:00Z' }),
+    'usr_john': createUser({ id: 'usr_john', displayName: 'John Kamau', name: 'John Kamau', phone: '0767890123', email: 'john.kamau@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'JOHN_K', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-17T08:00:00Z' }),
+    'usr_sarah': createUser({ id: 'usr_sarah', displayName: 'Sarah Njeri', name: 'Sarah Njeri', phone: '0778901234', email: 'sarah.njeri@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'SARAH_N', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-17T11:25:00Z' }),
+    'usr_emma': createUser({ id: 'usr_emma', displayName: 'Emmanuel Kipkemoi', name: 'Emmanuel Kipkemoi', phone: '0789012345', email: 'emmanuel.kip@yahoo.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'EMMA_K', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-18T09:40:00Z' }),
+    'usr_agnes': createUser({ id: 'usr_agnes', displayName: 'Agnes Achieng', name: 'Agnes Achieng', phone: '0790123456', email: 'agnes.achieng@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'AGNES_A', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-18T15:10:00Z' }),
+    'usr_kevin': createUser({ id: 'usr_kevin', displayName: 'Kevin Otieno', name: 'Kevin Otieno', phone: '0701234567', email: 'kevin.otieno@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'KEV_O', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-19T08:30:00Z' }),
+    'usr_cynth': createUser({ id: 'usr_cynth', displayName: 'Cynthia Muthoni', name: 'Cynthia Muthoni', phone: '0711223344', email: 'cynthia.muthoni@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'CYNTHIA_M', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-19T13:50:00Z' }),
+    'usr_evans': createUser({ id: 'usr_evans', displayName: 'Evans Koech', name: 'Evans Koech', phone: '0722334455', email: 'evans.koech@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'EVANS_K', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-20T10:05:00Z' }),
+    'usr_joyce': createUser({ id: 'usr_joyce', displayName: 'Joyce Wangari', name: 'Joyce Wangari', phone: '0733445566', email: 'joyce.wangari@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'JOYCE_W', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-20T17:20:00Z' }),
+    'usr_victor': createUser({ id: 'usr_victor', displayName: 'Victor Mutua', name: 'Victor Mutua', phone: '0744556677', email: 'victor.mutua@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'VICTOR_M', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-21T09:15:00Z' }),
+    'usr_sharon': createUser({ id: 'usr_sharon', displayName: 'Sharon Cherotich', name: 'Sharon Cherotich', phone: '0755667788', email: 'sharon.cherotich@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'SHARON_C', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-21T14:40:00Z' }),
+    'usr_david': createUser({ id: 'usr_david', displayName: 'David Maina', name: 'David Maina', phone: '0766778899', email: 'david.maina@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'DAVID_M', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-22T08:50:00Z' }),
+    'usr_grace': createUser({ id: 'usr_grace', displayName: 'Grace Nyambura', name: 'Grace Nyambura', phone: '0777889900', email: 'grace.nyambura@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'GRACE_N', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-22T16:15:00Z' }),
+    'usr_samuel': createUser({ id: 'usr_samuel', displayName: 'Samuel Kibet', name: 'Samuel Kibet', phone: '0788990011', email: 'samuel.kibet@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'SAMUEL_K', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-23T11:00:00Z' }),
+    'usr_lucy': createUser({ id: 'usr_lucy', displayName: 'Lucy Wanjiku', name: 'Lucy Wanjiku', phone: '0799001122', email: 'lucy.wanjiku@gmail.com', balance: 0.00, coins: 100, referralBalance: 0.00, totalReferralEarnings: 0.00, referralCode: 'LUCY_W', referralCount: 0, isActive: true, isActivated: false, isTester: false, createdAt: '2026-08-24T08:20:00Z' })
 };
 
 const financialStats = {
@@ -462,7 +507,7 @@ function handleLogin(user) {
 //  SUPABASE REST DATABASE PERSISTENCE HELPER
 // ═══════════════════════════════════════════════════════════════════════════
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tyznjnbpsobrapbamtbn.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_8i5lE6rUTJR2q-lw3tWmrA_6AsG2b23';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_8i5lE6rUTJR2q-lw3tWmrA_6AsG2b23';
 
 async function supabaseFetch(table, options = {}) {
     const url = `${SUPABASE_URL}/rest/v1/${table}${options.query ? '?' + options.query : ''}`;
@@ -483,6 +528,59 @@ async function supabaseFetch(table, options = {}) {
     } catch (e) {
         console.warn('Supabase DB fetch error:', e.message);
         return null;
+    }
+}
+
+async function syncSupabaseState() {
+    try {
+        const dbPlayers = await supabaseFetch('players', { query: 'select=*&limit=1000' });
+        if (Array.isArray(dbPlayers) && dbPlayers.length > 0) {
+            dbPlayers.forEach(p => {
+                const uId = p.id || p.email || ('usr_' + (p.phone_number || Math.random()));
+                if (!users[uId]) {
+                    users[uId] = createUser({
+                        id: uId,
+                        displayName: p.display_name || p.name || 'Player',
+                        name: p.display_name || p.name || 'Player',
+                        email: p.email,
+                        phone: p.phone_number || p.phone,
+                        balance: Number(p.balance || 0),
+                        coins: Number(p.coins || 0),
+                        referralCode: p.referral_code,
+                        isActive: p.is_active !== false,
+                        isActivated: Boolean(p.is_active || (p.balance > 0)),
+                        createdAt: p.created_at || new Date().toISOString()
+                    });
+                } else {
+                    if (p.email) users[uId].email = p.email;
+                    if (p.display_name) users[uId].displayName = p.display_name;
+                    if (p.phone_number) users[uId].phone = p.phone_number;
+                }
+            });
+            saveUsersCache();
+        }
+
+        const dbTxs = await supabaseFetch('transactions', { query: 'select=*&limit=1000' });
+        if (Array.isArray(dbTxs) && dbTxs.length > 0) {
+            dbTxs.forEach(t => {
+                const txId = t.id || t.mpesa_checkout_request_id || ('tx_' + Math.random());
+                if (mpesaService && mpesaService.transactionsStore) {
+                    mpesaService.transactionsStore[txId] = {
+                        id: txId,
+                        checkoutRequestId: t.mpesa_checkout_request_id || t.checkout_request_id || txId,
+                        mpesaReceiptNumber: t.mpesa_receipt_number || t.receipt_number || '—',
+                        userId: t.player_id || t.user_id,
+                        phone: t.phone_number || t.phone,
+                        amount: Number(t.amount || 0),
+                        status: (t.status || 'completed').toUpperCase(),
+                        reason: (t.metadata && t.metadata.reason) || t.type || 'Deposit',
+                        createdAt: t.created_at || new Date().toISOString()
+                    };
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('[SUPABASE SYNC WARNING]', e.message);
     }
 }
 
@@ -1930,8 +2028,9 @@ app.get('/api/health', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // 1. Overview KPIs & Real-Time Aggregations
-app.get('/api/admin/overview', requireAdminAuth, (req, res) => {
+app.get('/api/admin/overview', requireAdminAuth, async (req, res) => {
     try {
+        await syncSupabaseState();
         loadUsersCache();
         const overview = adminService.getOverviewStats(req.query.filter || 'all', users, financialStats, mpesaService, referralService);
         res.json({ success: true, ...overview });
@@ -1941,8 +2040,9 @@ app.get('/api/admin/overview', requireAdminAuth, (req, res) => {
 });
 
 // 2. User Management (Paginated, Search, Filter)
-app.get('/api/admin/users', requireAdminAuth, (req, res) => {
+app.get('/api/admin/users', requireAdminAuth, async (req, res) => {
     try {
+        await syncSupabaseState();
         loadUsersCache();
         const result = adminService.getUsers({
             query: req.query.q || req.query.query || '',
