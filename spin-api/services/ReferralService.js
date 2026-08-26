@@ -225,12 +225,22 @@ class ReferralService {
 
         // Update in user object
         const user = usersStore[ticket.userId] || Object.values(usersStore).find(u => u.id === ticket.userId);
-        if (user && user.referralWithdrawals) {
-            const userTicket = user.referralWithdrawals.find(w => w.id === ticketId);
-            if (userTicket) {
-                userTicket.status = 'PAID';
-                userTicket.processedAt = ticket.processedAt;
-                userTicket.mpesaReceipt = ticket.mpesaReceipt;
+        if (user) {
+            if (user.referralWithdrawals) {
+                const userTicket = user.referralWithdrawals.find(w => w.id === ticketId);
+                if (userTicket) {
+                    userTicket.status = 'PAID';
+                    userTicket.processedAt = ticket.processedAt;
+                    userTicket.mpesaReceipt = ticket.mpesaReceipt;
+                }
+            }
+            if (user.withdrawals) {
+                const userTicket = user.withdrawals.find(w => w.id === ticketId);
+                if (userTicket) {
+                    userTicket.status = 'PAID';
+                    userTicket.processedAt = ticket.processedAt;
+                    userTicket.mpesaReceipt = ticket.mpesaReceipt;
+                }
             }
         }
 
@@ -251,9 +261,21 @@ class ReferralService {
         // Refund balance to user
         const user = usersStore[ticket.userId] || Object.values(usersStore).find(u => u.id === ticket.userId);
         if (user) {
-            user.referralBalance = (user.referralBalance || 0) + ticket.amount;
+            if (ticket.source === 'CASH_BALANCE') {
+                user.balance = (user.balance || 0) + ticket.amount;
+            } else {
+                user.referralBalance = (user.referralBalance || 0) + ticket.amount;
+            }
             if (user.referralWithdrawals) {
                 const userTicket = user.referralWithdrawals.find(w => w.id === ticketId);
+                if (userTicket) {
+                    userTicket.status = 'REJECTED';
+                    userTicket.processedAt = ticket.processedAt;
+                    userTicket.adminNotes = reason;
+                }
+            }
+            if (user.withdrawals) {
+                const userTicket = user.withdrawals.find(w => w.id === ticketId);
                 if (userTicket) {
                     userTicket.status = 'REJECTED';
                     userTicket.processedAt = ticket.processedAt;

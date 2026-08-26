@@ -372,6 +372,8 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     const userCoinsEl = document.getElementById('userCoinsText');
     const mobSummaryCash = document.getElementById('mobSummaryCash');
     const mobSummaryCoins = document.getElementById('mobSummaryCoins');
+    const mobWithdrawBtn = document.getElementById('mobWalletWithdrawBtn');
+    const mobWithdrawNote = document.getElementById('mobWithdrawNote');
 
     let curUser = null;
     try {
@@ -393,6 +395,29 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     if (userCoinsEl) userCoinsEl.textContent = `${fmtCoins} Coins`;
     if (mobSummaryCash) mobSummaryCash.textContent = `KSh ${fmtBal}`;
     if (mobSummaryCoins) mobSummaryCoins.textContent = `${fmtCoins}`;
+
+    // Mobile Withdrawal Button State & Minimum Rules (< KSh 1,000 disabled)
+    const minWithdrawal = 1000;
+    if (mobWithdrawBtn) {
+        if (finalBal >= minWithdrawal) {
+            mobWithdrawBtn.disabled = false;
+            mobWithdrawBtn.style.opacity = '1';
+            mobWithdrawBtn.style.cursor = 'pointer';
+            mobWithdrawBtn.style.boxShadow = '0 0 15px rgba(255,215,0,0.4)';
+            if (mobWithdrawNote) {
+                mobWithdrawNote.innerHTML = `<span style="color:#00e676; font-weight:bold;">✓ Ready to withdraw (KSh ${fmtBal} available)</span>`;
+            }
+        } else {
+            mobWithdrawBtn.disabled = true;
+            mobWithdrawBtn.style.opacity = '0.5';
+            mobWithdrawBtn.style.cursor = 'not-allowed';
+            mobWithdrawBtn.style.boxShadow = 'none';
+            const diff = minWithdrawal - finalBal;
+            if (mobWithdrawNote) {
+                mobWithdrawNote.innerHTML = `No withdrawal available for amounts below KSh 1,000.<br><span style="color:#ffd700;">You need KSh ${diff.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} more to withdraw.</span>`;
+            }
+        }
+    }
 };
 
 window.toggleCategory = function (id) {
@@ -2164,6 +2189,108 @@ window.executeReferralWithdrawal = async function() {
 
             // Refresh referral dashboard stats
             if (window.openReferralModal) window.openReferralModal();
+        } else {
+            throw new Error(res.error || 'Withdrawal failed');
+        }
+    } catch(err) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 CONFIRM & SEND TO M-PESA';
+        }
+        if (window.showToast) window.showToast(err.message || 'Failed to submit withdrawal request', 'error');
+    }
+};
+
+// ─── CASH WALLET WITHDRAWAL PROMPT & EXECUTION ─────────────────────────────
+window.promptWalletWithdrawal = function() {
+    const rawUser = localStorage.getItem('spin_user_data');
+    let curBal = Number(window.APP_STATE?.balance || 0);
+    let savedUser = {};
+    try {
+        if (rawUser) {
+            savedUser = JSON.parse(rawUser);
+            if (savedUser.balance !== undefined) curBal = Number(savedUser.balance);
+        }
+    } catch(e) {}
+
+    if (curBal < 1000) {
+        if (window.showToast) window.showToast('No withdrawal available for amounts below KSh 1,000.', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('walletWithdrawModal');
+    if (!modal) return;
+
+    const phoneInput = document.getElementById('walletWithdrawPhoneInput');
+    if (phoneInput && !phoneInput.value) {
+        phoneInput.value = savedUser.phone || savedUser.email || '';
+    }
+    const amountInput = document.getElementById('walletWithdrawAmountInput');
+    if (amountInput) {
+        amountInput.value = Math.floor(curBal);
+    }
+    const availDisplay = document.getElementById('walletWithdrawAvailableDisplay');
+    if (availDisplay) {
+        availDisplay.textContent = `KSh ${curBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('open', 'active');
+};
+
+window.closeWalletWithdrawModal = function() {
+    const modal = document.getElementById('walletWithdrawModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('open', 'active');
+    }
+};
+
+window.executeWalletWithdrawal = async function() {
+    const phoneInput = document.getElementById('walletWithdrawPhoneInput');
+    const amountInput = document.getElementById('walletWithdrawAmountInput');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const amount = Number(amountInput ? amountInput.value : 0);
+
+    if (!phone || phone.length < 9) {
+        if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number!', 'error');
+        return;
+    }
+    if (!amount || amount < 1000) {
+        if (window.showToast) window.showToast('No withdrawal available for amounts below KSh 1,000.', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('confirmWalletWithdrawBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'PROCESSING WITHDRAWAL...';
+    }
+
+    try {
+        const res = await apiPost('/api/wallet/withdraw', { phone, amount, source: 'balance' });
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 CONFIRM & SEND TO M-PESA';
+        }
+
+        if (res && res.success) {
+            window.closeWalletWithdrawModal();
+            if (res.balance !== undefined) {
+                if (window.APP_STATE) window.APP_STATE.balance = Number(res.balance);
+                const curCoins = window.APP_STATE?.user?.coins || 0;
+                window.updateBalanceUI(Number(res.balance), curCoins);
+                const rawUser = localStorage.getItem('spin_user_data');
+                if (rawUser) {
+                    try {
+                        const u = JSON.parse(rawUser);
+                        u.balance = Number(res.balance);
+                        localStorage.setItem('spin_user_data', JSON.stringify(u));
+                    } catch(e) {}
+                }
+            }
+            if (typeof triggerConfetti === 'function') triggerConfetti();
+            if (window.showToast) window.showToast(`🎉 ${res.message || 'Withdrawal request submitted successfully!'}`, 'success');
         } else {
             throw new Error(res.error || 'Withdrawal failed');
         }
