@@ -3413,8 +3413,15 @@ html, body {
   .mobile-android-layout {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
-    padding: 8px 10px 80px !important;
+    gap: 8px !important;
+    padding: 6px 10px 75px !important;
+  }
+  .mobile-wallet-card {
+    height: auto !important;
+    min-height: unset !important;
+    padding: 8px 12px !important;
+    margin-bottom: 2px !important;
+    box-sizing: border-box !important;
   }
 }
 
