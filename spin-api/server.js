@@ -1825,8 +1825,8 @@ app.post(['/api/wallet/withdraw', '/api/withdraw'], requirePlayerAuth, (req, res
         if (!phone) {
             return res.status(400).json({ success: false, error: 'Valid M-Pesa phone number is required for payout.' });
         }
-        if (!amount || amount < 1000) {
-            return res.status(400).json({ success: false, error: 'No withdrawal available for amounts below KSh 1,000.' });
+        if (!amount || amount < 500) {
+            return res.status(400).json({ success: false, error: 'Minimum withdrawal amount is KSh 500.' });
         }
 
         if (source === 'referral') {
@@ -1836,8 +1836,8 @@ app.post(['/api/wallet/withdraw', '/api/withdraw'], requirePlayerAuth, (req, res
         }
 
         const currentBal = Number(user.balance) || 0;
-        if (currentBal < 1000) {
-            return res.status(400).json({ success: false, error: 'No withdrawal available for amounts below KSh 1,000.' });
+        if (currentBal < 500) {
+            return res.status(400).json({ success: false, error: 'Minimum withdrawal amount is KSh 500.' });
         }
         if (amount > currentBal) {
             return res.status(400).json({ success: false, error: `Insufficient funds. Your cash balance is KSh ${currentBal.toLocaleString()}.` });

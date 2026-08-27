@@ -402,26 +402,19 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     if (mobSummaryCash) mobSummaryCash.textContent = `KSh ${fmtBal}`;
     if (mobSummaryCoins) mobSummaryCoins.textContent = `${fmtCoins}`;
 
-    // Mobile Withdrawal Button State & Minimum Rules (< KSh 1,000 disabled)
-    const minWithdrawal = 1000;
+    // Mobile Withdrawal Button State (< KSh 500 disabled)
+    const minWithdrawal = 500;
     if (mobWithdrawBtn) {
         if (finalBal >= minWithdrawal) {
             mobWithdrawBtn.disabled = false;
             mobWithdrawBtn.style.opacity = '1';
             mobWithdrawBtn.style.cursor = 'pointer';
             mobWithdrawBtn.style.boxShadow = '0 0 15px rgba(255,215,0,0.4)';
-            if (mobWithdrawNote) {
-                mobWithdrawNote.innerHTML = `<span style="color:#00e676; font-weight:bold;">✓ Ready to withdraw (KSh ${fmtBal} available)</span>`;
-            }
         } else {
             mobWithdrawBtn.disabled = true;
             mobWithdrawBtn.style.opacity = '0.5';
             mobWithdrawBtn.style.cursor = 'not-allowed';
             mobWithdrawBtn.style.boxShadow = 'none';
-            const diff = minWithdrawal - finalBal;
-            if (mobWithdrawNote) {
-                mobWithdrawNote.innerHTML = `No withdrawal available for amounts below KSh 1,000.<br><span style="color:#ffd700;">You need KSh ${diff.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} more to withdraw.</span>`;
-            }
         }
     }
 };
@@ -2220,8 +2213,8 @@ window.promptWalletWithdrawal = function() {
         }
     } catch(e) {}
 
-    if (curBal < 1000) {
-        if (window.showToast) window.showToast('No withdrawal available for amounts below KSh 1,000.', 'error');
+    if (curBal < 500) {
+        if (window.showToast) window.showToast('Minimum withdrawal amount is KSh 500.', 'error');
         return;
     }
 
@@ -2263,8 +2256,8 @@ window.executeWalletWithdrawal = async function() {
         if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number!', 'error');
         return;
     }
-    if (!amount || amount < 1000) {
-        if (window.showToast) window.showToast('No withdrawal available for amounts below KSh 1,000.', 'error');
+    if (!amount || amount < 500) {
+        if (window.showToast) window.showToast('Minimum withdrawal amount is KSh 500.', 'error');
         return;
     }
 
