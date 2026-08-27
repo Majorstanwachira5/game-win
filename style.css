@@ -3419,9 +3419,12 @@ html, body {
   .mobile-wallet-card {
     height: auto !important;
     min-height: unset !important;
-    padding: 8px 12px !important;
+    padding: 8px 10px !important;
     margin-bottom: 2px !important;
     box-sizing: border-box !important;
+  }
+  .mobile-wallet-card .spin-gold-btn {
+    margin-bottom: 0 !important;
   }
 }
 
