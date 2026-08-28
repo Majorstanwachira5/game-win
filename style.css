@@ -836,6 +836,18 @@ body {
   box-shadow: 0 0 60px rgba(0, 240, 255, 0.12), 0 0 100px rgba(255, 215, 0, 0.08);
 }
 
+.wheel-preview-prompt {
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+  user-select: none;
+  animation: pulsePreviewPrompt 2s infinite ease-in-out;
+}
+
+@keyframes pulsePreviewPrompt {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
 .center-hub {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);

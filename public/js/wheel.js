@@ -1,7 +1,10 @@
 /**
- * wheel.js — Luxury Canvas 3D Spin Wheel Engine v3.0 (Permanent Stop Architecture)
- * Renders metallic gold rim, crisp LED bulbs, vibrant gradient slices, clear typography,
- * and physics-based easing animation with 100% rock-solid stationary lock when stopped.
+ * wheel.js — Luxury Canvas 3D Spin Wheel Engine v3.5 (Interactive Pre-Payment Preview & Real Spin Engine)
+ * Features:
+ * 1. Pre-payment Presentation Animation (smooth preview rotation, LED pulse, click-to-stop deceleration).
+ * 2. Complete isolation between Landing Preview and Real Server-Verified Game Spins.
+ * 3. Zero fake rewards, zero unauthorized /api/spin calls, zero CPU/battery drain when resting.
+ * 4. High-DPI crisp Canvas 3D rendering with gold rim, dynamic LEDs, and vibrant gradient slices.
  */
 
 class SpinWheelEngine {
@@ -26,8 +29,18 @@ class SpinWheelEngine {
         this.spinState = null;
         this.animFrameId = null;
 
+        // Pre-payment Preview Presentation State: 'IDLE' | 'PREVIEW_SPINNING' | 'PREVIEW_STOPPING' | 'PREVIEW_STOPPED'
+        this.previewState = 'IDLE';
+        this.previewSpeed = 0.045; // Smooth angular velocity (~2.6 rad/sec)
+        this.previewStartTime = 0;
+        this.previewMaxDuration = 15000; // 15 seconds presentation auto-duration
+        this.previewDecelStartTime = 0;
+        this.previewDecelDuration = 2200; // 2.2s smooth physics friction deceleration
+        this.previewInitialSpeed = 0;
+        this.previewRafId = null;
+
         this.initAudio();
-        // Initial static render (100% stationary, zero idle loop)
+        this.initInteraction();
         this.draw();
     }
 
@@ -89,6 +102,138 @@ class SpinWheelEngine {
         }
     }
 
+    initInteraction() {
+        if (!this.canvas) return;
+        this.canvas.style.cursor = 'pointer';
+        this.canvas.setAttribute('aria-label', 'Interactive PLAYCOIN wheel — tap to stop or spin');
+
+        const handleTap = (e) => {
+            if (this.isSpinning) return; // Real spin currently underway
+            if (window.WheelEngine && typeof window.WheelEngine.handlePreviewTap === 'function') {
+                if (e && e.cancelable) e.preventDefault();
+                window.WheelEngine.handlePreviewTap();
+            }
+        };
+
+        this.canvas.addEventListener('click', handleTap);
+        this.canvas.addEventListener('touchend', handleTap, { passive: false });
+    }
+
+    // ─── PREVIEW PRESENTATION ANIMATION ENGINE ────────────────────────────────
+    startPreview() {
+        if (this.isSpinning || this.previewState === 'PREVIEW_SPINNING') return;
+
+        this.previewState = 'PREVIEW_SPINNING';
+        this.previewStartTime = performance.now();
+
+        if (this.previewRafId) {
+            cancelAnimationFrame(this.previewRafId);
+            this.previewRafId = null;
+        }
+
+        this.updatePreviewBadge('PREVIEW_SPINNING');
+
+        const frame = (now) => {
+            if (this.isSpinning) {
+                // Real spin has taken control, immediately abort preview
+                this.cancelPreview();
+                return;
+            }
+
+            if (this.previewState === 'PREVIEW_SPINNING') {
+                this.currentAngle += this.previewSpeed;
+                this.ledOffset = Math.floor(now / 160) % 2;
+
+                // Auto-decelerate after 15 seconds of unattended presentation
+                if (now - this.previewStartTime >= this.previewMaxDuration) {
+                    this.stopPreview();
+                } else {
+                    this.draw();
+                    this.previewRafId = requestAnimationFrame(frame);
+                }
+            } else if (this.previewState === 'PREVIEW_STOPPING') {
+                const elapsed = now - this.previewDecelStartTime;
+                const p = Math.min(elapsed / this.previewDecelDuration, 1);
+                // Cubic deceleration curve (smooth gradual stop)
+                const ease = Math.pow(1 - p, 2.5);
+                const currentSpeed = this.previewInitialSpeed * ease;
+                this.currentAngle += currentSpeed;
+                this.ledOffset = Math.floor(now / (160 + p * 300)) % 2;
+
+                if (p >= 1) {
+                    // Complete permanent stop
+                    this.previewState = 'PREVIEW_STOPPED';
+                    this.previewRafId = null;
+                    this.ledOffset = 0; // Solid rest LEDs
+                    this.draw();
+                    this.updatePreviewBadge('PREVIEW_STOPPED');
+                    return;
+                }
+
+                this.draw();
+                this.previewRafId = requestAnimationFrame(frame);
+            }
+        };
+
+        this.previewRafId = requestAnimationFrame(frame);
+    }
+
+    stopPreview() {
+        if (this.previewState !== 'PREVIEW_SPINNING') return;
+        this.previewState = 'PREVIEW_STOPPING';
+        this.previewDecelStartTime = performance.now();
+        this.previewInitialSpeed = this.previewSpeed;
+        this.updatePreviewBadge('PREVIEW_STOPPING');
+    }
+
+    cancelPreview() {
+        this.previewState = 'IDLE';
+        if (this.previewRafId) {
+            cancelAnimationFrame(this.previewRafId);
+            this.previewRafId = null;
+        }
+        this.updatePreviewBadge('IDLE');
+    }
+
+    updatePreviewBadge(state) {
+        const textDesktop = document.getElementById('desktopWheelPreviewText');
+        const textMobile = document.getElementById('mobileWheelPreviewText');
+        const badgeDesktop = document.getElementById('desktopWheelPreviewBadge');
+        const badgeMobile = document.getElementById('mobileWheelPreviewBadge');
+
+        let msg = '';
+        let show = true;
+        let isReady = false;
+
+        if (state === 'PREVIEW_SPINNING') {
+            msg = 'Tap the wheel to stop';
+        } else if (state === 'PREVIEW_STOPPING') {
+            msg = 'Slowing down...';
+        } else if (state === 'PREVIEW_STOPPED') {
+            msg = 'Ready to Play? Deposit or Spin Now!';
+            isReady = true;
+        } else {
+            show = false;
+        }
+
+        [textDesktop, textMobile].forEach(el => {
+            if (el) el.textContent = msg;
+        });
+
+        [badgeDesktop, badgeMobile].forEach(b => {
+            if (!b) return;
+            b.style.display = show ? 'block' : 'none';
+            if (isReady) {
+                b.style.color = '#00e676';
+                b.style.textShadow = '0 0 10px rgba(0,230,118,0.4)';
+            } else {
+                b.style.color = '#ffd700';
+                b.style.textShadow = 'none';
+            }
+        });
+    }
+
+    // ─── WHEEL CANVAS RENDERING ───────────────────────────────────────────────
     draw() {
         if (!this.canvas || !this.ctx) return;
         const width = this.canvas.width || 300;
@@ -235,7 +380,10 @@ class SpinWheelEngine {
         return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
+    // ─── REAL SERVER-VERIFIED GAME SPIN ENGINE ────────────────────────────────
     spinToTargetIndex(targetIndex, durationMs = 3600, onComplete) {
+        this.cancelPreview();
+
         if (this.isSpinning) return;
 
         const numSlices = this.slices.length;
@@ -300,7 +448,7 @@ class SpinWheelEngine {
                 this.spinState.lastSliceCrossed = currentSliceIndex;
             }
 
-            // Rapid LED flashing only during active spin
+            // Rapid LED flashing during real spin
             this.ledOffset = Math.floor(now / 90) % 2;
 
             if (progress >= 1) {
@@ -360,7 +508,38 @@ window.WheelEngine = {
             if (inst && typeof inst.updateSlices === 'function') inst.updateSlices(slices);
         });
     },
+    startPreviewAll() {
+        _wheelInstances.forEach(inst => {
+            if (inst && typeof inst.startPreview === 'function') inst.startPreview();
+        });
+    },
+    stopPreviewAll() {
+        _wheelInstances.forEach(inst => {
+            if (inst && typeof inst.stopPreview === 'function') inst.stopPreview();
+        });
+    },
+    cancelPreviewAll() {
+        _wheelInstances.forEach(inst => {
+            if (inst && typeof inst.cancelPreview === 'function') inst.cancelPreview();
+        });
+    },
+    handlePreviewTap() {
+        let isAnyPreviewing = false;
+        _wheelInstances.forEach(inst => {
+            if (inst && inst.previewState === 'PREVIEW_SPINNING') {
+                isAnyPreviewing = true;
+            }
+        });
+
+        if (isAnyPreviewing) {
+            this.stopPreviewAll();
+        } else {
+            // Already at rest, trigger real game flow
+            if (window.performSpin) window.performSpin();
+        }
+    },
     spinToSlice(target, onComplete) {
+        this.cancelPreviewAll();
         _initAllWheels();
 
         const activeInstances = Array.from(_wheelInstances.values()).filter(inst => inst && inst.canvas);
@@ -400,12 +579,20 @@ window.WheelEngine = {
     }
 };
 
-// Auto-initialize when script loads or DOM is ready
+// Auto-initialize & start presentation preview on page load
+function _bootWheelPresentation() {
+    _initAllWheels();
+    // Start presentation animation automatically
+    if (window.WheelEngine) {
+        window.WheelEngine.startPreviewAll();
+    }
+}
+
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(_initAllWheels, 50);
+    setTimeout(_bootWheelPresentation, 80);
 } else {
     document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(_initAllWheels, 50);
+        setTimeout(_bootWheelPresentation, 80);
     });
 }
-window.addEventListener('load', _initAllWheels);
+window.addEventListener('load', _bootWheelPresentation);
