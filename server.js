@@ -878,6 +878,9 @@ app.get(['/api/auth/me', '/auth/me', '/me', '/api/me'], requirePlayerAuth, (req,
                 email: user.email || user.phone,
                 balance: (user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') ? 250000.00 : user.balance,
                 coins: (user.email && user.email.toLowerCase() === 'britannycooke98@gmail.com') ? 250000 : user.coins,
+                freeSpins: user.freeSpins || 0,
+                doubleNextWin: Boolean(user.doubleNextWin),
+                mysteryKeys: user.mysteryKeys || 0,
                 vipTier: user.vipTier,
                 xp: user.xp
             }

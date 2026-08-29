@@ -384,7 +384,11 @@ class SpinWheelEngine {
     spinToTargetIndex(targetIndex, durationMs = 3600, onComplete) {
         this.cancelPreview();
 
-        if (this.isSpinning) return;
+        if (this.animFrameId) {
+            cancelAnimationFrame(this.animFrameId);
+            this.animFrameId = null;
+        }
+        this.isSpinning = false;
 
         const numSlices = this.slices.length;
         const sliceAngle = (2 * Math.PI) / numSlices;
@@ -417,11 +421,6 @@ class SpinWheelEngine {
             onComplete
         };
         this.isSpinning = true;
-
-        if (this.animFrameId) {
-            cancelAnimationFrame(this.animFrameId);
-            this.animFrameId = null;
-        }
 
         const frame = (now) => {
             if (!this.isSpinning || !this.spinState) {

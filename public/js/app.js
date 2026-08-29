@@ -266,9 +266,9 @@ window.setAuthenticatedUser = function (user, token) {
     APP_STATE.userId = user.id || 'usr_player';
     APP_STATE.user = user;
     APP_STATE.isAuthenticated = true;
-    APP_STATE.balance = user.balance ?? 0.00;
-    APP_STATE.coins = user.coins ?? 0;
-    APP_STATE.freeSpins = user.freeSpins ?? 0;
+    APP_STATE.balance = Number(user.balance ?? 0.00);
+    APP_STATE.coins = Number(user.coins ?? 0);
+    APP_STATE.freeSpins = Number(user.freeSpins ?? user.free_spins ?? user.free_spins_count ?? 0);
     APP_STATE.vipTier = user.vipTier || 'bronze';
 
     // TESTER ACCOUNT CONFIGURATION FOR brittanycooke98 / britannycooke98
@@ -326,6 +326,7 @@ window.setAuthenticatedUser = function (user, token) {
     if (userVipEl) userVipEl.textContent = (user.vipTier || 'BRONZE').toUpperCase() + (user.isTester ? ' TESTER VIP' : ' VIP');
 
     updateBalanceUI(user.balance ?? 0.00, user.coins || 0);
+    updateSpinButtonState();
 };
 
 window.showTesterWinAnimation = function (amountText, subtitleText) {
@@ -438,6 +439,8 @@ window.setUnauthenticatedState = function () {
     if (unauthHeader) unauthHeader.style.display = 'flex';
     if (authHeader) authHeader.style.display = 'none';
     if (chatLockOverlay) chatLockOverlay.style.display = 'flex';
+
+    updateSpinButtonState();
 };
 
 window.showRegBonusModal = function () {
@@ -796,6 +799,8 @@ function updateUserState(user, coinsGained = 0) {
     if (user.balance !== undefined) APP_STATE.balance = Number(user.balance);
     if (user.coins !== undefined) APP_STATE.coins = Number(user.coins);
     if (user.freeSpins !== undefined) APP_STATE.freeSpins = Number(user.freeSpins);
+    else if (user.free_spins !== undefined) APP_STATE.freeSpins = Number(user.free_spins);
+    else if (user.free_spins_count !== undefined) APP_STATE.freeSpins = Number(user.free_spins_count);
     if (user.doubleNextWin !== undefined) APP_STATE.doubleNextWin = user.doubleNextWin;
     if (user.mysteryKeys !== undefined) APP_STATE.mysteryKeys = user.mysteryKeys;
     if (user.xp !== undefined) APP_STATE.xp = user.xp;
@@ -874,6 +879,7 @@ function updateSpinButtonState() {
         });
     }
 }
+window.updateSpinButtonState = updateSpinButtonState;
 
 // ─── WHEEL CONTROLS ────────────────────────────────────────────────────────
 function bindWheelControls() {
@@ -1107,7 +1113,7 @@ async function performSpin() {
     }
 
     const wager = APP_STATE.betAmount || 100;
-    const isFreeSpin = (APP_STATE.freeSpins || (APP_STATE.user && APP_STATE.user.freeSpins) || 0) > 0;
+    const isFreeSpin = (Number(APP_STATE.freeSpins) || Number(APP_STATE.user?.freeSpins) || Number(APP_STATE.user?.free_spins) || Number(APP_STATE.user?.free_spins_count) || 0) > 0;
 
     if (!isFreeSpin && (APP_STATE.balance || 0) < wager) {
         promptDirectMpesaPayAndPlay(wager, 'spin', () => {
@@ -1137,36 +1143,45 @@ async function executeSpin(wager) {
             betAmount: APP_STATE.betAmount || 100
         });
 
-        if (!res.success) throw new Error(res.error || 'Spin failed');
+        if (!res || !res.success) throw new Error(res?.error || res?.message || 'Spin failed');
 
         // Spin the 3D wheel to target slice index
-        if (window.WheelEngine) {
+        if (window.WheelEngine && typeof window.WheelEngine.spinToSlice === 'function') {
             window.WheelEngine.spinToSlice(res.wonSlice || res.sliceIndex, () => {
                 // Spin finished
                 APP_STATE.isSpinning = false;
                 allSpinBtns.forEach(btn => btn.disabled = false);
 
+                const wonType = (typeof res.wonSlice === 'object' && res.wonSlice) ? res.wonSlice.type : '';
+                const wonLabel = (typeof res.wonSlice === 'object' && res.wonSlice) ? res.wonSlice.label : (typeof res.wonSlice === 'string' ? res.wonSlice : 'WIN');
+
                 if (res.winAmount > 0) {
-                    showWinModal(`KSh ${res.winAmount.toLocaleString()}`, res.wonSlice.label, res.xpGained);
+                    showWinModal(`KSh ${res.winAmount.toLocaleString()}`, wonLabel, res.xpGained);
                     triggerConfetti();
-                } else if (res.wonSlice.type === 'free_spin') {
+                } else if (wonType === 'free_spin') {
                     showToast(`🎁 You won ${res.freeSpinsGranted || 1} Free Spin(s)!`, 'success');
-                } else if (res.wonSlice.type === 'double_next') {
+                } else if (wonType === 'double_next') {
                     showToast('⚡ Double Spin Activated! Next Win 2X Multiplied', 'warning');
                 } else {
                     showToast('TRY AGAIN! Good luck next spin.', 'info');
                 }
 
-                updateUserState(res.user, res.coinsGained);
+                if (res.user) {
+                    updateUserState(res.user, res.coinsGained);
+                }
                 if (typeof handleChallengesCompleted === 'function') handleChallengesCompleted(res.completedChallenges);
                 if (typeof handleTierUp === 'function') handleTierUp(res);
             });
+        } else {
+            APP_STATE.isSpinning = false;
+            allSpinBtns.forEach(btn => btn.disabled = false);
+            if (res.user) updateUserState(res.user, res.coinsGained);
         }
 
     } catch (err) {
         APP_STATE.isSpinning = false;
         allSpinBtns.forEach(btn => btn.disabled = false);
-        showToast(err.message, 'error');
+        showToast(err.message || 'Spin request failed', 'error');
     }
 }
 window.performSpin = performSpin;

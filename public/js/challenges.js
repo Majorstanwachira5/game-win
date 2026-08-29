@@ -42,16 +42,35 @@ window.switchChallengeTab = function(period) {
     renderChallenges();
 };
 
-window.claimStreakReward = function() {
-    if (window.showToast) window.showToast('🎁 Daily Login Streak Bonus Claimed! +100 $SPIN Coins & 1 Free Spin!', 'success');
-    const btn = document.getElementById('widgetClaimBtn');
+window.claimDailyStreak = window.claimStreakReward = function() {
+    if (!window.APP_STATE || !window.APP_STATE.isAuthenticated) {
+        if (window.showToast) window.showToast('Please Register or Log In first to claim your streak bonus!', 'warning');
+        if (window.openAuthModal) window.openAuthModal('login');
+        return;
+    }
+
+    const btn = document.getElementById('claimStreakBtn') || document.getElementById('widgetClaimBtn');
     if (btn) {
         btn.textContent = '✅ CLAIMED';
         btn.disabled = true;
         btn.classList.remove('gold-pulse-btn');
         btn.style.opacity = '0.6';
     }
+
+    if (window.showToast) window.showToast('🎁 Daily Login Streak Bonus Claimed! +100 $SPIN Coins & 1 Free Spin!', 'success');
     if (window.showCoinsGainedBadge) window.showCoinsGainedBadge(100);
+
+    if (window.APP_STATE) {
+        window.APP_STATE.freeSpins = (window.APP_STATE.freeSpins || 0) + 1;
+        window.APP_STATE.coins = (window.APP_STATE.coins || 0) + 100;
+        if (window.APP_STATE.user) {
+            window.APP_STATE.user.freeSpins = window.APP_STATE.freeSpins;
+            window.APP_STATE.user.coins = window.APP_STATE.coins;
+        }
+        if (window.updateBalanceUI) window.updateBalanceUI(window.APP_STATE.balance, window.APP_STATE.coins);
+        if (window.updateSpinButtonState) window.updateSpinButtonState();
+        try { localStorage.setItem('spin_user_data', JSON.stringify(window.APP_STATE.user)); } catch(e) {}
+    }
 };
 
 function startResetCountdown() {
