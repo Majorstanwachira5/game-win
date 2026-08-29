@@ -252,51 +252,54 @@ class MpesaService {
     }
 
     /**
-     * Persist Transaction Record to Persistent Supabase Database & Memory Map
+     * Persist Transaction Record to Persistent Supabase Database (Async Background) & Memory Map
      */
-    async recordTransaction(tx) {
+    recordTransaction(tx) {
         if (!tx || !tx.checkoutRequestId) return;
         this.pendingTransactions.set(tx.checkoutRequestId, tx);
 
-        try {
-            const dbPayload = {
-                mpesa_checkout_request_id: tx.checkoutRequestId,
-                phone_number: tx.phone,
-                amount: tx.amount,
-                status: tx.status.toLowerCase(),
-                metadata: {
-                    userId: tx.userId,
-                    merchantRequestId: tx.merchantRequestId || '',
-                    reason: tx.reason || '',
-                    resultCode: tx.resultCode !== undefined ? tx.resultCode : null,
-                    resultDesc: tx.resultDesc || ''
-                }
-            };
-            if (tx.mpesaReceiptNumber) dbPayload.mpesa_receipt_number = tx.mpesaReceiptNumber;
-
-            const existing = await dbFetch('transactions', {
-                query: `mpesa_checkout_request_id=eq.${encodeURIComponent(tx.checkoutRequestId)}`
-            });
-
-            if (existing && existing.length > 0) {
-                await dbFetch('transactions', {
-                    method: 'PATCH',
-                    query: `mpesa_checkout_request_id=eq.${encodeURIComponent(tx.checkoutRequestId)}`,
-                    body: dbPayload
-                });
-            } else {
-                await dbFetch('transactions', {
-                    method: 'POST',
-                    body: {
-                        player_id: tx.userId && tx.userId.length === 36 ? tx.userId : '00000000-0000-0000-0000-000000000001',
-                        type: 'deposit',
-                        ...dbPayload
+        // Persist to Supabase DB asynchronously without blocking real-time payment response latency
+        (async () => {
+            try {
+                const dbPayload = {
+                    mpesa_checkout_request_id: tx.checkoutRequestId,
+                    phone_number: tx.phone,
+                    amount: tx.amount,
+                    status: (tx.status || 'pending').toLowerCase(),
+                    metadata: {
+                        userId: tx.userId,
+                        merchantRequestId: tx.merchantRequestId || '',
+                        reason: tx.reason || '',
+                        resultCode: tx.resultCode !== undefined ? tx.resultCode : null,
+                        resultDesc: tx.resultDesc || ''
                     }
+                };
+                if (tx.mpesaReceiptNumber) dbPayload.mpesa_receipt_number = tx.mpesaReceiptNumber;
+
+                const existing = await dbFetch('transactions', {
+                    query: `mpesa_checkout_request_id=eq.${encodeURIComponent(tx.checkoutRequestId)}`
                 });
+
+                if (existing && existing.length > 0) {
+                    await dbFetch('transactions', {
+                        method: 'PATCH',
+                        query: `mpesa_checkout_request_id=eq.${encodeURIComponent(tx.checkoutRequestId)}`,
+                        body: dbPayload
+                    });
+                } else {
+                    await dbFetch('transactions', {
+                        method: 'POST',
+                        body: {
+                            player_id: tx.userId && tx.userId.length === 36 ? tx.userId : '00000000-0000-0000-0000-000000000001',
+                            type: 'deposit',
+                            ...dbPayload
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('[MPESA DB RECORD WARNING]', e.message);
             }
-        } catch (e) {
-            console.warn('[MPESA DB RECORD WARNING]', e.message);
-        }
+        })().catch(err => console.warn('[MPESA DB ASYNC WARNING]', err.message));
     }
 
     /**
@@ -440,7 +443,7 @@ class MpesaService {
         };
 
         // Register pending transaction in persistent DB & memory
-        await this.recordTransaction(tx);
+        this.recordTransaction(tx);
 
         platformEvents.emitEvent('STK_PUSH_INITIATED', {
             userId,
@@ -517,7 +520,7 @@ class MpesaService {
                 pendingTx.completedAmount = amount;
                 pendingTx.resultCode = resultCode;
                 pendingTx.resultDesc = resultDesc;
-                await this.recordTransaction(pendingTx);
+                this.recordTransaction(pendingTx);
             }
 
             platformEvents.emitEvent('PAYMENT_RECEIVED', {
@@ -547,7 +550,7 @@ class MpesaService {
             pendingTx.reason = cleanReason;
             pendingTx.resultCode = resultCode;
             pendingTx.resultDesc = resultDesc;
-            await this.recordTransaction(pendingTx);
+            this.recordTransaction(pendingTx);
         }
 
         return {

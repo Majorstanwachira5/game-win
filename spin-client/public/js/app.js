@@ -1031,12 +1031,18 @@ window.formatMpesaReason = function (rawReason, code) {
             if (!checkoutRequestId) return;
 
             let attempts = 0;
-            const maxAttempts = 30;
+            const maxAttempts = 60;
+            let isResolved = false;
             const pollInterval = setInterval(async () => {
+                if (isResolved) {
+                    clearInterval(pollInterval);
+                    return;
+                }
                 attempts++;
                 try {
                     const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
                     if (statusRes && statusRes.status === 'COMPLETED') {
+                        isResolved = true;
                         clearInterval(pollInterval);
                         newSubmitBtn.textContent = 'Success!';
                         if (statusBanner) {
@@ -1050,16 +1056,15 @@ window.formatMpesaReason = function (rawReason, code) {
                             updateUserState(statusRes.user, statusRes.coinsGained || statusRes.amount || amount);
                         }
                         triggerConfetti();
-                        setTimeout(() => {
-                            if (modal) {
-                                modal.classList.remove('open', 'active');
-                                modal.style.display = 'none';
-                            }
-                            if (typeof onPaymentSuccess === 'function') {
-                                onPaymentSuccess();
-                            }
-                        }, 600);
+                        if (modal) {
+                            modal.classList.remove('open', 'active');
+                            modal.style.display = 'none';
+                        }
+                        if (typeof onPaymentSuccess === 'function') {
+                            onPaymentSuccess();
+                        }
                     } else if (statusRes && statusRes.status === 'FAILED') {
+                        isResolved = true;
                         clearInterval(pollInterval);
                         newSubmitBtn.disabled = false;
                         newSubmitBtn.textContent = 'Retry';
@@ -1088,7 +1093,7 @@ window.formatMpesaReason = function (rawReason, code) {
                         if (statusText) statusText.textContent = 'Timed Out (1037)';
                     }
                 }
-            }, 2500);
+            }, 1000);
         } catch (err) {
             newSubmitBtn.disabled = false;
             newSubmitBtn.textContent = 'Retry';
@@ -1283,16 +1288,23 @@ function bindDepositModal() {
                 if (!checkoutRequestId) return;
 
                 let attempts = 0;
-                const maxAttempts = 30;
+                const maxAttempts = 60;
+                let isResolved = false;
                 const pollInterval = setInterval(async () => {
+                    if (isResolved) {
+                        clearInterval(pollInterval);
+                        return;
+                    }
                     attempts++;
                     try {
                         const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
                         if (statusRes && statusRes.status === 'COMPLETED') {
+                            isResolved = true;
                             clearInterval(pollInterval);
                             confirmBtn.textContent = 'Success!';
                             if (statusBanner) {
                                 statusBanner.style.borderColor = 'var(--gold-primary)';
+                                statusBanner.style.color = '#00ff66';
                                 if (statusTitle) statusTitle.textContent = 'Payment Confirmed';
                                 if (statusDesc) statusDesc.textContent = `KSh ${amount.toLocaleString()} credited successfully`;
                             }
@@ -1308,9 +1320,10 @@ function bindDepositModal() {
                                 if (statusBanner) statusBanner.style.display = 'none';
                                 confirmBtn.disabled = false;
                                 confirmBtn.textContent = 'Deposit';
-                            }, 2000);
+                            }, 400);
 
                         } else if (statusRes && statusRes.status === 'FAILED') {
+                            isResolved = true;
                             clearInterval(pollInterval);
                             confirmBtn.disabled = false;
                             confirmBtn.textContent = 'Retry';
@@ -1339,7 +1352,7 @@ function bindDepositModal() {
                             }
                         }
                     }
-                }, 2500);
+                }, 1000);
             } catch (err) {
                 showToast(err.message || 'M-Pesa STK Push failed. Check your details.', 'error');
                 confirmBtn.disabled = false;
