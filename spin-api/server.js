@@ -1562,7 +1562,13 @@ app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAu
         const depositAmount = Math.max(1, Math.round(Number(amount) || 100));
         const user = getOrCreateUser(userId, req.userEmail, req.isTester);
 
-        const result = await mpesaService.initiateStkPush(userId, phone, depositAmount);
+        const host = req.get('host') || 'playcoin.live';
+        const cleanHost = host.replace(/:[0-9]+$/, '');
+        const callbackUrl = (cleanHost.includes('playcoin.live') || cleanHost.includes('ngrok') || cleanHost.includes('loca.lt'))
+            ? `https://${cleanHost}/api/mpesa/callback`
+            : '';
+
+        const result = await mpesaService.initiateStkPush(userId, phone, depositAmount, 'SpinWin', callbackUrl);
         const coinsGained = rewardEngine.calculateRewardCoins(depositAmount);
 
         // Real payment: Funds and coins are credited upon successful M-Pesa confirmation
@@ -1623,7 +1629,7 @@ app.post('/api/deposit/authorize-pin', requirePlayerAuth, async (req, res) => {
     }
 });
 
-app.post('/api/mpesa/callback', async (req, res) => {
+app.post(['/api/mpesa/callback', '/mpesa/callback', '/api/deposit/callback'], async (req, res) => {
     try {
         const outcome = await mpesaService.processCallback(req.body);
         

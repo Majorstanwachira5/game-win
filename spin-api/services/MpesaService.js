@@ -342,7 +342,7 @@ class MpesaService {
     /**
      * Initiate M-Pesa Express STK Push
      */
-    async initiateStkPush(userId, rawPhone, amount, accountReference = 'SpinWin') {
+    async initiateStkPush(userId, rawPhone, amount, accountReference = 'SpinWin', customCallback = '') {
         const phone = this.formatPhone(rawPhone);
         if (!phone || phone.length !== 12 || !phone.startsWith('254')) {
             throw new Error('Invalid Kenyan phone number format. Must be 07XXXXXXXX, 01XXXXXXXX, or 254XXXXXXXXX.');
@@ -357,6 +357,7 @@ class MpesaService {
 
         const isBuyGoods = this.transactionType === 'CustomerBuyGoodsOnline';
         const partyB = (isBuyGoods && this.tillNumber) ? this.tillNumber : this.businessShortCode;
+        const effectiveCallback = (customCallback && customCallback.startsWith('http')) ? customCallback : this.callbackUrl;
 
         const requestBody = {
             BusinessShortCode: this.businessShortCode,
@@ -367,7 +368,7 @@ class MpesaService {
             PartyA: phone,
             PartyB: partyB,
             PhoneNumber: phone,
-            CallBackURL: this.callbackUrl,
+            CallBackURL: effectiveCallback,
             AccountReference: accountReference,
             TransactionDesc: `Wallet Topup for User ${userId}`
         };
@@ -563,13 +564,56 @@ class MpesaService {
     }
 
     /**
-     * Check transaction status by CheckoutRequestID (DB + Memory Async Support)
+     * Check transaction status by CheckoutRequestID (DB + Memory Async Support + Active Daraja STK Query Fallback)
      */
     async getTransactionStatus(checkoutRequestId) {
         if (!checkoutRequestId) {
             return { status: 'NOT_FOUND' };
         }
-        const tx = await this.getTransaction(checkoutRequestId);
+        let tx = await this.getTransaction(checkoutRequestId);
+        if (tx && tx.status === 'COMPLETED') {
+            return tx;
+        }
+
+        // Active Daraja STK Query Fallback: If pending for > 2.5 seconds, proactively query Safaricom
+        // to instantly catch confirmed payments even if webhook callback is delayed or blocked
+        if (tx && tx.status === 'PENDING' && (Date.now() - (tx.createdAt || 0)) >= 2500) {
+            try {
+                const queryRes = await this.queryStkPush(checkoutRequestId);
+                const resCode = queryRes?.ResultCode !== undefined ? Number(queryRes.ResultCode) : null;
+                if (resCode === 0) {
+                    tx.status = 'COMPLETED';
+                    tx.resultCode = 0;
+                    tx.resultDesc = queryRes.ResultDesc || 'The service request has been accepted successfully';
+                    tx.mpesaReceiptNumber = queryRes.MpesaReceiptNumber || tx.mpesaReceiptNumber || 'MPESA_' + Date.now();
+                    this.recordTransaction(tx);
+                    platformEvents.emitEvent('PAYMENT_RECEIVED', {
+                        userId: tx.userId || 'unknown',
+                        amount: tx.amount,
+                        receipt: tx.mpesaReceiptNumber,
+                        phone: tx.phone
+                    });
+                } else if (resCode === 1032) {
+                    tx.status = 'FAILED';
+                    tx.reason = '1032 (Cancelled)';
+                    tx.resultCode = 1032;
+                    this.recordTransaction(tx);
+                } else if (resCode === 1037) {
+                    tx.status = 'FAILED';
+                    tx.reason = '1037 (Timeout)';
+                    tx.resultCode = 1037;
+                    this.recordTransaction(tx);
+                } else if (resCode === 1) {
+                    tx.status = 'FAILED';
+                    tx.reason = '1 (Insufficient Balance)';
+                    tx.resultCode = 1;
+                    this.recordTransaction(tx);
+                }
+            } catch (queryErr) {
+                // If Daraja query is pending or not yet resolved, keep transaction state as pending
+            }
+        }
+
         if (tx) {
             return tx;
         }
