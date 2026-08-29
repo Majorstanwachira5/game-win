@@ -1041,7 +1041,10 @@ window.formatMpesaReason = function (rawReason, code) {
                 attempts++;
                 try {
                     const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
-                    if (statusRes && statusRes.status === 'COMPLETED') {
+                    const statusUpper = (statusRes?.status || '').toUpperCase();
+                    const isConfirmed = statusUpper === 'COMPLETED' || statusUpper === 'SUCCESS' || statusUpper === 'CONFIRMED' || (statusRes?.success === true && statusRes?.amount > 0);
+
+                    if (isConfirmed) {
                         isResolved = true;
                         clearInterval(pollInterval);
                         newSubmitBtn.textContent = 'Success!';
@@ -1056,14 +1059,28 @@ window.formatMpesaReason = function (rawReason, code) {
                             updateUserState(statusRes.user, statusRes.coinsGained || statusRes.amount || amount);
                         }
                         triggerConfetti();
+
+                        // Cleanly close modal and overlays for instant mobile transition
                         if (modal) {
                             modal.classList.remove('open', 'active');
                             modal.style.display = 'none';
                         }
+                        document.querySelectorAll('#phonePayModal, #depositModal').forEach(m => {
+                            m.classList.remove('open', 'active');
+                            m.style.display = 'none';
+                        });
+
+                        const wheelEl = document.getElementById('wheelCanvas') || document.querySelector('.wheel-container') || document.querySelector('.hero-section');
+                        if (wheelEl && typeof wheelEl.scrollIntoView === 'function') {
+                            wheelEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+
                         if (typeof onPaymentSuccess === 'function') {
                             onPaymentSuccess();
+                        } else {
+                            executeSpin(amount || 100);
                         }
-                    } else if (statusRes && statusRes.status === 'FAILED') {
+                    } else if (statusUpper === 'FAILED') {
                         isResolved = true;
                         clearInterval(pollInterval);
                         newSubmitBtn.disabled = false;
@@ -1298,7 +1315,10 @@ function bindDepositModal() {
                     attempts++;
                     try {
                         const statusRes = await apiFetch(`/api/deposit/status/${checkoutRequestId}`);
-                        if (statusRes && statusRes.status === 'COMPLETED') {
+                        const statusUpper = (statusRes?.status || '').toUpperCase();
+                        const isConfirmed = statusUpper === 'COMPLETED' || statusUpper === 'SUCCESS' || statusUpper === 'CONFIRMED' || (statusRes?.success === true && statusRes?.amount > 0);
+
+                        if (isConfirmed) {
                             isResolved = true;
                             clearInterval(pollInterval);
                             confirmBtn.textContent = 'Success!';
@@ -1320,9 +1340,9 @@ function bindDepositModal() {
                                 if (statusBanner) statusBanner.style.display = 'none';
                                 confirmBtn.disabled = false;
                                 confirmBtn.textContent = 'Deposit';
-                            }, 400);
+                            }, 300);
 
-                        } else if (statusRes && statusRes.status === 'FAILED') {
+                        } else if (statusUpper === 'FAILED') {
                             isResolved = true;
                             clearInterval(pollInterval);
                             confirmBtn.disabled = false;

@@ -308,10 +308,14 @@ class MpesaService {
     async getTransaction(checkoutRequestId) {
         if (!checkoutRequestId) return null;
 
-        if (this.pendingTransactions.has(checkoutRequestId)) {
-            return this.pendingTransactions.get(checkoutRequestId);
+        let tx = this.pendingTransactions.get(checkoutRequestId) || null;
+
+        // If in-memory tx is already COMPLETED, return it
+        if (tx && (tx.status === 'COMPLETED' || tx.status === 'SUCCESS')) {
+            return tx;
         }
 
+        // Check database to see if transaction was confirmed externally or via webhook
         try {
             const rows = await dbFetch('transactions', {
                 query: `mpesa_checkout_request_id=eq.${encodeURIComponent(checkoutRequestId)}`
@@ -319,24 +323,30 @@ class MpesaService {
             if (rows && rows.length > 0) {
                 const r = rows[0];
                 const meta = r.metadata || {};
-                const tx = {
-                    userId: meta.userId || 'demo-user-1',
-                    phone: r.phone_number,
-                    amount: Number(r.amount),
-                    status: (r.status || 'pending').toUpperCase(),
-                    checkoutRequestId: r.mpesa_checkout_request_id,
-                    merchantRequestId: meta.merchantRequestId || '',
-                    mpesaReceiptNumber: r.mpesa_receipt_number || null,
+                const dbStatus = (r.status || 'pending').toUpperCase();
+                const dbTx = {
+                    userId: meta.userId || r.player_id || tx?.userId || 'demo-user-1',
+                    phone: r.phone_number || tx?.phone,
+                    amount: Number(r.amount) || tx?.amount || 100,
+                    status: (dbStatus === 'SUCCESS' || dbStatus === 'CONFIRMED') ? 'COMPLETED' : dbStatus,
+                    checkoutRequestId: r.mpesa_checkout_request_id || checkoutRequestId,
+                    merchantRequestId: meta.merchantRequestId || tx?.merchantRequestId || '',
+                    mpesaReceiptNumber: r.mpesa_receipt_number || tx?.mpesaReceiptNumber || null,
                     reason: meta.reason || null
                 };
-                this.pendingTransactions.set(checkoutRequestId, tx);
-                return tx;
+
+                if (dbTx.status === 'COMPLETED') {
+                    this.pendingTransactions.set(checkoutRequestId, dbTx);
+                    return dbTx;
+                }
+
+                if (!tx) tx = dbTx;
             }
         } catch (e) {
             console.warn('[MPESA DB LOOKUP WARNING]', e.message);
         }
 
-        return null;
+        return tx;
     }
 
     /**
