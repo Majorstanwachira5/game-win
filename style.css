@@ -4401,22 +4401,477 @@ html, body {
   margin-bottom: 3px;
 }
 
+.btn-chart-expand {
+  background: rgba(0, 240, 255, 0.12);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: #00f0ff;
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-chart-expand:hover {
+  background: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+/* Fullscreen Chart Mode */
+.market-dashboard-modal.fullscreen-chart-mode {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 10px 14px !important;
+  z-index: 9999999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.market-dashboard-modal.fullscreen-chart-mode .market-bottom-section {
+  display: none !important;
+}
+
+.market-dashboard-modal.fullscreen-chart-mode .market-chart-section {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
+}
+
+.market-dashboard-modal.fullscreen-chart-mode .market-canvas-container {
+  flex: 1 !important;
+  height: auto !important;
+  min-height: 380px !important;
+}
+
+/* Technical Indicators Toggles */
+.market-indicators-group {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.market-indicator-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: 'Sora', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.market-indicator-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.market-indicator-btn.active {
+  background: rgba(0, 240, 255, 0.2);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  font-weight: 900;
+}
+
+/* Drawing Tools */
+.market-drawing-tools {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.drawing-tool-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drawing-tool-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.drawing-tool-btn.active {
+  background: rgba(255, 215, 0, 0.25);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+/* Workspace Multi-Tab Header */
+.workspace-tabs-header {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.workspace-tab-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.workspace-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.workspace-tab-btn.active {
+  background: rgba(0, 240, 255, 0.15);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+}
+
+.workspace-tab-badge {
+  background: rgba(0, 230, 118, 0.2);
+  color: #00e676;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+.workspace-pane {
+  display: none;
+}
+
+.workspace-pane.active {
+  display: block;
+}
+
+/* Positions, Orders, and History Lists */
+.market-positions-list, .market-orders-list, .market-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.position-card, .order-card {
+  background: rgba(6, 10, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.position-side-pill {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.position-side-pill.buy {
+  background: rgba(0, 230, 118, 0.18);
+  color: #00e676;
+}
+
+.position-side-pill.sell {
+  background: rgba(255, 23, 68, 0.18);
+  color: #ff1744;
+}
+
+.position-pl-badge {
+  font-family: 'Orbitron', 'Sora', monospace;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.position-pl-badge.profit {
+  background: rgba(0, 230, 118, 0.15);
+  color: #00e676;
+}
+
+.position-pl-badge.loss {
+  background: rgba(255, 23, 68, 0.15);
+  color: #ff1744;
+}
+
+.btn-close-position {
+  background: rgba(255, 23, 68, 0.15);
+  border: 1px solid rgba(255, 23, 68, 0.4);
+  color: #ff1744;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-close-position:hover {
+  background: #ff1744;
+  color: #fff;
+}
+
+/* Trading Side Tabs & Input Form */
+.trade-side-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.trade-side-tab {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.trade-side-tab.active-buy {
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.3), rgba(0, 230, 118, 0.1));
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.5);
+  box-shadow: 0 0 10px rgba(0, 230, 118, 0.25);
+}
+
+.trade-side-tab.active-sell {
+  background: linear-gradient(135deg, rgba(255, 23, 68, 0.3), rgba(255, 23, 68, 0.1));
+  color: #ff1744;
+  border: 1px solid rgba(255, 23, 68, 0.5);
+  box-shadow: 0 0 10px rgba(255, 23, 68, 0.25);
+}
+
+.trade-input-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trade-input-group label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.trade-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.trade-input-wrapper input {
+  width: 100%;
+  background: rgba(4, 7, 15, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 9px 45px 9px 12px;
+  color: #fff;
+  font-family: 'Orbitron', 'Sora', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.trade-input-wrapper input:focus {
+  border-color: var(--cyan-accent);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+.trade-input-unit {
+  position: absolute;
+  right: 12px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.trade-quick-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.quick-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.trade-preview-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(6, 10, 20, 0.6);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 10px;
+}
+
+.preview-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.preview-val {
+  color: #00f0ff;
+  font-family: 'Orbitron', 'Sora', monospace;
+  font-weight: 800;
+}
+
+.btn-execute-trade {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-execute-trade.buy {
+  background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%);
+  color: #000;
+  box-shadow: 0 0 18px rgba(0, 230, 118, 0.35);
+}
+
+.btn-execute-trade.buy:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(0, 230, 118, 0.65);
+}
+
+.btn-execute-trade.sell {
+  background: linear-gradient(135deg, #ff1744 0%, #ff5252 100%);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(255, 23, 68, 0.35);
+}
+
+.btn-execute-trade.sell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 25px rgba(255, 23, 68, 0.65);
+}
+
+.btn-quick-deposit {
+  width: 100%;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 8px;
+  color: var(--gold-primary);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-quick-deposit:hover {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.trading-secondary-actions {
+  margin-top: 4px;
+}
+
 /* Mobile Responsiveness for MT5 Trading Terminal */
 @media (max-width: 768px) {
   .market-dashboard-modal {
-    padding: 12px !important;
-    gap: 10px !important;
+    padding: 10px !important;
+    gap: 8px !important;
     width: 96% !important;
   }
 
   .market-header-block {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .market-header-actions {
-    width: 100%;
-    justify-content: space-between;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .terminal-metrics-strip {
@@ -4424,7 +4879,7 @@ html, body {
   }
 
   .market-canvas-container {
-    height: 250px;
+    height: 270px;
   }
 
   .market-hud-bar {
@@ -4435,11 +4890,8 @@ html, body {
   .market-bottom-section {
     grid-template-columns: 1fr;
   }
-
-  .trading-actions-grid {
-    grid-template-columns: 1fr;
-  }
 }
+
 
 
 

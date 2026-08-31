@@ -30,8 +30,10 @@ const tonService = require('./spin-api/services/TonService');
 const referralService = require('./spin-api/services/ReferralService');
 const adminService = require('./spin-api/services/AdminService');
 const marketService = require('./spin-api/services/MarketService');
+const tradingService = require('./spin-api/services/TradingService');
 
 // Hook authoritative wallet coin events to market volume
+
 platformEvents.on('WALLET_UPDATED', (payload) => {
     if (payload && (payload.assetType === 'PLAY' || payload.assetType === 'PLAY_COINS')) {
         marketService.recordActivityVolume(payload.amountCredited || 0);
@@ -2527,6 +2529,82 @@ app.get('/api/admin/market/overview', requireAdminAuth, (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PLAYCOIN AUTHORITATIVE TRADING & POSITION MANAGEMENT APIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// POST /api/trading/order — Execute an authoritative market BUY / SELL order
+app.post(['/api/trading/order', '/api/market/trade', '/api/trading/execute'], requirePlayerAuth, (req, res) => {
+    try {
+        const { side, amount, orderType, clientOrderId } = req.body;
+        const user = getOrCreateUser(req.userId, req.userEmail, req.isTester);
+        const result = tradingService.executeOrder(user, { side, amount, orderType, clientOrderId });
+        saveUsersCache();
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/trading/positions — Get user active positions with live calculated P/L
+app.get(['/api/trading/positions', '/api/market/positions'], requirePlayerAuth, (req, res) => {
+    try {
+        const positions = tradingService.getUserPositions(req.userId);
+        res.json({
+            success: true,
+            count: positions.length,
+            positions,
+            marketPrice: marketService.currentPrice,
+            serverTimestamp: Date.now()
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/trading/close-position — Close an active position at live market price
+app.post(['/api/trading/close-position', '/api/market/close-position'], requirePlayerAuth, (req, res) => {
+    try {
+        const { positionId } = req.body;
+        if (!positionId) return res.status(400).json({ success: false, error: 'positionId is required' });
+        const user = getOrCreateUser(req.userId, req.userEmail, req.isTester);
+        const result = tradingService.closePosition(user, positionId);
+        saveUsersCache();
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/trading/orders — Get user orders
+app.get(['/api/trading/orders', '/api/market/orders'], requirePlayerAuth, (req, res) => {
+    try {
+        const orders = tradingService.getUserOrders(req.userId);
+        res.json({
+            success: true,
+            count: orders.length,
+            orders
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/trading/history — Get user trade history
+app.get(['/api/trading/history', '/api/market/trade-history'], requirePlayerAuth, (req, res) => {
+    try {
+        const history = tradingService.getUserHistory(req.userId);
+        res.json({
+            success: true,
+            count: history.length,
+            history
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  SWAGGER OPENAPI 3.0 UI DOCUMENTATION & INTERACTIVE AUTH TESTING

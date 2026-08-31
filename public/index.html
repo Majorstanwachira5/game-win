@@ -1513,8 +1513,11 @@
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div id="modal-market" class="game-modal-overlay" style="display:none">
-        <div class="market-dashboard-modal glass-modal trade-terminal-theme">
+        <div class="market-dashboard-modal glass-modal trade-terminal-theme" id="marketDashboardModal">
             <!-- Terminal Top Navigation & Ticker Bar -->
             <div class="market-header-block">
                 <div class="market-title-area">
@@ -1529,6 +1532,9 @@
                     </div>
                 </div>
                 <div class="market-header-actions">
+                    <button type="button" class="btn-chart-expand" id="btnFullscreenToggle" onclick="if(window.MarketEngine) window.MarketEngine.toggleFullscreenChart();" title="Toggle Fullscreen Chart Mode">
+                        <span class="expand-icon">⛶</span> <span class="expand-btn-text">Expand</span>
+                    </button>
                     <button type="button" class="btn-terminal-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Deposit funds via M-Pesa (Min KSh 200)">
                         <span>💳</span> DEPOSIT
                     </button>
@@ -1563,15 +1569,15 @@
                 </div>
             </div>
 
-            <!-- Candlestick Chart Area with Live HUD & Chart Type Controls -->
-            <div class="market-chart-section">
+            <!-- Candlestick Chart Area with Live HUD & Multi-Tool Toolbar -->
+            <div class="market-chart-section" id="marketChartSection">
                 <div class="market-chart-toolbar">
                     <!-- Chart Type Selector -->
                     <div class="market-chart-types" id="marketChartTypeTabs">
                         <button type="button" class="market-type-tab active" data-chart-type="candles" title="Candlestick Chart">🕯️ Candles</button>
                         <button type="button" class="market-type-tab" data-chart-type="line" title="Line Price Chart">📈 Line</button>
                         <button type="button" class="market-type-tab" data-chart-type="area" title="Filled Area Mountain Chart">🏔️ Area</button>
-                        <button type="button" class="market-type-tab" data-chart-type="ohlc" title="OHLC Bar Chart">📊 OHLC</button>
+                        <button type="button" class="market-type-tab" data-chart-type="ohlc" title="OHLC Bar Chart">📊 Bars</button>
                     </div>
 
                     <!-- Timeframe Selector -->
@@ -1581,7 +1587,24 @@
                         <button type="button" class="market-time-tab" data-interval="15m">15m</button>
                         <button type="button" class="market-time-tab active" data-interval="1h">1h</button>
                         <button type="button" class="market-time-tab" data-interval="4h">4h</button>
-                        <button type="button" class="market-time-tab" data-interval="1d">1d</button>
+                        <button type="button" class="market-time-tab" data-interval="1d">1D</button>
+                    </div>
+
+                    <!-- Technical Indicators Toggles -->
+                    <div class="market-indicators-group" id="marketIndicatorsGroup">
+                        <button type="button" class="market-indicator-btn active" data-indicator="ma" title="Moving Average (7, 25, 99)">MA</button>
+                        <button type="button" class="market-indicator-btn" data-indicator="ema" title="Exponential Moving Average (12, 26)">EMA</button>
+                        <button type="button" class="market-indicator-btn" data-indicator="boll" title="Bollinger Bands (20, 2)">BOLL</button>
+                        <button type="button" class="market-indicator-btn" data-indicator="rsi" title="Relative Strength Index (14)">RSI</button>
+                        <button type="button" class="market-indicator-btn active" data-indicator="vol" title="Volume Histogram">VOL</button>
+                    </div>
+
+                    <!-- Drawing Tools Toolbar -->
+                    <div class="market-drawing-tools" id="marketDrawingTools">
+                        <button type="button" class="drawing-tool-btn active" data-tool="crosshair" title="Crosshair / Magnifier">✛</button>
+                        <button type="button" class="drawing-tool-btn" data-tool="trendline" title="Trendline Drawing">📏</button>
+                        <button type="button" class="drawing-tool-btn" data-tool="hline" title="Horizontal Price Line">➖</button>
+                        <button type="button" class="drawing-tool-btn" data-tool="clear" title="Clear Drawings">🗑️</button>
                     </div>
 
                     <!-- Live Cursor OHLC HUD Readout -->
@@ -1591,80 +1614,154 @@
                         <span class="hud-item"><strong class="hud-lbl">L:</strong> <span id="hudLow">---</span></span>
                         <span class="hud-item"><strong class="hud-lbl">C:</strong> <span id="hudClose">---</span></span>
                         <span class="hud-item"><strong class="hud-lbl">VOL:</strong> <span id="hudVol">---</span></span>
-                    </div>
-
-                    <div class="market-chart-legend">
-                        <div class="legend-item"><span class="legend-dot green"></span> Bull</div>
-                        <div class="legend-item"><span class="legend-dot red"></span> Bear</div>
+                        <span class="hud-item" id="hudMaWrap" style="display:none;"><strong class="hud-lbl">MA7:</strong> <span id="hudMa">---</span></span>
+                        <span class="hud-item" id="hudRsiWrap" style="display:none;"><strong class="hud-lbl">RSI:</strong> <span id="hudRsi">---</span></span>
                     </div>
                 </div>
 
-                <div class="market-canvas-container">
+                <div class="market-canvas-container" id="marketCanvasContainer">
                     <canvas id="marketCandleCanvas"></canvas>
                 </div>
             </div>
 
             <!-- Bottom Trading & Settlement Workspace -->
             <div class="market-bottom-section">
-                <!-- Left: Authoritative Double-Entry Ledger Feed -->
+                <!-- Left: Multi-Tab Positions, Orders, History & Ledger Workspace -->
                 <div class="market-activity-card">
-                    <div class="market-section-title">
-                        <span>📜</span> AUTHORITATIVE SETTLEMENT FEED
+                    <div class="workspace-tabs-header">
+                        <button type="button" class="workspace-tab-btn active" data-target-pane="panePositions">
+                            <span>📊</span> POSITIONS <span class="workspace-tab-badge" id="posCountBadge">0</span>
+                        </button>
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneOrders">
+                            <span>📜</span> ORDERS
+                        </button>
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneHistory">
+                            <span>🕒</span> HISTORY
+                        </button>
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneLedger">
+                            <span>🛡️</span> SETTLEMENT FEED
+                        </button>
                     </div>
-                    <div id="marketActivityList" class="market-activity-list">
-                        <div class="market-empty-activity">
-                            <span>⏳</span>
-                            <p>Loading ledger transactions...</p>
+
+                    <div class="workspace-tab-content">
+                        <!-- Pane 1: Active Open Positions with Live P/L -->
+                        <div id="panePositions" class="workspace-pane active">
+                            <div id="marketPositionsList" class="market-positions-list">
+                                <div class="market-empty-activity">
+                                    <span>📊</span>
+                                    <p>No open positions. Execute a BUY or SELL order to open a position.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 2: User Orders -->
+                        <div id="paneOrders" class="workspace-pane" style="display:none;">
+                            <div id="marketOrdersList" class="market-orders-list">
+                                <div class="market-empty-activity">
+                                    <span>📜</span>
+                                    <p>No recent orders found.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 3: Trade History -->
+                        <div id="paneHistory" class="workspace-pane" style="display:none;">
+                            <div id="marketHistoryList" class="market-history-list">
+                                <div class="market-empty-activity">
+                                    <span>🕒</span>
+                                    <p>No completed trade history.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 4: Authoritative Double-Entry Ledger Feed -->
+                        <div id="paneLedger" class="workspace-pane" style="display:none;">
+                            <div id="marketActivityList" class="market-activity-list">
+                                <div class="market-empty-activity">
+                                    <span>⏳</span>
+                                    <p>Loading ledger transactions...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right: Trading Capital & Deposit Execution Panel -->
+                <!-- Right: Professional Order Placement & Trading Capital Panel -->
                 <div class="market-trading-panel">
                     <div class="market-section-title">
-                        <span>⚡</span> TRADING CAPITAL & EXECUTION
+                        <span>⚡</span> ORDER PLACEMENT
+                    </div>
+
+                    <!-- Buy / Sell Side Selector Tabs -->
+                    <div class="trade-side-tabs">
+                        <button type="button" class="trade-side-tab active-buy" id="btnSideBuy" onclick="if(window.MarketEngine) window.MarketEngine.setTradeSide('BUY');">
+                            <span>🟢</span> BUY PLAY
+                        </button>
+                        <button type="button" class="trade-side-tab" id="btnSideSell" onclick="if(window.MarketEngine) window.MarketEngine.setTradeSide('SELL');">
+                            <span>🔴</span> SELL PLAY
+                        </button>
                     </div>
                     
                     <div class="trading-capital-box">
                         <div class="capital-row">
-                            <span class="capital-label">Available Cash Balance:</span>
+                            <span class="capital-label" id="tradeAvailableLabel">Available Cash:</span>
                             <strong class="capital-val" id="tradeAvailableCash" style="color:var(--gold-primary);">KSh 0.00</strong>
                         </div>
                         <div class="capital-row">
-                            <span class="capital-label">Available Play Coins:</span>
+                            <span class="capital-label">Coin Holdings:</span>
                             <strong class="capital-val" id="tradeAvailableCoins" style="color:var(--cyan-accent);">0 PLAY</strong>
                         </div>
                         <div class="capital-row valuation-row">
-                            <span class="capital-label">Estimated Position Valuation:</span>
-                            <strong class="capital-val" id="tradeTotalValuation">KSh 0.00</strong>
+                            <span class="capital-label">Market Execution Price:</span>
+                            <strong class="capital-val" id="tradeExecutionPriceDisplay" style="color:#00f0ff;">KSh 0.5000</strong>
                         </div>
                     </div>
 
-                    <div class="trading-actions-grid">
-                        <button type="button" class="btn-trade-action deposit-btn trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();">
-                            <span class="action-icon">💳</span>
-                            <div class="action-text">
-                                <span class="action-title">DEPOSIT</span>
-                                <small class="action-sub">Deposit via M-Pesa (Min KSh 200)</small>
+                    <!-- Order Input Form -->
+                    <div class="trade-input-form">
+                        <div class="trade-input-group">
+                            <label for="tradeOrderAmount" id="tradeAmountLabel">AMOUNT (KSh):</label>
+                            <div class="trade-input-wrapper">
+                                <input type="number" id="tradeOrderAmount" min="10" step="10" placeholder="Min 10" oninput="if(window.MarketEngine) window.MarketEngine.calculateOrderPreview();" />
+                                <span class="trade-input-unit" id="tradeAmountUnit">KSh</span>
                             </div>
-                        </button>
+                        </div>
 
-                        <button type="button" class="btn-trade-action spin-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); if(window.playGame) window.playGame('wheel');">
-                            <span class="action-icon">🎰</span>
-                            <div class="action-text">
-                                <span class="action-title">PLAY WHEEL</span>
-                                <small class="action-sub">Wager Coins / Multipliers</small>
-                            </div>
+                        <!-- Quick Percentage Chips -->
+                        <div class="trade-quick-chips">
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(25);">25%</button>
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(50);">50%</button>
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(75);">75%</button>
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(100);">100%</button>
+                        </div>
+
+                        <!-- Estimated Conversion Preview -->
+                        <div class="trade-preview-strip">
+                            <span class="preview-label" id="tradePreviewLabel">Estimated Receive:</span>
+                            <strong class="preview-val" id="tradePreviewValue">0.00 PLAY</strong>
+                        </div>
+
+                        <!-- Primary Execute Trade Button -->
+                        <button type="button" id="btnExecuteTrade" class="btn-execute-trade buy" onclick="if(window.MarketEngine) window.MarketEngine.executeCurrentOrder();">
+                            <span class="exec-icon">⚡</span>
+                            <span class="exec-title" id="btnExecuteText">EXECUTE BUY ORDER</span>
+                        </button>
+                    </div>
+
+                    <div class="trading-secondary-actions">
+                        <button type="button" class="btn-quick-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();">
+                            <span>💳</span> Deposit via M-Pesa (Min KSh 200)
                         </button>
                     </div>
 
                     <div class="terminal-note-box">
-                        <span>🛡️</span> Secure instant deposits via M-Pesa (Min KSh 200). Immutable ledger & balance verification.
+                        <span>🛡️</span> All order executions & settlements are backend-authoritative and recorded in the immutable ledger.
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
 
 
 

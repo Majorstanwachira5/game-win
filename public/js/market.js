@@ -1,24 +1,41 @@
 /**
- * market.js — PLAYCOIN Market Dashboard & Interactive Candlestick Engine
+ * market.js — Authoritative PLAYCOIN Professional Trading Terminal Engine
  * 
  * Features:
- * - High-DPI Interactive HTML5 Canvas Candlestick Chart
- * - Timeframe switching (1m, 5m, 15m, 1h, 4h, 1d)
- * - Hover crosshairs, live price line, volume histogram, floating OHLC tooltip
- * - Zoom & Pan navigation
- * - Authoritative backend market data consumption
- * - Single authoritative user coin balance display & ledger activity
- * - Configurable Telegram redemption confirmation flow
- * - Strictly zero fake/mock frontend data
+ * - High-DPI HTML5 Canvas Chart with Pan & Zoom
+ * - Multi-chart presentation modes (Candles, Line, Area, Bars/OHLC)
+ * - Technical Indicators Engine (MA, EMA, Bollinger Bands, RSI, Volume)
+ * - Interactive Crosshair / Magnifier with price & time axis bubbles
+ * - Compact Drawing Tools (Crosshair, Trendline, Horizontal Line, Clear)
+ * - Fullscreen Chart Mode expansion
+ * - Backend-authoritative order placement (BUY / SELL PLAYCOIN)
+ * - Real-time Open Positions with dynamic live P/L calculation & Position Close
+ * - Order book history & authoritative double-entry ledger feeds
+ * - Direct integration with existing verified M-Pesa STK Deposit (Min KSh 200)
+ * - Strictly zero fake/mock frontend trading data
  */
 
 (function (window, document) {
     'use strict';
 
     const MarketEngine = {
-        // State
+        // Core State
         activeInterval: '1h',
         activeChartType: 'candles',
+        activeIndicators: { ma: true, ema: false, boll: false, rsi: false, vol: true },
+        activeDrawingTool: 'crosshair',
+        drawings: [],
+        tempDrawing: null,
+        isFullscreenChart: false,
+
+        // Trading State
+        activeTradeSide: 'BUY',
+        activeWorkspaceTab: 'panePositions',
+        positions: [],
+        orders: [],
+        tradeHistory: [],
+
+        // Chart & Data Buffers
         candles: [],
         marketOverview: null,
         userActivity: [],
@@ -55,12 +72,15 @@
                 if (savedType && ['candles', 'line', 'area', 'ohlc'].includes(savedType)) {
                     this.activeChartType = savedType;
                 }
+                const savedInds = sessionStorage.getItem('market_indicators');
+                if (savedInds) {
+                    this.activeIndicators = JSON.parse(savedInds);
+                }
             } catch (e) {}
 
             this._bindUIEvents();
             this.fetchMarketConfig();
         },
-
 
         /**
          * Fetch public market configuration
@@ -94,7 +114,7 @@
                 this.refreshAll();
             }, 50);
 
-            // Start polling (every 8 seconds)
+            // Start polling (every 6 seconds)
             this.startPolling();
         },
 
@@ -107,7 +127,38 @@
                 modal.classList.remove('open', 'active');
                 modal.setAttribute('style', 'display: none !important;');
             }
+            if (this.isFullscreenChart) {
+                this.toggleFullscreenChart(false);
+            }
             this.stopPolling();
+        },
+
+        /**
+         * Toggle Fullscreen Chart Mode
+         */
+        toggleFullscreenChart: function (forceState) {
+            const modal = document.getElementById('marketDashboardModal') || document.querySelector('.market-dashboard-modal');
+            const btn = document.getElementById('btnFullscreenToggle');
+            if (!modal) return;
+
+            this.isFullscreenChart = typeof forceState === 'boolean' ? forceState : !this.isFullscreenChart;
+
+            if (this.isFullscreenChart) {
+                modal.classList.add('fullscreen-chart-mode');
+                if (btn) {
+                    btn.innerHTML = '<span class="expand-icon">✕</span> <span class="expand-btn-text">Exit Fullscreen</span>';
+                }
+            } else {
+                modal.classList.remove('fullscreen-chart-mode');
+                if (btn) {
+                    btn.innerHTML = '<span class="expand-icon">⛶</span> <span class="expand-btn-text">Expand</span>';
+                }
+            }
+
+            setTimeout(() => {
+                this.resizeCanvas();
+                this.drawChart();
+            }, 60);
         },
 
         /**
@@ -120,10 +171,13 @@
                 if (modal && (modal.classList.contains('open') || modal.style.display === 'flex')) {
                     this.fetchMarketOverview(true);
                     this.fetchCandles(true);
+                    if (this.activeWorkspaceTab === 'panePositions') {
+                        this.fetchPositions(true);
+                    }
                 } else {
                     this.stopPolling();
                 }
-            }, 8000);
+            }, 6000);
         },
 
         /**
@@ -142,6 +196,9 @@
         refreshAll: function () {
             this.fetchMarketOverview(false);
             this.fetchCandles(false);
+            this.fetchPositions(false);
+            this.fetchOrders();
+            this.fetchTradeHistory();
             this.fetchUserActivity();
         },
 
@@ -182,6 +239,7 @@
             const tradeCashEl = document.getElementById('tradeAvailableCash');
             const tradeCoinsEl = document.getElementById('tradeAvailableCoins');
             const tradeValEl = document.getElementById('tradeTotalValuation');
+            const tradePriceDisplay = document.getElementById('tradeExecutionPriceDisplay');
 
             const price = Number(data.price || 0);
             const stats = data.stats24h || {};
@@ -190,6 +248,7 @@
             const isPos = change >= 0;
 
             if (priceEl) priceEl.textContent = `KSh ${price.toFixed(4)}`;
+            if (tradePriceDisplay) tradePriceDisplay.textContent = `KSh ${price.toFixed(4)}`;
             
             if (changeEl) {
                 changeEl.textContent = `${isPos ? '+' : ''}${changePct.toFixed(2)}% (${isPos ? '+' : ''}${change.toFixed(4)})`;
@@ -227,8 +286,9 @@
                 const totalVal = currentCash + (currentCoins * price);
                 tradeValEl.textContent = `KSh ${totalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
-        },
 
+            this.calculateOrderPreview();
+        },
 
         renderOverviewError: function () {
             const priceEl = document.getElementById('marketLivePrice');
@@ -274,103 +334,22 @@
         },
 
         /**
-         * Fetch Real Authoritative User / Platform PLAYCOIN Activity
-         */
-        fetchUserActivity: function () {
-            const listEl = document.getElementById('marketActivityList');
-            if (!listEl) return;
-
-            let headers = {};
-            const token = localStorage.getItem('spin_jwt_token');
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            let storedUser = null;
-            try {
-                const raw = localStorage.getItem('spin_user_data');
-                if (raw) storedUser = JSON.parse(raw);
-            } catch(e) {}
-
-            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
-            if (userId) headers['x-user-id'] = userId;
-
-            fetch('/api/market/playcoin/activity', { headers })
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.success && Array.isArray(data.activity) && data.activity.length > 0) {
-                        this.renderActivityList(data.activity);
-                    } else {
-                        listEl.innerHTML = `
-                            <div class="market-empty-activity">
-                                <span>📜</span>
-                                <p>No recent PLAYCOIN transactions found.</p>
-                            </div>
-                        `;
-                    }
-                })
-                .catch(() => {
-                    listEl.innerHTML = `
-                        <div class="market-empty-activity">
-                            <span>⚠️</span>
-                            <p>Activity data unavailable</p>
-                        </div>
-                    `;
-                });
-        },
-
-        /**
-         * Render Activity List
-         */
-        renderActivityList: function (items) {
-            const listEl = document.getElementById('marketActivityList');
-            if (!listEl) return;
-
-            listEl.innerHTML = items.map(item => {
-                const amount = Number(item.amount || 0);
-                const isCredit = amount >= 0;
-                const dateStr = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
-                const label = item.game || item.description || (isCredit ? 'Reward Credited' : 'Coin Settlement');
-                const symbol = item.token_symbol || item.currency || 'PLAY';
-
-                return `
-                    <div class="market-activity-item">
-                        <div class="activity-left">
-                            <span class="activity-icon">${isCredit ? '🟢' : '🔴'}</span>
-                            <div class="activity-details">
-                                <span class="activity-title">${label}</span>
-                                <span class="activity-time">${dateStr} · Status: Settled</span>
-                            </div>
-                        </div>
-                        <div class="activity-right ${isCredit ? 'bullish' : 'bearish'}">
-                            ${isCredit ? '+' : ''}${amount.toLocaleString('en-US')} ${symbol}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        },
-
-        /**
-         * Timeframe Selector Handler
+         * Set Active Timeframe
          */
         setInterval: function (interval) {
             this.activeInterval = interval;
             this.panOffset = 0;
             this.hoveredIndex = -1;
 
-            // Update UI tab states
-            const tabs = document.querySelectorAll('.market-time-tab');
-            tabs.forEach(t => {
-                if (t.getAttribute('data-interval') === interval) {
-                    t.classList.add('active');
-                } else {
-                    t.classList.remove('active');
-                }
+            document.querySelectorAll('.market-time-tab').forEach(t => {
+                t.classList.toggle('active', t.getAttribute('data-interval') === interval);
             });
 
             this.fetchCandles(false);
         },
 
         /**
-         * Chart Presentation Type Handler (Candles, Line, Area, OHLC)
+         * Set Chart Presentation Type
          */
         setChartType: function (chartType) {
             const valid = ['candles', 'line', 'area', 'ohlc'];
@@ -381,19 +360,52 @@
                 sessionStorage.setItem('market_chart_type', chartType);
             } catch (e) {}
 
-            // Update UI tab states
-            const tabs = document.querySelectorAll('.market-type-tab');
-            tabs.forEach(t => {
-                if (t.getAttribute('data-chart-type') === chartType) {
-                    t.classList.add('active');
-                } else {
-                    t.classList.remove('active');
-                }
+            document.querySelectorAll('.market-type-tab').forEach(t => {
+                t.classList.toggle('active', t.getAttribute('data-chart-type') === chartType);
             });
 
             this.drawChart();
         },
 
+        /**
+         * Toggle Indicator
+         */
+        toggleIndicator: function (ind) {
+            if (this.activeIndicators[ind] !== undefined) {
+                this.activeIndicators[ind] = !this.activeIndicators[ind];
+                try {
+                    sessionStorage.setItem('market_indicators', JSON.stringify(this.activeIndicators));
+                } catch (e) {}
+
+                document.querySelectorAll('.market-indicator-btn').forEach(btn => {
+                    if (btn.getAttribute('data-indicator') === ind) {
+                        btn.classList.toggle('active', this.activeIndicators[ind]);
+                    }
+                });
+
+                this.drawChart();
+            }
+        },
+
+        /**
+         * Set Active Drawing Tool
+         */
+        setDrawingTool: function (tool) {
+            if (tool === 'clear') {
+                this.drawings = [];
+                this.activeDrawingTool = 'crosshair';
+                document.querySelectorAll('.drawing-tool-btn').forEach(b => {
+                    b.classList.toggle('active', b.getAttribute('data-tool') === 'crosshair');
+                });
+                this.drawChart();
+                return;
+            }
+
+            this.activeDrawingTool = tool;
+            document.querySelectorAll('.drawing-tool-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-tool') === tool);
+            });
+        },
 
         /**
          * Canvas Resize & High-DPI Adaptation
@@ -404,146 +416,214 @@
             if (!container) return;
 
             const rect = container.getBoundingClientRect();
-            const width = Math.floor(rect.width);
-            const height = Math.max(260, Math.floor(rect.height || 360));
-
             const dpr = window.devicePixelRatio || 1;
+
+            const width = rect.width || 600;
+            const height = rect.height || 280;
+
             this.canvas.width = width * dpr;
             this.canvas.height = height * dpr;
             this.canvas.style.width = width + 'px';
             this.canvas.style.height = height + 'px';
 
-            this.ctx.scale(dpr, dpr);
-            this.drawChart();
+            if (this.ctx) {
+                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
         },
 
         _setupResizeObserver: function () {
-            if (typeof ResizeObserver !== 'undefined' && this.canvas && this.canvas.parentElement) {
+            if (window.ResizeObserver && this.canvas && this.canvas.parentElement) {
                 const ro = new ResizeObserver(() => {
                     this.resizeCanvas();
+                    this.drawChart();
                 });
                 ro.observe(this.canvas.parentElement);
             }
         },
 
         /**
-         * Candlestick Chart Renderer
+         * Mathematical Indicator Calculation Helpers
+         */
+        _calculateSMA: function (data, period) {
+            const result = new Array(data.length).fill(null);
+            for (let i = period - 1; i < data.length; i++) {
+                let sum = 0;
+                for (let j = 0; j < period; j++) {
+                    sum += data[i - j].close;
+                }
+                result[i] = sum / period;
+            }
+            return result;
+        },
+
+        _calculateEMA: function (data, period) {
+            const result = new Array(data.length).fill(null);
+            if (data.length < period) return result;
+            
+            const k = 2 / (period + 1);
+            let sum = 0;
+            for (let i = 0; i < period; i++) sum += data[i].close;
+            let prevEMA = sum / period;
+            result[period - 1] = prevEMA;
+
+            for (let i = period; i < data.length; i++) {
+                const curEMA = (data[i].close * k) + (prevEMA * (1 - k));
+                result[i] = curEMA;
+                prevEMA = curEMA;
+            }
+            return result;
+        },
+
+        _calculateBollinger: function (data, period = 20, multiplier = 2) {
+            const sma = this._calculateSMA(data, period);
+            const upper = new Array(data.length).fill(null);
+            const lower = new Array(data.length).fill(null);
+
+            for (let i = period - 1; i < data.length; i++) {
+                let sumSq = 0;
+                for (let j = 0; j < period; j++) {
+                    sumSq += Math.pow(data[i - j].close - sma[i], 2);
+                }
+                const stdDev = Math.sqrt(sumSq / period);
+                upper[i] = sma[i] + (multiplier * stdDev);
+                lower[i] = sma[i] - (multiplier * stdDev);
+            }
+            return { middle: sma, upper, lower };
+        },
+
+        _calculateRSI: function (data, period = 14) {
+            const result = new Array(data.length).fill(null);
+            if (data.length <= period) return result;
+
+            let gains = 0;
+            let losses = 0;
+
+            for (let i = 1; i <= period; i++) {
+                const diff = data[i].close - data[i - 1].close;
+                if (diff >= 0) gains += diff;
+                else losses -= diff;
+            }
+
+            let avgGain = gains / period;
+            let avgLoss = losses / period;
+            let rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+            result[period] = 100 - (100 / (1 + rs));
+
+            for (let i = period + 1; i < data.length; i++) {
+                const diff = data[i].close - data[i - 1].close;
+                const gain = diff > 0 ? diff : 0;
+                const loss = diff < 0 ? -diff : 0;
+
+                avgGain = ((avgGain * (period - 1)) + gain) / period;
+                avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+                rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+                result[i] = 100 - (100 / (1 + rs));
+            }
+
+            return result;
+        },
+
+        /**
+         * Main Professional HTML5 Canvas Chart Rendering Pipeline
          */
         drawChart: function () {
-            if (!this.canvas || !this.ctx || this.candles.length === 0) return;
-
-            const width = parseFloat(this.canvas.style.width) || 600;
-            const height = parseFloat(this.canvas.style.height) || 360;
+            if (!this.ctx || !this.canvas) return;
             const ctx = this.ctx;
+            const w = this.canvas.width / (window.devicePixelRatio || 1);
+            const h = this.canvas.height / (window.devicePixelRatio || 1);
 
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, w, h);
 
-            // Chart Layout Margins
-            const paddingRight = 65; // Price Axis
-            const paddingBottom = 30; // Time Axis
-            const paddingTop = 20;
-            const paddingLeft = 10;
+            if (!this.candles || this.candles.length === 0) {
+                return;
+            }
 
-            const plotWidth = width - paddingLeft - paddingRight;
-            const plotHeight = height - paddingTop - paddingBottom;
-            const volumeHeight = plotHeight * 0.22;
-            const candlePlotHeight = plotHeight - volumeHeight;
-
-            // Visible Slice calculation based on pan & zoom
             const total = this.candles.length;
             const count = Math.min(Math.max(15, this.visibleCandlesCount), total);
-            
-            let endIndex = total - this.panOffset;
-            endIndex = Math.min(total, Math.max(count, endIndex));
-            let startIndex = Math.max(0, endIndex - count);
+            const startIndex = Math.max(0, Math.min(total - count, total - count - this.panOffset));
+            const visibleSlice = this.candles.slice(startIndex, startIndex + count);
 
-            const visibleSlice = this.candles.slice(startIndex, endIndex);
             if (visibleSlice.length === 0) return;
 
-            // Find High / Low for scaling
+            // Layout dimensions
+            const paddingLeft = 10;
+            const paddingRight = 65; // Price axis on right
+            const paddingTop = 12;
+            const paddingBottom = 22; // Time axis
+            const plotWidth = w - paddingLeft - paddingRight;
+
+            // Check if RSI sub-pane is active
+            const isRsiActive = this.activeIndicators.rsi;
+            const mainPlotRatio = isRsiActive ? 0.74 : 1.0;
+            const totalPlotHeight = h - paddingTop - paddingBottom;
+            const mainPlotHeight = totalPlotHeight * mainPlotRatio;
+            const rsiPlotTop = paddingTop + mainPlotHeight + 10;
+            const rsiPlotHeight = isRsiActive ? (totalPlotHeight - mainPlotHeight - 10) : 0;
+
+            // Calculate min/max price for visible slice
             let minPrice = Infinity;
             let maxPrice = -Infinity;
             let maxVolume = 0;
 
             visibleSlice.forEach(c => {
-                if (c.high > maxPrice) maxPrice = c.high;
                 if (c.low < minPrice) minPrice = c.low;
-                if (c.volume > maxVolume) maxVolume = c.volume;
+                if (c.high > maxPrice) maxPrice = c.high;
+                if ((c.volume || 0) > maxVolume) maxVolume = c.volume;
             });
 
-            // Prevent flat line zero range
             if (minPrice === maxPrice) {
-                minPrice *= 0.95;
-                maxPrice *= 1.05;
+                minPrice *= 0.98;
+                maxPrice *= 1.02;
             }
-            const pricePadding = (maxPrice - minPrice) * 0.08;
-            minPrice -= pricePadding;
-            maxPrice += pricePadding;
+
+            const priceSpread = maxPrice - minPrice;
+            minPrice -= priceSpread * 0.08;
+            maxPrice += priceSpread * 0.08;
             const priceRange = maxPrice - minPrice;
 
-            // Helper mapping coordinates
-            const getY = (val) => paddingTop + candlePlotHeight - ((val - minPrice) / priceRange) * candlePlotHeight;
-            const getVolY = (vol) => paddingTop + plotHeight - (maxVolume > 0 ? (vol / maxVolume) * volumeHeight : 0);
-
-            // Update Live HUD Readout
-            const hudCandle = (this.hoveredIndex >= 0 && visibleSlice[this.hoveredIndex]) ? visibleSlice[this.hoveredIndex] : visibleSlice[visibleSlice.length - 1];
-            if (hudCandle) {
-                const hO = document.getElementById('hudOpen');
-                const hH = document.getElementById('hudHigh');
-                const hL = document.getElementById('hudLow');
-                const hC = document.getElementById('hudClose');
-                const hV = document.getElementById('hudVol');
-                if (hO) hO.textContent = hudCandle.open.toFixed(4);
-                if (hH) hH.textContent = hudCandle.high.toFixed(4);
-                if (hL) hL.textContent = hudCandle.low.toFixed(4);
-                if (hC) {
-                    hC.textContent = hudCandle.close.toFixed(4);
-                    hC.style.color = hudCandle.close >= hudCandle.open ? '#00e676' : '#ff1744';
-                }
-                if (hV) hV.textContent = Number(hudCandle.volume || 0).toLocaleString('en-US');
-            }
+            const getY = (p) => paddingTop + (mainPlotHeight * (1 - ((p - minPrice) / priceRange)));
+            const getPriceFromY = (y) => maxPrice - (((y - paddingTop) / mainPlotHeight) * priceRange);
+            const getVolY = (vol) => (paddingTop + mainPlotHeight) - ((vol / (maxVolume || 1)) * (mainPlotHeight * 0.22));
 
             const candleStep = plotWidth / visibleSlice.length;
             const candleWidth = Math.max(2, candleStep * 0.68);
 
-            // 1. Draw Grid Lines & Price Axis
+            // 1. Grid Lines & Right Price Axis
             ctx.save();
-
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.lineWidth = 1;
             ctx.font = '10px Sora, sans-serif';
-            ctx.fillStyle = 'rgba(160, 175, 200, 0.7)';
+            ctx.fillStyle = 'rgba(160, 175, 200, 0.75)';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-
 
             const gridSteps = 5;
             for (let i = 0; i <= gridSteps; i++) {
                 const p = minPrice + (priceRange * (i / gridSteps));
                 const y = getY(p);
 
-                // Horizontal line
                 ctx.beginPath();
                 ctx.moveTo(paddingLeft, y);
                 ctx.lineTo(paddingLeft + plotWidth, y);
                 ctx.stroke();
 
-                // Price label
                 ctx.fillText(`KSh ${p.toFixed(4)}`, paddingLeft + plotWidth + 6, y);
             }
             ctx.restore();
 
-            // 2. Draw Volume Bars
-            visibleSlice.forEach((c, idx) => {
-                const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
-                const isBull = c.close >= c.open;
-                const volTop = getVolY(c.volume || 0);
-                const volHeight = (paddingTop + plotHeight) - volTop;
-                ctx.fillStyle = isBull ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 23, 68, 0.2)';
-                ctx.fillRect(x - (candleWidth / 2), volTop, candleWidth, volHeight);
-            });
+            // 2. Volume Bars (if active)
+            if (this.activeIndicators.vol !== false) {
+                visibleSlice.forEach((c, idx) => {
+                    const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
+                    const isBull = c.close >= c.open;
+                    const volTop = getVolY(c.volume || 0);
+                    const volHeight = (paddingTop + mainPlotHeight) - volTop;
+                    ctx.fillStyle = isBull ? 'rgba(0, 230, 118, 0.18)' : 'rgba(255, 23, 68, 0.18)';
+                    ctx.fillRect(x - (candleWidth / 2), volTop, candleWidth, volHeight);
+                });
+            }
 
-            // 3. Draw Selected Chart Type
+            // 3. Render Price Series
             if (this.activeChartType === 'candles') {
                 visibleSlice.forEach((c, idx) => {
                     const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
@@ -553,7 +633,7 @@
                     const bodyBottom = getY(Math.min(c.open, c.close));
                     const bodyHeight = Math.max(1, bodyBottom - bodyTop);
 
-                    // Candlestick Wick (High to Low)
+                    // Wick
                     ctx.beginPath();
                     ctx.strokeStyle = candleColor;
                     ctx.lineWidth = 1.2;
@@ -561,7 +641,7 @@
                     ctx.lineTo(x, getY(c.low));
                     ctx.stroke();
 
-                    // Candlestick Body
+                    // Body
                     ctx.fillStyle = candleColor;
                     ctx.fillRect(x - (candleWidth / 2), bodyTop, candleWidth, bodyHeight);
                 });
@@ -572,7 +652,6 @@
                     const candleColor = isBull ? '#00e676' : '#ff1744';
                     const tickSize = Math.max(3, candleWidth / 2);
 
-                    // High-Low Vertical Line
                     ctx.beginPath();
                     ctx.strokeStyle = candleColor;
                     ctx.lineWidth = 1.4;
@@ -580,14 +659,14 @@
                     ctx.lineTo(x, getY(c.low));
                     ctx.stroke();
 
-                    // Open Tick (Left)
+                    // Open tick (left)
                     const openY = getY(c.open);
                     ctx.beginPath();
                     ctx.moveTo(x - tickSize, openY);
                     ctx.lineTo(x, openY);
                     ctx.stroke();
 
-                    // Close Tick (Right)
+                    // Close tick (right)
                     const closeY = getY(c.close);
                     ctx.beginPath();
                     ctx.moveTo(x, closeY);
@@ -597,16 +676,15 @@
             } else if (this.activeChartType === 'line' || this.activeChartType === 'area') {
                 if (visibleSlice.length > 0) {
                     if (this.activeChartType === 'area') {
-                        // Mountain Area Gradient Fill
                         ctx.save();
-                        const grad = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + candlePlotHeight);
+                        const grad = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + mainPlotHeight);
                         grad.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
                         grad.addColorStop(1, 'rgba(0, 240, 255, 0.01)');
                         ctx.fillStyle = grad;
                         ctx.beginPath();
                         const firstX = paddingLeft + (candleStep / 2);
                         const firstY = getY(visibleSlice[0].close);
-                        ctx.moveTo(firstX, paddingTop + candlePlotHeight);
+                        ctx.moveTo(firstX, paddingTop + mainPlotHeight);
                         ctx.lineTo(firstX, firstY);
 
                         for (let i = 1; i < visibleSlice.length; i++) {
@@ -615,7 +693,7 @@
                             ctx.lineTo(x, y);
                         }
                         const lastX = paddingLeft + ((visibleSlice.length - 1) * candleStep) + (candleStep / 2);
-                        ctx.lineTo(lastX, paddingTop + candlePlotHeight);
+                        ctx.lineTo(lastX, paddingTop + mainPlotHeight);
                         ctx.closePath();
                         ctx.fill();
                         ctx.restore();
@@ -636,23 +714,98 @@
                     }
                     ctx.stroke();
                     ctx.restore();
-
-                    // Line Chart Points
-                    if (visibleSlice.length <= 60) {
-                        visibleSlice.forEach((c, idx) => {
-                            const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
-                            const y = getY(c.close);
-                            ctx.fillStyle = '#00f0ff';
-                            ctx.beginPath();
-                            ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-                            ctx.fill();
-                        });
-                    }
                 }
             }
 
+            // 4. Moving Average (MA) Indicator Overlays
+            if (this.activeIndicators.ma) {
+                const allCandles = this.candles;
+                const ma7 = this._calculateSMA(allCandles, 7);
+                const ma25 = this._calculateSMA(allCandles, 25);
+                const ma99 = this._calculateSMA(allCandles, 99);
 
-            // 3. Draw Time Axis Labels
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, ma7, getY, '#ffd700', 1.2);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, ma25, getY, '#00f0ff', 1.2);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, ma99, getY, '#b388ff', 1.2);
+            }
+
+            // 5. Exponential Moving Average (EMA) Indicator Overlays
+            if (this.activeIndicators.ema) {
+                const allCandles = this.candles;
+                const ema12 = this._calculateEMA(allCandles, 12);
+                const ema26 = this._calculateEMA(allCandles, 26);
+
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, ema12, getY, '#ff4081', 1.3);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, ema26, getY, '#ffab00', 1.3);
+            }
+
+            // 6. Bollinger Bands Overlay
+            if (this.activeIndicators.boll) {
+                const boll = this._calculateBollinger(this.candles, 20, 2);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, boll.upper, getY, '#448aff', 1);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, boll.middle, getY, '#ffd700', 1);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, boll.lower, getY, '#448aff', 1);
+            }
+
+            // 7. RSI Sub-Pane
+            if (isRsiActive) {
+                ctx.save();
+                // Sub-pane border
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.strokeRect(paddingLeft, rsiPlotTop, plotWidth, rsiPlotHeight);
+
+                // RSI Reference Lines (70 and 30)
+                const getRsiY = (rsiVal) => rsiPlotTop + (rsiPlotHeight * (1 - (rsiVal / 100)));
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = 'rgba(255, 23, 68, 0.35)';
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, getRsiY(70));
+                ctx.lineTo(paddingLeft + plotWidth, getRsiY(70));
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(0, 230, 118, 0.35)';
+                ctx.beginPath();
+                ctx.moveTo(paddingLeft, getRsiY(30));
+                ctx.lineTo(paddingLeft + plotWidth, getRsiY(30));
+                ctx.stroke();
+
+                ctx.setLineDash([]);
+                ctx.font = '9px Sora, sans-serif';
+                ctx.fillStyle = 'rgba(160, 175, 200, 0.6)';
+                ctx.fillText('70', paddingLeft + plotWidth + 6, getRsiY(70));
+                ctx.fillText('30', paddingLeft + plotWidth + 6, getRsiY(30));
+
+                const allRsi = this._calculateRSI(this.candles, 14);
+                this._drawIndicatorLine(ctx, visibleSlice, startIndex, candleStep, paddingLeft, allRsi, getRsiY, '#ff9100', 1.5);
+                ctx.restore();
+            }
+
+            // 8. User Drawings (Trendlines & Horizontal Lines)
+            if (this.drawings && this.drawings.length > 0) {
+                ctx.save();
+                this.drawings.forEach(d => {
+                    if (d.type === 'hline') {
+                        const y = getY(d.price);
+                        ctx.strokeStyle = '#ffd700';
+                        ctx.setLineDash([4, 2]);
+                        ctx.lineWidth = 1.2;
+                        ctx.beginPath();
+                        ctx.moveTo(paddingLeft, y);
+                        ctx.lineTo(paddingLeft + plotWidth, y);
+                        ctx.stroke();
+                    } else if (d.type === 'trendline') {
+                        ctx.strokeStyle = '#00f0ff';
+                        ctx.lineWidth = 1.8;
+                        ctx.beginPath();
+                        ctx.moveTo(d.x1, d.y1);
+                        ctx.lineTo(d.x2, d.y2);
+                        ctx.stroke();
+                    }
+                });
+                ctx.restore();
+            }
+
+            // 9. Time Axis Labels
             ctx.save();
             ctx.fillStyle = 'rgba(160, 175, 200, 0.7)';
             ctx.font = '10px Sora, sans-serif';
@@ -667,19 +820,12 @@
                 if (!c) continue;
                 const x = paddingLeft + (i * candleStep) + (candleStep / 2);
                 const d = new Date(c.timestamp);
-                let timeStr = '';
-
-                if (this.activeInterval === '1d') {
-                    timeStr = `${d.getMonth() + 1}/${d.getDate()}`;
-                } else {
-                    timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-
-                ctx.fillText(timeStr, x, paddingTop + plotHeight + 8);
+                let timeStr = this.activeInterval === '1d' ? `${d.getMonth() + 1}/${d.getDate()}` : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                ctx.fillText(timeStr, x, paddingTop + mainPlotHeight + (isRsiActive ? rsiPlotHeight + 14 : 6));
             }
             ctx.restore();
 
-            // 4. Latest Price Dashed Guideline
+            // 10. Latest Price Guideline
             const lastCandle = this.candles[this.candles.length - 1];
             if (lastCandle) {
                 const latestY = getY(lastCandle.close);
@@ -692,7 +838,6 @@
                 ctx.lineTo(paddingLeft + plotWidth, latestY);
                 ctx.stroke();
 
-                // Latest price pill badge
                 ctx.setLineDash([]);
                 ctx.fillStyle = lastCandle.close >= lastCandle.open ? '#00e676' : '#ff1744';
                 ctx.fillRect(paddingLeft + plotWidth, latestY - 9, paddingRight, 18);
@@ -704,167 +849,198 @@
                 ctx.restore();
             }
 
-            // 5. Interactive Crosshair & Tooltip
+            // 11. Crosshair Guidelines & Axis Badges
             if (this.hoverPos && this.hoveredIndex >= 0 && this.hoveredIndex < visibleSlice.length) {
                 const hoveredCandle = visibleSlice[this.hoveredIndex];
-                const hoverX = paddingLeft + (this.hoveredIndex * candleStep) + (candleStep / 2);
-                const hoverY = this.hoverPos.y;
+                const cx = paddingLeft + (this.hoveredIndex * candleStep) + (candleStep / 2);
+                const cy = Math.max(paddingTop, Math.min(paddingTop + mainPlotHeight, this.hoverPos.y));
 
                 ctx.save();
-                // Vertical crosshair line
-                ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                 ctx.setLineDash([3, 3]);
                 ctx.lineWidth = 1;
+
+                // Vertical Line
                 ctx.beginPath();
-                ctx.moveTo(hoverX, paddingTop);
-                ctx.lineTo(hoverX, paddingTop + plotHeight);
+                ctx.moveTo(cx, paddingTop);
+                ctx.lineTo(cx, paddingTop + mainPlotHeight + (isRsiActive ? rsiPlotHeight + 10 : 0));
                 ctx.stroke();
 
-                // Horizontal crosshair line
+                // Horizontal Line
                 ctx.beginPath();
-                ctx.moveTo(paddingLeft, hoverY);
-                ctx.lineTo(paddingLeft + plotWidth, hoverY);
+                ctx.moveTo(paddingLeft, cy);
+                ctx.lineTo(paddingLeft + plotWidth, cy);
                 ctx.stroke();
+
+                // Y-Axis Price Badge
+                ctx.setLineDash([]);
+                const hoveredPrice = getPriceFromY(cy);
+                ctx.fillStyle = '#00f0ff';
+                ctx.fillRect(paddingLeft + plotWidth, cy - 9, paddingRight, 18);
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 9px Orbitron, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`KSh ${hoveredPrice.toFixed(4)}`, paddingLeft + plotWidth + (paddingRight / 2), cy);
+
+                // X-Axis Time Badge
+                const d = new Date(hoveredCandle.timestamp);
+                const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                const timeBoxY = paddingTop + mainPlotHeight + (isRsiActive ? rsiPlotHeight + 12 : 4);
+                ctx.fillStyle = '#ffd700';
+                ctx.fillRect(cx - 24, timeBoxY, 48, 16);
+                ctx.fillStyle = '#000';
+                ctx.fillText(timeStr, cx, timeBoxY + 8);
+
                 ctx.restore();
 
-                this.renderFloatingTooltip(hoveredCandle, hoverX, hoverY, width, height);
-            } else {
-                this.hideFloatingTooltip();
+                this.updateHudReadout(hoveredCandle);
+            } else if (lastCandle) {
+                this.updateHudReadout(lastCandle);
             }
         },
 
-        /**
-         * Floating OHLC Tooltip
-         */
-        renderFloatingTooltip: function (candle, x, y, canvasW) {
-            let tooltip = document.getElementById('marketChartTooltip');
-            if (!tooltip) {
-                tooltip = document.createElement('div');
-                tooltip.id = 'marketChartTooltip';
-                tooltip.className = 'market-chart-tooltip';
-                if (this.canvas && this.canvas.parentElement) {
-                    this.canvas.parentElement.appendChild(tooltip);
+        _drawIndicatorLine: function (ctx, visibleSlice, startIndex, candleStep, paddingLeft, allValues, getY, color, lineWidth) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            let first = true;
+
+            for (let i = 0; i < visibleSlice.length; i++) {
+                const globalIndex = startIndex + i;
+                const val = allValues[globalIndex];
+                if (val === null || val === undefined) continue;
+
+                const x = paddingLeft + (i * candleStep) + (candleStep / 2);
+                const y = getY(val);
+
+                if (first) {
+                    ctx.moveTo(x, y);
+                    first = false;
+                } else {
+                    ctx.lineTo(x, y);
                 }
             }
-
-            const isBull = candle.close >= candle.open;
-            const diff = candle.close - candle.open;
-            const diffPct = candle.open > 0 ? (diff / candle.open) * 100 : 0;
-            const timeStr = new Date(candle.timestamp).toLocaleString([], {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            tooltip.innerHTML = `
-                <div class="tt-header">${timeStr} · <strong>${this.activeInterval}</strong></div>
-                <div class="tt-grid">
-                    <div><span>O:</span> <strong>KSh ${candle.open.toFixed(4)}</strong></div>
-                    <div><span>H:</span> <strong>KSh ${candle.high.toFixed(4)}</strong></div>
-                    <div><span>L:</span> <strong>KSh ${candle.low.toFixed(4)}</strong></div>
-                    <div><span>C:</span> <strong style="color:${isBull ? '#00e676' : '#ff1744'}">KSh ${candle.close.toFixed(4)}</strong></div>
-                </div>
-                <div class="tt-footer">
-                    <span>Vol: <strong>${candle.volume ? candle.volume.toLocaleString('en-US') : 0} PLAY</strong></span>
-                    <span style="color:${isBull ? '#00e676' : '#ff1744'}">${isBull ? '+' : ''}${diffPct.toFixed(2)}%</span>
-                </div>
-            `;
-
-            tooltip.style.display = 'block';
-
-            // Positioning within container
-            const tooltipW = 190;
-            let leftPos = x + 15;
-            if (leftPos + tooltipW > canvasW) {
-                leftPos = x - tooltipW - 15;
-            }
-
-            tooltip.style.left = `${Math.max(10, leftPos)}px`;
-            tooltip.style.top = `${Math.max(10, Math.min(y - 30, 200))}px`;
+            ctx.stroke();
+            ctx.restore();
         },
 
-        hideFloatingTooltip: function () {
-            const tooltip = document.getElementById('marketChartTooltip');
-            if (tooltip) tooltip.style.display = 'none';
+        updateHudReadout: function (c) {
+            const hudOpen = document.getElementById('hudOpen');
+            const hudHigh = document.getElementById('hudHigh');
+            const hudLow = document.getElementById('hudLow');
+            const hudClose = document.getElementById('hudClose');
+            const hudVol = document.getElementById('hudVol');
+
+            if (hudOpen) hudOpen.textContent = c.open.toFixed(4);
+            if (hudHigh) hudHigh.textContent = c.high.toFixed(4);
+            if (hudLow) hudLow.textContent = c.low.toFixed(4);
+            if (hudClose) hudClose.textContent = c.close.toFixed(4);
+            if (hudVol) hudVol.textContent = Number(c.volume || 0).toLocaleString('en-US');
         },
 
-        renderChartState: function (type) {
-            let stateEl = document.getElementById('marketChartStateOverlay');
-            if (!stateEl && this.canvas && this.canvas.parentElement) {
-                stateEl = document.createElement('div');
-                stateEl.id = 'marketChartStateOverlay';
-                stateEl.className = 'market-chart-state-overlay';
-                this.canvas.parentElement.appendChild(stateEl);
+        renderChartState: function (state) {
+            let overlay = document.getElementById('marketChartStateOverlay');
+            if (!overlay && this.canvas) {
+                overlay = document.createElement('div');
+                overlay.id = 'marketChartStateOverlay';
+                overlay.className = 'market-chart-state-overlay';
+                this.canvas.parentElement.appendChild(overlay);
             }
-            if (!stateEl) return;
+            if (!overlay) return;
 
-            stateEl.style.display = 'flex';
-            if (type === 'loading') {
-                stateEl.innerHTML = `<div class="market-spinner"></div><span>Loading PLAYCOIN Candlestick Data...</span>`;
-            } else if (type === 'empty') {
-                stateEl.innerHTML = `<span>📊 Data unavailable for this timeframe.</span>`;
-            } else if (type === 'error') {
-                stateEl.innerHTML = `<span>⚠️ Unable to load market data.</span><button onclick="window.MarketEngine.fetchCandles(false)">Retry</button>`;
+            overlay.style.display = 'flex';
+            if (state === 'loading') {
+                overlay.innerHTML = '<div class="market-spinner"></div><p>Streaming Order Flow...</p>';
+            } else if (state === 'error') {
+                overlay.innerHTML = '<span>⚠️</span><p>Market feed unavailable. Retrying...</p>';
+            } else if (state === 'empty') {
+                overlay.innerHTML = '<span>📊</span><p>Initializing order book...</p>';
             }
         },
 
         hideChartState: function () {
-            const stateEl = document.getElementById('marketChartStateOverlay');
-            if (stateEl) stateEl.style.display = 'none';
+            const overlay = document.getElementById('marketChartStateOverlay');
+            if (overlay) overlay.style.display = 'none';
         },
 
         /**
-         * Canvas Interactive Listeners (Crosshairs, Pan, Zoom)
+         * Canvas Interactive Events (Crosshair, Drag Pan, Pinch Zoom, Drawing Tools)
          */
         _bindCanvasEvents: function () {
             if (!this.canvas) return;
 
-            // Mouse Move (Crosshair & Tooltip)
-            this.canvas.addEventListener('mousemove', (e) => {
+            const handlePointerMove = (clientX, clientY) => {
                 const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
                 this.hoverPos = { x, y };
-
-                const paddingLeft = 10;
-                const paddingRight = 65;
-                const plotWidth = rect.width - paddingLeft - paddingRight;
-
+                const plotWidth = rect.width - 75;
                 const total = this.candles.length;
                 const count = Math.min(Math.max(15, this.visibleCandlesCount), total);
-                let endIndex = total - this.panOffset;
-                endIndex = Math.min(total, Math.max(count, endIndex));
-                let startIndex = Math.max(0, endIndex - count);
-                const visibleCount = endIndex - startIndex;
+                const candleStep = plotWidth / count;
+                const idx = Math.floor((x - 10) / candleStep);
 
-                if (x >= paddingLeft && x <= paddingLeft + plotWidth && visibleCount > 0) {
-                    const step = plotWidth / visibleCount;
-                    const idx = Math.floor((x - paddingLeft) / step);
-                    this.hoveredIndex = Math.min(visibleCount - 1, Math.max(0, idx));
+                if (idx >= 0 && idx < count) {
+                    this.hoveredIndex = idx;
                 } else {
                     this.hoveredIndex = -1;
                 }
+                this.drawChart();
+            };
 
+            this.canvas.addEventListener('mousemove', (e) => {
                 if (this.isDragging) {
                     const dx = e.clientX - this.dragStartX;
+                    const rect = this.canvas.getBoundingClientRect();
+                    const plotWidth = rect.width - 75;
+                    const total = this.candles.length;
+                    const count = Math.min(Math.max(15, this.visibleCandlesCount), total);
                     const candleStep = plotWidth / count;
                     const shift = Math.round(dx / candleStep);
                     this.panOffset = Math.max(0, Math.min(total - count, this.dragStartOffset + shift));
+                    this.drawChart();
+                } else {
+                    handlePointerMove(e.clientX, e.clientY);
                 }
-
-                this.drawChart();
             });
 
             this.canvas.addEventListener('mouseleave', () => {
-                this.hoverPos = null;
                 this.hoveredIndex = -1;
+                this.hoverPos = null;
                 this.isDragging = false;
                 this.drawChart();
             });
 
-            // Drag to Pan
             this.canvas.addEventListener('mousedown', (e) => {
+                if (this.activeDrawingTool === 'hline') {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const y = e.clientY - rect.top;
+                    // Calculate price
+                    const total = this.candles.length;
+                    const count = Math.min(Math.max(15, this.visibleCandlesCount), total);
+                    const startIndex = Math.max(0, Math.min(total - count, total - count - this.panOffset));
+                    const visibleSlice = this.candles.slice(startIndex, startIndex + count);
+                    let minPrice = Infinity, maxPrice = -Infinity;
+                    visibleSlice.forEach(c => {
+                        if (c.low < minPrice) minPrice = c.low;
+                        if (c.high > maxPrice) maxPrice = c.high;
+                    });
+                    const priceSpread = maxPrice - minPrice;
+                    minPrice -= priceSpread * 0.08;
+                    maxPrice += priceSpread * 0.08;
+                    const priceRange = maxPrice - minPrice;
+                    const h = rect.height;
+                    const mainPlotHeight = h - 34;
+                    const price = maxPrice - (((y - 12) / mainPlotHeight) * priceRange);
+
+                    this.drawings.push({ type: 'hline', price });
+                    this.drawChart();
+                    return;
+                }
+
                 this.isDragging = true;
                 this.dragStartX = e.clientX;
                 this.dragStartOffset = this.panOffset;
@@ -888,6 +1064,7 @@
                     this.isDragging = true;
                     this.dragStartX = e.touches[0].clientX;
                     this.dragStartOffset = this.panOffset;
+                    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
                 }
             }, { passive: true });
 
@@ -901,12 +1078,14 @@
                     const candleStep = plotWidth / count;
                     const shift = Math.round(dx / candleStep);
                     this.panOffset = Math.max(0, Math.min(total - count, this.dragStartOffset + shift));
-                    this.drawChart();
+                    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
                 }
             }, { passive: true });
 
             this.canvas.addEventListener('touchend', () => {
                 this.isDragging = false;
+                this.hoverPos = null;
+                this.drawChart();
             });
         },
 
@@ -930,21 +1109,471 @@
                 });
             });
 
-            // Redeem Buttons (Everywhere in the app)
-            document.querySelectorAll('.trigger-redeem-playcoin').forEach(btn => {
+            // Technical Indicators
+            document.querySelectorAll('.market-indicator-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.openRedeemConfirmation();
+                    const ind = e.currentTarget.getAttribute('data-indicator');
+                    if (ind) this.toggleIndicator(ind);
                 });
             });
 
-            // Deposit Buttons (Trading Terminal & Header)
+            // Drawing Tools
+            document.querySelectorAll('.drawing-tool-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const tool = e.currentTarget.getAttribute('data-tool');
+                    if (tool) this.setDrawingTool(tool);
+                });
+            });
+
+            // Workspace Tabs
+            document.querySelectorAll('.workspace-tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const pane = e.currentTarget.getAttribute('data-target-pane');
+                    if (pane) this.setWorkspaceTab(pane);
+                });
+            });
+
+            // Deposit Buttons
             document.querySelectorAll('.trigger-trading-deposit, .trigger-pay-and-trade').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     this.triggerDeposit();
                 });
             });
+        },
+
+        /**
+         * Workspace Tab Switcher
+         */
+        setWorkspaceTab: function (paneId) {
+            this.activeWorkspaceTab = paneId;
+
+            document.querySelectorAll('.workspace-tab-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-target-pane') === paneId);
+            });
+
+            document.querySelectorAll('.workspace-pane').forEach(p => {
+                p.style.display = p.id === paneId ? 'block' : 'none';
+                p.classList.toggle('active', p.id === paneId);
+            });
+
+            if (paneId === 'panePositions') this.fetchPositions();
+            else if (paneId === 'paneOrders') this.fetchOrders();
+            else if (paneId === 'paneHistory') this.fetchTradeHistory();
+            else if (paneId === 'paneLedger') this.fetchUserActivity();
+        },
+
+        /**
+         * Trading Order Execution Flow
+         */
+        setTradeSide: function (side) {
+            this.activeTradeSide = side;
+            const btnBuy = document.getElementById('btnSideBuy');
+            const btnSell = document.getElementById('btnSideSell');
+            const lblAmount = document.getElementById('tradeAmountLabel');
+            const unitAmount = document.getElementById('tradeAmountUnit');
+            const btnExec = document.getElementById('btnExecuteTrade');
+            const btnExecText = document.getElementById('btnExecuteText');
+            const availLabel = document.getElementById('tradeAvailableLabel');
+
+            if (side === 'BUY') {
+                if (btnBuy) btnBuy.className = 'trade-side-tab active-buy';
+                if (btnSell) btnSell.className = 'trade-side-tab';
+                if (lblAmount) lblAmount.textContent = 'AMOUNT (KSh):';
+                if (unitAmount) unitAmount.textContent = 'KSh';
+                if (availLabel) availLabel.textContent = 'Available Cash:';
+                if (btnExec) {
+                    btnExec.className = 'btn-execute-trade buy';
+                    if (btnExecText) btnExecText.textContent = 'EXECUTE BUY ORDER';
+                }
+            } else {
+                if (btnBuy) btnBuy.className = 'trade-side-tab';
+                if (btnSell) btnSell.className = 'trade-side-tab active-sell';
+                if (lblAmount) lblAmount.textContent = 'AMOUNT (PLAY):';
+                if (unitAmount) unitAmount.textContent = 'PLAY';
+                if (availLabel) availLabel.textContent = 'Available Coins:';
+                if (btnExec) {
+                    btnExec.className = 'btn-execute-trade sell';
+                    if (btnExecText) btnExecText.textContent = 'EXECUTE SELL ORDER';
+                }
+            }
+
+            this.calculateOrderPreview();
+        },
+
+        setTradePercent: function (percent) {
+            const input = document.getElementById('tradeOrderAmount');
+            if (!input) return;
+
+            let balance = 0;
+            try {
+                const stored = localStorage.getItem('spin_user_data');
+                if (stored) {
+                    const u = JSON.parse(stored);
+                    balance = this.activeTradeSide === 'BUY' ? Number(u.balance || 0) : Number(u.coins || 0);
+                }
+            } catch (e) {}
+
+            if (window.APP_STATE) {
+                if (this.activeTradeSide === 'BUY' && window.APP_STATE.balance !== undefined) balance = window.APP_STATE.balance;
+                if (this.activeTradeSide === 'SELL' && window.APP_STATE.coins !== undefined) balance = window.APP_STATE.coins;
+            }
+
+            const calculated = Math.floor((balance * (percent / 100)) * 100) / 100;
+            input.value = calculated > 0 ? calculated : '';
+            this.calculateOrderPreview();
+        },
+
+        calculateOrderPreview: function () {
+            const input = document.getElementById('tradeOrderAmount');
+            const previewLabel = document.getElementById('tradePreviewLabel');
+            const previewVal = document.getElementById('tradePreviewValue');
+            if (!input || !previewVal) return;
+
+            const val = parseFloat(input.value) || 0;
+            const price = this.marketOverview ? Number(this.marketOverview.price || 0.5) : 0.5;
+
+            if (this.activeTradeSide === 'BUY') {
+                if (previewLabel) previewLabel.textContent = 'Estimated Receive:';
+                const estCoins = price > 0 ? (val / price).toFixed(2) : '0.00';
+                previewVal.textContent = `${Number(estCoins).toLocaleString('en-US')} PLAY`;
+            } else {
+                if (previewLabel) previewLabel.textContent = 'Estimated Cash:';
+                const estCash = (val * price).toFixed(2);
+                previewVal.textContent = `KSh ${Number(estCash).toLocaleString('en-US')}`;
+            }
+        },
+
+        executeCurrentOrder: function () {
+            const input = document.getElementById('tradeOrderAmount');
+            const amount = parseFloat(input ? input.value : 0);
+            if (!amount || amount < 10) {
+                if (window.showToast) window.showToast('Please enter a valid order amount (Min 10).', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnExecuteTrade');
+            if (btn) btn.disabled = true;
+
+            const clientOrderId = 'ord_req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+            let headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('spin_jwt_token');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            let storedUser = null;
+            try {
+                const raw = localStorage.getItem('spin_user_data');
+                if (raw) storedUser = JSON.parse(raw);
+            } catch (e) {}
+
+            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
+            if (userId) headers['x-user-id'] = userId;
+
+            fetch('/api/trading/order', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    side: this.activeTradeSide,
+                    amount,
+                    orderType: 'MARKET',
+                    clientOrderId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (btn) btn.disabled = false;
+                if (data && data.success) {
+                    if (window.showToast) {
+                        const filled = data.order;
+                        window.showToast(`Order Filled: ${filled.side} ${filled.quantity} PLAY @ KSh ${filled.executionPrice.toFixed(4)}`, 'success');
+                    }
+
+                    if (data.user) {
+                        if (window.APP_STATE) {
+                            window.APP_STATE.balance = data.user.balance;
+                            window.APP_STATE.coins = data.user.coins;
+                        }
+                        if (window.updateBalanceUI) window.updateBalanceUI();
+                    }
+
+                    if (input) input.value = '';
+                    this.calculateOrderPreview();
+                    this.setWorkspaceTab('panePositions');
+                    this.fetchMarketOverview(true);
+                } else {
+                    if (window.showToast) window.showToast(data.error || 'Order execution failed', 'error');
+                }
+            })
+            .catch(err => {
+                if (btn) btn.disabled = false;
+                if (window.showToast) window.showToast(err.message || 'Network error executing trade', 'error');
+            });
+        },
+
+        /**
+         * Positions, Orders & History Fetchers
+         */
+        fetchPositions: function (isBackground = false) {
+            let headers = {};
+            const token = localStorage.getItem('spin_jwt_token');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            let storedUser = null;
+            try {
+                const raw = localStorage.getItem('spin_user_data');
+                if (raw) storedUser = JSON.parse(raw);
+            } catch (e) {}
+            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
+            if (userId) headers['x-user-id'] = userId;
+
+            fetch('/api/trading/positions', { headers })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && Array.isArray(data.positions)) {
+                        this.positions = data.positions;
+                        this.renderPositionsList(data.positions);
+                        const countBadge = document.getElementById('posCountBadge');
+                        if (countBadge) countBadge.textContent = data.positions.length;
+                    }
+                })
+                .catch(() => {});
+        },
+
+        renderPositionsList: function (positions) {
+            const listEl = document.getElementById('marketPositionsList');
+            if (!listEl) return;
+
+            if (!positions || positions.length === 0) {
+                listEl.innerHTML = '<div class="market-empty-activity"><span>📊</span><p>No open positions. Execute a BUY or SELL order to open a position.</p></div>';
+                return;
+            }
+
+            listEl.innerHTML = positions.map(pos => {
+                const isBuy = pos.side === 'BUY';
+                const isProfit = (pos.unrealizedPL || 0) >= 0;
+
+                return `
+                    <div class="position-card">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span class="position-side-pill ${isBuy ? 'buy' : 'sell'}">${pos.side}</span>
+                                <strong style="font-size:11px; color:#fff;">${pos.symbol}</strong>
+                                <span style="font-size:10px; color:#64748b;">${Number(pos.size).toLocaleString('en-US')} PLAY</span>
+                            </div>
+                            <div style="font-size:9px; color:#94a3b8;">
+                                Entry: KSh ${Number(pos.entryPrice).toFixed(4)} · Mark: KSh ${Number(pos.currentPrice).toFixed(4)}
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="position-pl-badge ${isProfit ? 'profit' : 'loss'}">
+                                ${isProfit ? '+' : ''}KSh ${Number(pos.unrealizedPL).toFixed(2)} (${isProfit ? '+' : ''}${Number(pos.plPercent).toFixed(2)}%)
+                            </div>
+                            <button type="button" class="btn-close-position" onclick="if(window.MarketEngine) window.MarketEngine.closePosition('${pos.id}');">Close</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        },
+
+        closePosition: function (positionId) {
+            let headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('spin_jwt_token');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            let storedUser = null;
+            try {
+                const raw = localStorage.getItem('spin_user_data');
+                if (raw) storedUser = JSON.parse(raw);
+            } catch (e) {}
+            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
+            if (userId) headers['x-user-id'] = userId;
+
+            fetch('/api/trading/close-position', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ positionId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    if (window.showToast) {
+                        const isProfit = data.realizedPL >= 0;
+                        window.showToast(`Position Closed. Realized P/L: ${isProfit ? '+' : ''}KSh ${data.realizedPL.toFixed(2)}`, isProfit ? 'success' : 'info');
+                    }
+                    this.fetchPositions();
+                    this.fetchMarketOverview(true);
+                } else {
+                    if (window.showToast) window.showToast(data.error || 'Failed to close position', 'error');
+                }
+            })
+            .catch(() => {
+                if (window.showToast) window.showToast('Network error closing position', 'error');
+            });
+        },
+
+        fetchOrders: function () {
+            let headers = {};
+            const token = localStorage.getItem('spin_jwt_token');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            let storedUser = null;
+            try {
+                const raw = localStorage.getItem('spin_user_data');
+                if (raw) storedUser = JSON.parse(raw);
+            } catch (e) {}
+            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
+            if (userId) headers['x-user-id'] = userId;
+
+            fetch('/api/trading/orders', { headers })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && Array.isArray(data.orders)) {
+                        this.orders = data.orders;
+                        this.renderOrdersList(data.orders);
+                    }
+                })
+                .catch(() => {});
+        },
+
+        renderOrdersList: function (orders) {
+            const listEl = document.getElementById('marketOrdersList');
+            if (!listEl) return;
+
+            if (!orders || orders.length === 0) {
+                listEl.innerHTML = '<div class="market-empty-activity"><span>📜</span><p>No recent orders found.</p></div>';
+                return;
+            }
+
+            listEl.innerHTML = orders.map(ord => {
+                const dateStr = ord.timestamp ? new Date(ord.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                const isBuy = ord.side === 'BUY';
+
+                return `
+                    <div class="order-card">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span class="position-side-pill ${isBuy ? 'buy' : 'sell'}">${ord.side}</span>
+                                <strong style="font-size:11px; color:#fff;">${ord.symbol || 'PLAY/KSh'}</strong>
+                                <span style="font-size:10px; color:#64748b;">${dateStr}</span>
+                            </div>
+                            <div style="font-size:9px; color:#94a3b8;">
+                                Price: KSh ${Number(ord.executionPrice).toFixed(4)} · Qty: ${Number(ord.quantity || ord.amount).toLocaleString('en-US')} PLAY
+                            </div>
+                        </div>
+                        <div style="font-size:10px; font-weight:800; color:#00e676;">
+                            ● ${ord.status || 'FILLED'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        },
+
+        fetchTradeHistory: function () {
+            let headers = {};
+            const token = localStorage.getItem('spin_jwt_token');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            let storedUser = null;
+            try {
+                const raw = localStorage.getItem('spin_user_data');
+                if (raw) storedUser = JSON.parse(raw);
+            } catch (e) {}
+            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
+            if (userId) headers['x-user-id'] = userId;
+
+            fetch('/api/trading/history', { headers })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && Array.isArray(data.history)) {
+                        this.tradeHistory = data.history;
+                        this.renderHistoryList(data.history);
+                    }
+                })
+                .catch(() => {});
+        },
+
+        renderHistoryList: function (history) {
+            const listEl = document.getElementById('marketHistoryList');
+            if (!listEl) return;
+
+            if (!history || history.length === 0) {
+                listEl.innerHTML = '<div class="market-empty-activity"><span>🕒</span><p>No completed trade history.</p></div>';
+                return;
+            }
+
+            listEl.innerHTML = history.map(item => {
+                const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                return `
+                    <div class="order-card">
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <span style="font-size:11px; font-weight:700; color:#fff;">${item.side || 'TRADE'} · ${item.symbol || 'PLAY/KSh'}</span>
+                            <span style="font-size:9px; color:#64748b;">${dateStr} · Status: ${item.status || 'SETTLED'}</span>
+                        </div>
+                        <div style="font-size:10px; font-family:'Orbitron', sans-serif; color:#00f0ff;">
+                            ${item.quantity ? item.quantity + ' PLAY' : 'SETTLED'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        },
+
+        /**
+         * Fetch Real Authoritative User / Platform PLAYCOIN Ledger Feed
+         */
+        fetchUserActivity: function () {
+            const listEl = document.getElementById('marketActivityList');
+            if (!listEl) return;
+
+            let headers = {};
+            const token = localStorage.getItem('spin_jwt_token');
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            let storedUser = null;
+            try {
+                const raw = localStorage.getItem('spin_user_data');
+                if (raw) storedUser = JSON.parse(raw);
+            } catch (e) {}
+
+            const userId = storedUser ? storedUser.id : (window.APP_STATE ? window.APP_STATE.userId : '');
+            if (userId) headers['x-user-id'] = userId;
+
+            fetch('/api/market/playcoin/activity', { headers })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && Array.isArray(data.activity) && data.activity.length > 0) {
+                        this.renderActivityList(data.activity);
+                    } else {
+                        listEl.innerHTML = '<div class="market-empty-activity"><span>📜</span><p>No transactions found in authoritative ledger.</p></div>';
+                    }
+                })
+                .catch(() => {
+                    listEl.innerHTML = '<div class="market-empty-activity"><span>⚠️</span><p>Unable to load transactions from authoritative ledger.</p></div>';
+                });
+        },
+
+        renderActivityList: function (activity) {
+            const listEl = document.getElementById('marketActivityList');
+            if (!listEl) return;
+
+            listEl.innerHTML = activity.map(item => {
+                const amount = Number(item.amount || item.credit || item.debit || 0);
+                const isCredit = (item.amount > 0) || (item.credit > 0) || (item.type === 'credit');
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                const label = item.game || item.description || (isCredit ? 'Reward Credited' : 'Coin Settlement');
+                const symbol = item.token_symbol || item.currency || 'PLAY';
+
+                return `
+                    <div class="market-activity-item">
+                        <div class="activity-left">
+                            <span class="activity-icon">${isCredit ? '🟢' : '🔴'}</span>
+                            <div class="activity-details">
+                                <span class="activity-title">${label}</span>
+                                <span class="activity-time">${dateStr} · Status: Settled</span>
+                            </div>
+                        </div>
+                        <div class="activity-right ${isCredit ? 'bullish' : 'bearish'}">
+                            ${isCredit ? '+' : ''}${amount.toLocaleString('en-US')} ${symbol}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         },
 
         /**
@@ -965,14 +1594,9 @@
             }
         },
 
-        /**
-         * Backwards-compatible alias for triggerDeposit
-         */
         triggerPayAndTrade: function () {
             this.triggerDeposit();
         },
-
-
 
         /**
          * Open Telegram Redemption Confirmation Modal
@@ -981,7 +1605,6 @@
             const modal = document.getElementById('redeemConfirmModal');
             if (!modal) return;
 
-            // Obtain authoritative balance
             let coins = 0;
             try {
                 const stored = localStorage.getItem('spin_user_data');
@@ -1002,9 +1625,6 @@
             modal.setAttribute('style', 'display: flex !important; z-index: 9999999;');
         },
 
-        /**
-         * Close Redeem Modal
-         */
         closeRedeemConfirmation: function () {
             const modal = document.getElementById('redeemConfirmModal');
             if (modal) {
@@ -1013,35 +1633,17 @@
             }
         },
 
-        /**
-         * Execute Redirect to Telegram Destination safely
-         */
-        proceedToTelegramRedemption: function () {
+        proceedToTelegramRedeem: function () {
             const targetUrl = this.redeemTelegramUrl || 'https://t.me/PlayCoinRedemptionBot';
-            
-            // Show feedback toast
-            if (window.showToast) {
-                window.showToast('Opening official Telegram Coin Redemption Desk...', 'info');
-            }
-
-            // Close confirmation modal
             this.closeRedeemConfirmation();
-
-            // Open Telegram destination
             window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }
     };
 
-    // Expose Globally
     window.MarketEngine = MarketEngine;
 
-    // Auto-init on DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () {
-            MarketEngine.init();
-        });
-    } else {
+    document.addEventListener('DOMContentLoaded', () => {
         MarketEngine.init();
-    }
+    });
 
 })(window, document);
