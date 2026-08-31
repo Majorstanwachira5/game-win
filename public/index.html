@@ -1516,7 +1516,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <div id="modal-market" class="game-modal-overlay" style="display:none">
+    <div id="modal-market" class="game-modal-overlay terminal-modal-overlay" style="display:none">
         <div class="market-dashboard-modal glass-modal trade-terminal-theme" id="marketDashboardModal">
             <!-- Terminal Top Navigation & Ticker Bar -->
             <div class="market-header-block">
@@ -1531,7 +1531,18 @@
                         <small style="color:#64748b; font-size:11px;">Authoritative Order Flow · 5s Tick Heartbeat · Real-time Valuation</small>
                     </div>
                 </div>
+
                 <div class="market-header-actions">
+                    <!-- Mobile Section Quick-Select Dropdown -->
+                    <div class="market-section-dropdown-wrap">
+                        <select id="tradingSectionDropdown" class="trading-section-select" onchange="if(window.MarketEngine) window.MarketEngine.switchSection(this.value);" title="Switch Section View">
+                            <option value="all">📱 All Sections</option>
+                            <option value="chart">📈 Chart View</option>
+                            <option value="trade">⚡ Order & Trade</option>
+                            <option value="positions">📊 Positions & History</option>
+                        </select>
+                    </div>
+
                     <button type="button" class="btn-chart-expand" id="btnFullscreenToggle" onclick="if(window.MarketEngine) window.MarketEngine.toggleFullscreenChart();" title="Toggle Fullscreen Chart Mode">
                         <span class="expand-icon">⛶</span> <span class="expand-btn-text">Expand</span>
                     </button>
@@ -1542,8 +1553,24 @@
                 </div>
             </div>
 
+            <!-- Terminal Top Section Switcher Navigation Bar (Mobile / Android Friendly) -->
+            <div class="terminal-section-nav-bar" id="terminalSectionNavBar">
+                <button type="button" class="section-nav-pill active" data-section="all" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('all');">
+                    <span>📱</span> Full Terminal
+                </button>
+                <button type="button" class="section-nav-pill" data-section="chart" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('chart');">
+                    <span>📈</span> Chart
+                </button>
+                <button type="button" class="section-nav-pill" data-section="trade" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('trade');">
+                    <span>⚡</span> Order & Trade
+                </button>
+                <button type="button" class="section-nav-pill" data-section="positions" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('positions');">
+                    <span>📊</span> Positions (<span id="posSectionCount">0</span>)
+                </button>
+            </div>
+
             <!-- Terminal Ticker Metrics Strip -->
-            <div class="market-stats-row terminal-metrics-strip">
+            <div class="market-stats-row terminal-metrics-strip" id="marketMetricsStrip">
                 <div class="market-card highlight-card">
                     <span class="market-card-label">LAST PRICE</span>
                     <div class="market-card-value live-price-glow" id="marketLivePrice">KSh 0.5000</div>
@@ -1572,12 +1599,14 @@
             <!-- Candlestick Chart Area with Live HUD & Multi-Tool Toolbar -->
             <div class="market-chart-section" id="marketChartSection">
                 <div class="market-chart-toolbar">
-                    <!-- Chart Type Selector -->
-                    <div class="market-chart-types" id="marketChartTypeTabs">
-                        <button type="button" class="market-type-tab active" data-chart-type="candles" title="Candlestick Chart">🕯️ Candles</button>
-                        <button type="button" class="market-type-tab" data-chart-type="line" title="Line Price Chart">📈 Line</button>
-                        <button type="button" class="market-type-tab" data-chart-type="area" title="Filled Area Mountain Chart">🏔️ Area</button>
-                        <button type="button" class="market-type-tab" data-chart-type="ohlc" title="OHLC Bar Chart">📊 Bars</button>
+                    <!-- Chart Type Dropdown / Tabs -->
+                    <div class="market-toolbar-dropdown-item">
+                        <select id="selectChartType" class="market-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.setChartType(this.value);" title="Select Chart Type">
+                            <option value="candles">🕯️ Candles</option>
+                            <option value="line">📈 Line</option>
+                            <option value="area">🏔️ Area</option>
+                            <option value="ohlc">📊 Bars</option>
+                        </select>
                     </div>
 
                     <!-- Timeframe Selector -->
@@ -1625,9 +1654,9 @@
             </div>
 
             <!-- Bottom Trading & Settlement Workspace -->
-            <div class="market-bottom-section">
+            <div class="market-bottom-section" id="marketBottomSection">
                 <!-- Left: Multi-Tab Positions, Orders, History & Ledger Workspace -->
-                <div class="market-activity-card">
+                <div class="market-activity-card" id="marketActivityCard">
                     <div class="workspace-tabs-header">
                         <button type="button" class="workspace-tab-btn active" data-target-pane="panePositions">
                             <span>📊</span> POSITIONS <span class="workspace-tab-badge" id="posCountBadge">0</span>
@@ -1687,7 +1716,7 @@
                 </div>
 
                 <!-- Right: Professional Order Placement & Trading Capital Panel -->
-                <div class="market-trading-panel">
+                <div class="market-trading-panel" id="marketTradingPanel">
                     <div class="market-section-title">
                         <span>⚡</span> ORDER PLACEMENT
                     </div>
@@ -1761,6 +1790,7 @@
             </div>
         </div>
     </div>
+
 
 
 

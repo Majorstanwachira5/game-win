@@ -333,6 +333,62 @@
                 });
         },
 
+        activeSection: 'all',
+
+        /**
+         * Switch Active Terminal View Section (Mobile / Android viewports)
+         */
+        switchSection: function (section) {
+            const valid = ['all', 'chart', 'trade', 'positions'];
+            if (!valid.includes(section)) section = 'all';
+            this.activeSection = section;
+
+            // Sync Dropdown
+            const dd = document.getElementById('tradingSectionDropdown');
+            if (dd && dd.value !== section) dd.value = section;
+
+            // Sync Nav Pills
+            document.querySelectorAll('.section-nav-pill').forEach(pill => {
+                pill.classList.toggle('active', pill.getAttribute('data-section') === section);
+            });
+
+            const chartSec = document.getElementById('marketChartSection');
+            const bottomSec = document.getElementById('marketBottomSection');
+            const actCard = document.getElementById('marketActivityCard');
+            const tradePanel = document.getElementById('marketTradingPanel');
+            const metricsStrip = document.getElementById('marketMetricsStrip');
+
+            if (section === 'all') {
+                if (metricsStrip) metricsStrip.style.display = '';
+                if (chartSec) chartSec.style.display = '';
+                if (bottomSec) bottomSec.style.display = '';
+                if (actCard) actCard.style.display = '';
+                if (tradePanel) tradePanel.style.display = '';
+            } else if (section === 'chart') {
+                if (metricsStrip) metricsStrip.style.display = '';
+                if (chartSec) chartSec.style.display = 'flex';
+                if (bottomSec) bottomSec.style.display = 'none';
+            } else if (section === 'trade') {
+                if (metricsStrip) metricsStrip.style.display = '';
+                if (chartSec) chartSec.style.display = 'none';
+                if (bottomSec) bottomSec.style.display = 'grid';
+                if (actCard) actCard.style.display = 'none';
+                if (tradePanel) tradePanel.style.display = 'flex';
+            } else if (section === 'positions') {
+                if (metricsStrip) metricsStrip.style.display = 'none';
+                if (chartSec) chartSec.style.display = 'none';
+                if (bottomSec) bottomSec.style.display = 'grid';
+                if (actCard) actCard.style.display = 'block';
+                if (tradePanel) tradePanel.style.display = 'none';
+                this.setWorkspaceTab('panePositions');
+            }
+
+            setTimeout(() => {
+                this.resizeCanvas();
+                this.drawChart();
+            }, 30);
+        },
+
         /**
          * Set Active Timeframe
          */
@@ -360,12 +416,16 @@
                 sessionStorage.setItem('market_chart_type', chartType);
             } catch (e) {}
 
+            const select = document.getElementById('selectChartType');
+            if (select && select.value !== chartType) select.value = chartType;
+
             document.querySelectorAll('.market-type-tab').forEach(t => {
                 t.classList.toggle('active', t.getAttribute('data-chart-type') === chartType);
             });
 
             this.drawChart();
         },
+
 
         /**
          * Toggle Indicator
@@ -1334,6 +1394,8 @@
                         this.renderPositionsList(data.positions);
                         const countBadge = document.getElementById('posCountBadge');
                         if (countBadge) countBadge.textContent = data.positions.length;
+                        const secCount = document.getElementById('posSectionCount');
+                        if (secCount) secCount.textContent = data.positions.length;
                     }
                 })
                 .catch(() => {});
@@ -1341,7 +1403,10 @@
 
         renderPositionsList: function (positions) {
             const listEl = document.getElementById('marketPositionsList');
+            const secCount = document.getElementById('posSectionCount');
+            if (secCount) secCount.textContent = (positions && positions.length) || 0;
             if (!listEl) return;
+
 
             if (!positions || positions.length === 0) {
                 listEl.innerHTML = '<div class="market-empty-activity"><span>📊</span><p>No open positions. Execute a BUY or SELL order to open a position.</p></div>';
