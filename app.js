@@ -403,6 +403,12 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     if (mobSummaryCash) mobSummaryCash.textContent = `KSh ${fmtBal}`;
     if (mobSummaryCoins) mobSummaryCoins.textContent = `${fmtCoins}`;
 
+    const marketUserCoinBal = document.getElementById('marketUserCoinBal');
+    if (marketUserCoinBal) marketUserCoinBal.textContent = `${fmtCoins} PLAY`;
+    const redeemModalBalanceText = document.getElementById('redeemModalBalanceText');
+    if (redeemModalBalanceText) redeemModalBalanceText.textContent = `${fmtCoins} PLAY`;
+
+
     // Mobile Withdrawal Button State (< KSh 500 disabled)
     const minWithdrawal = 500;
     if (mobWithdrawBtn) {

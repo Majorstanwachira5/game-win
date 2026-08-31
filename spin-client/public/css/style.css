@@ -3745,6 +3745,520 @@ html, body {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PLAYCOIN MARKET DASHBOARD, CANDLESTICK CHART & REDEMPTION STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.market-dashboard-modal {
+  max-width: 960px !important;
+  width: 95% !important;
+  max-height: 92vh !important;
+  overflow-y: auto !important;
+  background: linear-gradient(145deg, #0a0f1d 0%, #050811 100%) !important;
+  border: 1.5px solid rgba(255, 215, 0, 0.35) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.15) !important;
+  padding: 20px !important;
+  color: #fff !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+/* Top Market Header */
+.market-header-block {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 14px;
+}
+
+.market-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.market-token-icon {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(0, 240, 255, 0.2));
+  border: 1.5px solid var(--gold-primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.market-titles h2 {
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 18px;
+  margin: 0;
+  color: #fff;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-status-pill {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 8px;
+  background: rgba(0, 240, 255, 0.15);
+  color: var(--cyan-accent);
+  border: 1px solid var(--cyan-accent);
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.market-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-redeem-gold {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #000;
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-redeem-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 22px rgba(255, 215, 0, 0.7);
+}
+
+/* Market Stats Grid Cards */
+.market-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.market-card {
+  background: rgba(14, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.market-card.highlight-card {
+  border-color: rgba(255, 215, 0, 0.4);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(6, 10, 22, 0.8));
+}
+
+.market-card.user-bal-card {
+  border-color: rgba(0, 240, 255, 0.4);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(6, 10, 22, 0.8));
+}
+
+.market-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.market-card-value {
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.market-stat-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.market-stat-badge.bullish, .activity-right.bullish {
+  background: rgba(0, 230, 118, 0.15);
+  color: #00e676;
+}
+
+.market-stat-badge.bearish, .activity-right.bearish {
+  background: rgba(255, 23, 68, 0.15);
+  color: #ff1744;
+}
+
+/* Candlestick Chart Area */
+.market-chart-section {
+  background: rgba(6, 10, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.market-chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.market-time-tabs {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.market-time-tab {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-family: 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.market-time-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.market-time-tab.active {
+  background: var(--gold-primary);
+  color: #000;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.market-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.legend-dot.green { background: #00e676; }
+.legend-dot.red { background: #ff1744; }
+
+/* Canvas Stage */
+.market-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  min-height: 260px;
+  background: radial-gradient(circle at 50% 50%, #0d1527 0%, #060a14 100%);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+#marketCandleCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Floating Chart Tooltip */
+.market-chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(10, 16, 30, 0.95);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #fff;
+  z-index: 100;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: none;
+  min-width: 170px;
+}
+
+.market-chart-tooltip .tt-header {
+  font-size: 10px;
+  color: var(--cyan-accent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.market-chart-tooltip .tt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  font-size: 10px;
+}
+
+.market-chart-tooltip .tt-footer {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 4px;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Chart Overlay Status */
+.market-chart-state-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(6, 10, 22, 0.85);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 12px;
+  z-index: 20;
+}
+
+.market-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid rgba(0, 240, 255, 0.2);
+  border-top-color: var(--cyan-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Bottom Activity Section */
+.market-bottom-section {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+}
+
+.market-activity-card, .market-guide-card {
+  background: rgba(14, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.market-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.market-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.market-activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.activity-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activity-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.activity-time {
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.activity-right {
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.market-empty-activity {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.market-guide-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.market-guide-item {
+  display: flex;
+  gap: 6px;
+}
+
+/* Telegram Redemption Confirmation Modal */
+.redeem-confirm-card {
+  max-width: 460px !important;
+  width: 92% !important;
+  background: linear-gradient(145deg, #0e172a 0%, #080e1a 100%) !important;
+  border: 2px solid var(--gold-primary) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.35) !important;
+  padding: 22px !important;
+  text-align: center !important;
+  color: #fff !important;
+}
+
+.redeem-balance-pill {
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 14px 0;
+}
+
+.redeem-balance-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.redeem-balance-val {
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--gold-primary);
+  margin-top: 4px;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.redeem-info-box {
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: left;
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+
+.redeem-info-box ol {
+  margin: 6px 0 0 16px;
+  padding: 0;
+}
+
+.redeem-info-box li {
+  margin-bottom: 4px;
+}
+
+/* Mobile Responsiveness for Market Dashboard */
+@media (max-width: 768px) {
+  .market-dashboard-modal {
+    padding: 14px !important;
+    gap: 12px !important;
+    width: 96% !important;
+  }
+
+  .market-header-block {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .market-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .market-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .market-canvas-container {
+    height: 260px;
+  }
+
+  .market-bottom-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 
 
 

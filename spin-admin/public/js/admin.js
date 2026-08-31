@@ -179,6 +179,7 @@ function loadCurrentTabData() {
         case 'commissions': loadCommissions(); break;
         case 'withdrawals': loadWithdrawals(); break;
         case 'ledger': loadLedger(); break;
+        case 'market': loadMarketOverview(); break;
         case 'risk': loadRisk(); break;
         case 'audit': loadAuditLogs(); break;
         case 'wheel': loadWheelEngine(); break;
@@ -996,3 +997,47 @@ function setupEventHandlers() {
         alert('Diagnostic ping completed: All production services healthy.');
     });
 }
+
+// ─── 13. PLAYCOIN MARKET & TELEMETRY MONITOR ────────────────────────────────
+async function loadMarketOverview() {
+    try {
+        const data = await adminFetch('/api/admin/market/overview');
+        if (!data || !data.success) return;
+
+        const priceEl = document.getElementById('admMarketCurrentPrice');
+        const priceSub = document.getElementById('admMarketPriceSub');
+        const statusBadge = document.getElementById('admMarketStatusBadge');
+        const volEl = document.getElementById('admMarketVolume');
+        const rangeEl = document.getElementById('admMarket24hRange');
+        const circEl = document.getElementById('admMarketCirculating');
+        const uptimeEl = document.getElementById('admMarketUptime');
+        const ticksEl = document.getElementById('admMarketTicksCount');
+        const redeemUrlEl = document.getElementById('admRedeemUrl');
+
+        if (priceEl) priceEl.textContent = `KSh ${Number(data.currentPrice || 0).toFixed(4)}`;
+        if (priceSub) priceSub.textContent = `Status: ${data.marketStatus || 'INTERNAL MARKET'}`;
+        if (statusBadge) statusBadge.textContent = data.marketStatus || 'INTERNAL MARKET';
+
+        const stats = data.stats24h || {};
+        if (volEl) volEl.textContent = `${Number(stats.volume || 0).toLocaleString('en-US')} PLAY`;
+        if (rangeEl) rangeEl.textContent = `24H High: KSh ${Number(stats.high || 0).toFixed(4)} | Low: KSh ${Number(stats.low || 0).toFixed(4)}`;
+
+        if (circEl) circEl.textContent = `${Number(data.totalCirculatingCoins || 0).toLocaleString('en-US')} PLAY`;
+        if (uptimeEl) uptimeEl.textContent = `${data.uptimeSeconds || 0}s`;
+        if (ticksEl) ticksEl.textContent = `Ticks: ${data.totalTicksProcessed || 0} | 5s Heartbeat`;
+        if (redeemUrlEl && data.redeemTelegramUrl) redeemUrlEl.textContent = data.redeemTelegramUrl;
+
+        // Candle depths
+        const depths = data.candleDepths || {};
+        ['1m', '5m', '15m', '1h', '4h', '1d'].forEach(intv => {
+            const depthEl = document.getElementById(`admDepth${intv}`);
+            if (depthEl) depthEl.textContent = `${depths[intv] || 0} candles`;
+        });
+    } catch (err) {
+        console.error('Failed to load market overview:', err);
+    }
+}
+
+window.adminApp = {
+    loadMarketOverview
+};

@@ -66,6 +66,7 @@
         <li><button class="sidebar-nav-item" data-tab="ledger"><span class="nav-icon">📜</span> Wallets & Ledger</button></li>
 
         <li class="menu-category">Security & Engine</li>
+        <li><button class="sidebar-nav-item" data-tab="market"><span class="nav-icon">📈</span> PlayCoin Market</button></li>
         <li><button class="sidebar-nav-item" data-tab="risk"><span class="nav-icon">⚠️</span> Fraud & Risk</button></li>
         <li><button class="sidebar-nav-item" data-tab="audit"><span class="nav-icon">📋</span> Audit Trail</button></li>
         <li><button class="sidebar-nav-item" data-tab="wheel"><span class="nav-icon">⚙️</span> Game Engine & Rig</button></li>
@@ -748,6 +749,73 @@
                 <div class="kpi-value gold">STK PUSH</div>
                 <div class="kpi-sub">api.safaricom.co.ke · Production</div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- 13. PLAYCOIN MARKET & CANDLE SERVICE MONITOR               -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <section id="panel-market" class="adm-panel">
+          <div class="panel-header">
+            <div>
+              <h2>📈 PLAYCOIN Market & Telemetry Monitor</h2>
+              <p>Authoritative internal market engine state, candle generation buffers & redemption health</p>
+            </div>
+            <button class="btn primary-btn sm-btn" onclick="window.adminApp && window.adminApp.loadMarketOverview()">🔄 Refresh Telemetry</button>
+          </div>
+
+          <div class="kpi-grid" style="margin-bottom: 20px;">
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Current Reference Price</span><span id="admMarketStatusBadge" class="status-badge active">INTERNAL MARKET</span></div>
+              <div id="admMarketCurrentPrice" class="kpi-value cyan">KSh 0.5000</div>
+              <div class="kpi-sub" id="admMarketPriceSub">1 PLAY = KSh 0.50 Base Reference</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">24H Market Volume</span><span class="kpi-trend">Live Feed</span></div>
+              <div id="admMarketVolume" class="kpi-value gold">0 PLAY</div>
+              <div class="kpi-sub" id="admMarket24hRange">24H High: ... | Low: ...</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Circulating Coin Supply</span><span class="status-badge active">AUTHORITATIVE</span></div>
+              <div id="admMarketCirculating" class="kpi-value green">0 PLAY</div>
+              <div class="kpi-sub">Total Player Wallet Balances</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header"><span class="kpi-label">Market Engine Uptime</span><span id="admMarketServiceBadge" class="status-badge active">ONLINE</span></div>
+              <div id="admMarketUptime" class="kpi-value cyan">0s</div>
+              <div class="kpi-sub" id="admMarketTicksCount">Ticks: 0 | 5s Heartbeat</div>
+            </div>
+          </div>
+
+          <div class="table-card glass-card" style="margin-bottom: 20px;">
+            <div class="section-header">
+              <h3>🕯️ Candlestick Buffer Depths by Timeframe</h3>
+              <small style="color: var(--text-muted);">Authoritative OHLC data depth per interval</small>
+            </div>
+            <div id="admMarketBufferDepths" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 10px;">
+              <div class="kpi-card" style="padding: 10px;"><span style="font-size: 11px; color: var(--text-dim);">1m Interval</span><div id="admDepth1m" style="font-weight: 700; color: var(--cyan);">0 candles</div></div>
+              <div class="kpi-card" style="padding: 10px;"><span style="font-size: 11px; color: var(--text-dim);">5m Interval</span><div id="admDepth5m" style="font-weight: 700; color: var(--cyan);">0 candles</div></div>
+              <div class="kpi-card" style="padding: 10px;"><span style="font-size: 11px; color: var(--text-dim);">15m Interval</span><div id="admDepth15m" style="font-weight: 700; color: var(--cyan);">0 candles</div></div>
+              <div class="kpi-card" style="padding: 10px;"><span style="font-size: 11px; color: var(--text-dim);">1h Interval</span><div id="admDepth1h" style="font-weight: 700; color: var(--cyan);">0 candles</div></div>
+              <div class="kpi-card" style="padding: 10px;"><span style="font-size: 11px; color: var(--text-dim);">4h Interval</span><div id="admDepth4h" style="font-weight: 700; color: var(--cyan);">0 candles</div></div>
+              <div class="kpi-card" style="padding: 10px;"><span style="font-size: 11px; color: var(--text-dim);">1d Interval</span><div id="admDepth1d" style="font-weight: 700; color: var(--cyan);">0 candles</div></div>
+            </div>
+          </div>
+
+          <div class="glass-card" style="border-left: 4px solid var(--gold);">
+            <div class="section-header">
+              <h3 style="color: var(--gold);">🎟 Telegram Redemption Destination Configuration</h3>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 13px; color: #cbd5e1;">
+              <div>
+                <strong>Active Telegram Redemption URL:</strong>
+                <code id="admRedeemUrl" style="color: var(--cyan); margin-left: 6px;">https://t.me/PlayCoinRedemptionBot</code>
+              </div>
+              <span class="status-badge active">ACTIVE BOT ROUTING</span>
             </div>
           </div>
         </section>

@@ -46,6 +46,9 @@
     "MPESA_TILL": "1584329",
     "MPESA_PASSKEY": "c1910c46551fffe34287f6f8d77d0fa7887e1a6de4603791ec5072b788a71c9b",
     "MPESA_TRANSACTION_TYPE": "CustomerBuyGoodsOnline",
-    "MPESA_CALLBACK_URL": "https://www.playcoin.live/api/mpesa/callback"
+    "MPESA_CALLBACK_URL": "https://www.playcoin.live/api/mpesa/callback",
+    "PLAYCOIN_REDEEM_TELEGRAM_URL": "https://t.me/PlayCoinRedemptionBot",
+    "PLAYCOIN_INITIAL_PRICE": "0.50"
   }
 }
+

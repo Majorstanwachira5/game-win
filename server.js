@@ -29,6 +29,15 @@ const mpesaService = require('./spin-api/services/MpesaService');
 const tonService = require('./spin-api/services/TonService');
 const referralService = require('./spin-api/services/ReferralService');
 const adminService = require('./spin-api/services/AdminService');
+const marketService = require('./spin-api/services/MarketService');
+
+// Hook authoritative wallet coin events to market volume
+platformEvents.on('WALLET_UPDATED', (payload) => {
+    if (payload && (payload.assetType === 'PLAY' || payload.assetType === 'PLAY_COINS')) {
+        marketService.recordActivityVolume(payload.amountCredited || 0);
+    }
+});
+
 
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
 const dbConfig = {
@@ -2402,6 +2411,111 @@ app.get('/api/coins/stats', (req, res) => {
         },
         totalCirculatingCoins: Object.values(users).reduce((acc, u) => acc + (u.coins || 0), 0)
     });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PLAYCOIN AUTHORITATIVE MARKET DATA & REDEMPTION APIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET /api/market/playcoin — Market overview, 24h stats, and authoritative price
+app.get(['/api/market/playcoin', '/api/market/overview'], (req, res) => {
+    try {
+        const overview = marketService.getMarketOverview(users);
+        res.json({
+            success: true,
+            ...overview
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/playcoin/candles — Authoritative OHLCV candlestick data
+app.get(['/api/market/playcoin/candles', '/api/market/candles'], (req, res) => {
+    try {
+        const interval = req.query.interval || '1h';
+        const limit = parseInt(req.query.limit) || 100;
+        const candleData = marketService.getCandles(interval, limit);
+        res.json(candleData);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/playcoin/stats — 24h market stats summary
+app.get(['/api/market/playcoin/stats', '/api/market/stats'], (req, res) => {
+    try {
+        const overview = marketService.getMarketOverview(users);
+        res.json({
+            success: true,
+            stats24h: overview.stats24h,
+            price: overview.price,
+            status: overview.status,
+            totalCirculatingCoins: overview.totalCirculatingCoins,
+            serverTimestamp: overview.serverTimestamp
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/playcoin/activity — Exposes authoritative PLAYCOIN ledger transactions
+app.get(['/api/market/playcoin/activity', '/api/market/activity'], (req, res) => {
+    try {
+        const userId = req.userId || req.headers['x-user-id'] || req.query.userId;
+        let transactions = [];
+
+        if (userId && users[userId] && Array.isArray(users[userId].ledger)) {
+            transactions = users[userId].ledger
+                .filter(item => (item.currency === 'PLAY' || item.currency === '$PLAY' || item.token_symbol === '$PLAY' || item.token_symbol === 'PLAY' || (item.game && item.game.includes('Coin'))))
+                .slice(0, 20);
+        }
+
+        if (transactions.length === 0) {
+            Object.values(users).forEach(u => {
+                if (Array.isArray(u.ledger)) {
+                    const coinTx = u.ledger.filter(l => l.currency === 'PLAY' || l.currency === '$PLAY' || (l.game && l.game.includes('Coin')));
+                    transactions.push(...coinTx);
+                }
+            });
+            transactions.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            transactions = transactions.slice(0, 15);
+        }
+
+        res.json({
+            success: true,
+            count: transactions.length,
+            activity: transactions
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/playcoin/config — Public configuration (Telegram redemption, etc.)
+app.get(['/api/market/playcoin/config', '/api/market/config'], (req, res) => {
+    res.json({
+        success: true,
+        symbol: marketService.symbol,
+        currencyCode: marketService.currencyCode,
+        currencyUnit: 'KSh',
+        status: marketService.status,
+        redeemTelegramUrl: marketService.redeemTelegramUrl,
+        supportedIntervals: Object.keys(marketService.INTERVAL_MS)
+    });
+});
+
+// GET /api/admin/market/overview — Admin telemetry & candle health
+app.get('/api/admin/market/overview', requireAdminAuth, (req, res) => {
+    try {
+        const telemetry = marketService.getAdminTelemetry(users);
+        res.json({
+            success: true,
+            ...telemetry
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

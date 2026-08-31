@@ -52,8 +52,11 @@ services:
       NODE_ENV: production
       API_URL: http://spin-api:8080
       BACKEND_URL: http://spin-api:8080
+    env_file:
+      - .env
     depends_on:
       - spin-api
+
 
   # 4. Dedicated Standalone Admin Portal Service (Port 3001)
   spin-admin:
