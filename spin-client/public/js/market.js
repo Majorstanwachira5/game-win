@@ -18,6 +18,7 @@
     const MarketEngine = {
         // State
         activeInterval: '1h',
+        activeChartType: 'candles',
         candles: [],
         marketOverview: null,
         userActivity: [],
@@ -49,9 +50,17 @@
                 this._setupResizeObserver();
             }
 
+            try {
+                const savedType = sessionStorage.getItem('market_chart_type');
+                if (savedType && ['candles', 'line', 'area', 'ohlc'].includes(savedType)) {
+                    this.activeChartType = savedType;
+                }
+            } catch (e) {}
+
             this._bindUIEvents();
             this.fetchMarketConfig();
         },
+
 
         /**
          * Fetch public market configuration
@@ -361,6 +370,32 @@
         },
 
         /**
+         * Chart Presentation Type Handler (Candles, Line, Area, OHLC)
+         */
+        setChartType: function (chartType) {
+            const valid = ['candles', 'line', 'area', 'ohlc'];
+            if (!valid.includes(chartType)) chartType = 'candles';
+            this.activeChartType = chartType;
+
+            try {
+                sessionStorage.setItem('market_chart_type', chartType);
+            } catch (e) {}
+
+            // Update UI tab states
+            const tabs = document.querySelectorAll('.market-type-tab');
+            tabs.forEach(t => {
+                if (t.getAttribute('data-chart-type') === chartType) {
+                    t.classList.add('active');
+                } else {
+                    t.classList.remove('active');
+                }
+            });
+
+            this.drawChart();
+        },
+
+
+        /**
          * Canvas Resize & High-DPI Adaptation
          */
         resizeCanvas: function () {
@@ -498,33 +533,124 @@
             }
             ctx.restore();
 
-            // 2. Draw Volume & Candlesticks
+            // 2. Draw Volume Bars
             visibleSlice.forEach((c, idx) => {
                 const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
                 const isBull = c.close >= c.open;
-                const candleColor = isBull ? '#00e676' : '#ff1744';
-                const bodyTop = getY(Math.max(c.open, c.close));
-                const bodyBottom = getY(Math.min(c.open, c.close));
-                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
-
-                // Volume Bar
                 const volTop = getVolY(c.volume || 0);
                 const volHeight = (paddingTop + plotHeight) - volTop;
                 ctx.fillStyle = isBull ? 'rgba(0, 230, 118, 0.2)' : 'rgba(255, 23, 68, 0.2)';
                 ctx.fillRect(x - (candleWidth / 2), volTop, candleWidth, volHeight);
-
-                // Candlestick Wick (High to Low)
-                ctx.beginPath();
-                ctx.strokeStyle = candleColor;
-                ctx.lineWidth = 1.2;
-                ctx.moveTo(x, getY(c.high));
-                ctx.lineTo(x, getY(c.low));
-                ctx.stroke();
-
-                // Candlestick Body
-                ctx.fillStyle = candleColor;
-                ctx.fillRect(x - (candleWidth / 2), bodyTop, candleWidth, bodyHeight);
             });
+
+            // 3. Draw Selected Chart Type
+            if (this.activeChartType === 'candles') {
+                visibleSlice.forEach((c, idx) => {
+                    const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
+                    const isBull = c.close >= c.open;
+                    const candleColor = isBull ? '#00e676' : '#ff1744';
+                    const bodyTop = getY(Math.max(c.open, c.close));
+                    const bodyBottom = getY(Math.min(c.open, c.close));
+                    const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+
+                    // Candlestick Wick (High to Low)
+                    ctx.beginPath();
+                    ctx.strokeStyle = candleColor;
+                    ctx.lineWidth = 1.2;
+                    ctx.moveTo(x, getY(c.high));
+                    ctx.lineTo(x, getY(c.low));
+                    ctx.stroke();
+
+                    // Candlestick Body
+                    ctx.fillStyle = candleColor;
+                    ctx.fillRect(x - (candleWidth / 2), bodyTop, candleWidth, bodyHeight);
+                });
+            } else if (this.activeChartType === 'ohlc') {
+                visibleSlice.forEach((c, idx) => {
+                    const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
+                    const isBull = c.close >= c.open;
+                    const candleColor = isBull ? '#00e676' : '#ff1744';
+                    const tickSize = Math.max(3, candleWidth / 2);
+
+                    // High-Low Vertical Line
+                    ctx.beginPath();
+                    ctx.strokeStyle = candleColor;
+                    ctx.lineWidth = 1.4;
+                    ctx.moveTo(x, getY(c.high));
+                    ctx.lineTo(x, getY(c.low));
+                    ctx.stroke();
+
+                    // Open Tick (Left)
+                    const openY = getY(c.open);
+                    ctx.beginPath();
+                    ctx.moveTo(x - tickSize, openY);
+                    ctx.lineTo(x, openY);
+                    ctx.stroke();
+
+                    // Close Tick (Right)
+                    const closeY = getY(c.close);
+                    ctx.beginPath();
+                    ctx.moveTo(x, closeY);
+                    ctx.lineTo(x + tickSize, closeY);
+                    ctx.stroke();
+                });
+            } else if (this.activeChartType === 'line' || this.activeChartType === 'area') {
+                if (visibleSlice.length > 0) {
+                    if (this.activeChartType === 'area') {
+                        // Mountain Area Gradient Fill
+                        ctx.save();
+                        const grad = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + candlePlotHeight);
+                        grad.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
+                        grad.addColorStop(1, 'rgba(0, 240, 255, 0.01)');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        const firstX = paddingLeft + (candleStep / 2);
+                        const firstY = getY(visibleSlice[0].close);
+                        ctx.moveTo(firstX, paddingTop + candlePlotHeight);
+                        ctx.lineTo(firstX, firstY);
+
+                        for (let i = 1; i < visibleSlice.length; i++) {
+                            const x = paddingLeft + (i * candleStep) + (candleStep / 2);
+                            const y = getY(visibleSlice[i].close);
+                            ctx.lineTo(x, y);
+                        }
+                        const lastX = paddingLeft + ((visibleSlice.length - 1) * candleStep) + (candleStep / 2);
+                        ctx.lineTo(lastX, paddingTop + candlePlotHeight);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
+                    // Stroke Price Line
+                    ctx.save();
+                    ctx.strokeStyle = '#00f0ff';
+                    ctx.lineWidth = 2;
+                    ctx.shadowColor = 'rgba(0, 240, 255, 0.5)';
+                    ctx.shadowBlur = 6;
+                    ctx.beginPath();
+                    for (let i = 0; i < visibleSlice.length; i++) {
+                        const x = paddingLeft + (i * candleStep) + (candleStep / 2);
+                        const y = getY(visibleSlice[i].close);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Line Chart Points
+                    if (visibleSlice.length <= 60) {
+                        visibleSlice.forEach((c, idx) => {
+                            const x = paddingLeft + (idx * candleStep) + (candleStep / 2);
+                            const y = getY(c.close);
+                            ctx.fillStyle = '#00f0ff';
+                            ctx.beginPath();
+                            ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+                }
+            }
+
 
             // 3. Draw Time Axis Labels
             ctx.save();
@@ -788,6 +914,14 @@
          * Bind UI Controls
          */
         _bindUIEvents: function () {
+            // Chart Type tabs
+            document.querySelectorAll('.market-type-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const chartType = e.currentTarget.getAttribute('data-chart-type');
+                    if (chartType) this.setChartType(chartType);
+                });
+            });
+
             // Timeframe tabs
             document.querySelectorAll('.market-time-tab').forEach(tab => {
                 tab.addEventListener('click', (e) => {
@@ -796,7 +930,7 @@
                 });
             });
 
-            // Redeem Buttons
+            // Redeem Buttons (Everywhere in the app)
             document.querySelectorAll('.trigger-redeem-playcoin').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -804,21 +938,21 @@
                 });
             });
 
-            // Pay & Trade Buttons
-            document.querySelectorAll('.trigger-pay-and-trade').forEach(btn => {
+            // Deposit Buttons (Trading Terminal & Header)
+            document.querySelectorAll('.trigger-trading-deposit, .trigger-pay-and-trade').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
-                    this.triggerPayAndTrade();
+                    this.triggerDeposit();
                 });
             });
         },
 
         /**
-         * Trigger Pay & Trade entry point using the existing authoritative M-Pesa payment system
+         * Trigger Deposit entry point using the existing authoritative M-Pesa payment system (Min KSh 200)
          */
-        triggerPayAndTrade: function () {
+        triggerDeposit: function () {
             if (window.showToast) {
-                window.showToast('Opening secure M-Pesa STK Deposit terminal...', 'info');
+                window.showToast('Opening secure M-Pesa STK Deposit terminal (Min KSh 200)...', 'info');
             }
             if (typeof window.openDepositModal === 'function') {
                 window.openDepositModal();
@@ -830,6 +964,14 @@
                 }
             }
         },
+
+        /**
+         * Backwards-compatible alias for triggerDeposit
+         */
+        triggerPayAndTrade: function () {
+            this.triggerDeposit();
+        },
+
 
 
         /**

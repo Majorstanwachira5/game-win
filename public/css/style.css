@@ -3843,13 +3843,13 @@ html, body {
   gap: 8px;
 }
 
-.btn-terminal-pay {
-  background: linear-gradient(135deg, #00f0ff 0%, #0099ff 100%);
+.btn-terminal-deposit {
+  background: linear-gradient(135deg, #00f0ff 0%, #0077ff 100%);
   color: #000;
   font-family: 'Orbitron', 'Sora', sans-serif;
   font-size: 11px;
   font-weight: 900;
-  padding: 8px 16px;
+  padding: 8px 18px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
@@ -3861,32 +3861,9 @@ html, body {
   transition: all 0.2s ease;
 }
 
-.btn-terminal-pay:hover {
+.btn-terminal-deposit:hover {
   transform: translateY(-1px);
   box-shadow: 0 0 26px rgba(0, 240, 255, 0.8);
-}
-
-.btn-redeem-gold {
-  background: linear-gradient(135deg, #ffd700, #ff8c00);
-  color: #000;
-  font-family: 'Orbitron', 'Sora', sans-serif;
-  font-size: 11px;
-  font-weight: 900;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  letter-spacing: 0.5px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 0 14px rgba(255, 215, 0, 0.4);
-  transition: all 0.2s ease;
-}
-
-.btn-redeem-gold:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 22px rgba(255, 215, 0, 0.7);
 }
 
 /* Terminal Metrics Strip */
@@ -3976,6 +3953,41 @@ html, body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* Chart Type Selector Tabs */
+.market-chart-types {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.market-type-tab {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: 'Sora', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.market-type-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.market-type-tab.active {
+  background: var(--gold-primary);
+  color: #000;
+  font-weight: 900;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
 .market-time-tabs {
   display: flex;
   gap: 4px;
@@ -4009,6 +4021,7 @@ html, body {
   font-weight: 900;
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
 }
+
 
 /* Live Cursor HUD Bar */
 .market-hud-bar {
@@ -4276,16 +4289,17 @@ html, body {
   text-align: left;
 }
 
-.btn-trade-action.pay-btn {
+.btn-trade-action.pay-btn, .btn-trade-action.deposit-btn {
   background: linear-gradient(135deg, #00f0ff 0%, #0077ff 100%);
   color: #000;
   box-shadow: 0 0 15px rgba(0, 240, 255, 0.35);
 }
 
-.btn-trade-action.pay-btn:hover {
+.btn-trade-action.pay-btn:hover, .btn-trade-action.deposit-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 0 22px rgba(0, 240, 255, 0.7);
 }
+
 
 .btn-trade-action.spin-btn {
   background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);

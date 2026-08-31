@@ -1267,7 +1267,7 @@ function bindDepositModal() {
     document.querySelectorAll('.preset-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const amtInput = document.getElementById('depositAmountInput');
-            if (amtInput) amtInput.value = btn.dataset.amt || '100';
+            if (amtInput) amtInput.value = btn.dataset.amt || '200';
             document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
         });
@@ -1277,13 +1277,14 @@ function bindDepositModal() {
         confirmBtn.addEventListener('click', async () => {
             const amountInput = document.getElementById('depositAmountInput');
             const phoneInput = document.getElementById('depositPhoneInput');
-            const amount = Number(amountInput ? amountInput.value : 100);
+            const amount = Number(amountInput ? amountInput.value : 200);
             const phone = phoneInput ? phoneInput.value.trim() : '';
 
-            if (!amount || amount < 10) {
-                showToast('Minimum deposit amount is KSh 10', 'error');
+            if (!amount || amount < 200) {
+                showToast('Minimum deposit amount is KSh 200', 'error');
                 return;
             }
+
 
             if (!phone || phone.length < 9) {
                 showToast('Please enter a valid Safaricom M-Pesa phone number (e.g. 07XXXXXXXX)', 'error');

@@ -1567,9 +1567,19 @@ function creditSuccessfulDeposit(userId, amount, checkoutRequestId = '', receipt
 app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAuth, async (req, res) => {
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
-        const { phone = '', amount = 100 } = req.body;
-        const depositAmount = Math.max(1, Math.round(Number(amount) || 100));
+
+        const { phone = '', amount = 200 } = req.body;
+        const depositAmount = Math.round(Number(amount) || 0);
+
+        // Server-side strict minimum deposit enforcement (KSh 200)
+        if (!depositAmount || depositAmount < 200) {
+            return res.status(400).json({
+                success: false,
+                error: 'Minimum deposit is KSh 200. Please enter an amount of KSh 200 or more.'
+            });
+        }
         const user = getOrCreateUser(userId, req.userEmail, req.isTester);
+
 
         const host = req.get('host') || 'playcoin.live';
         const cleanHost = host.replace(/:[0-9]+$/, '');
