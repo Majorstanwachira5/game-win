@@ -170,6 +170,9 @@
             const statusEl = document.getElementById('marketStatusBadge');
             const supplyEl = document.getElementById('marketCirculatingSupply');
             const userBalEl = document.getElementById('marketUserCoinBal');
+            const tradeCashEl = document.getElementById('tradeAvailableCash');
+            const tradeCoinsEl = document.getElementById('tradeAvailableCoins');
+            const tradeValEl = document.getElementById('tradeTotalValuation');
 
             const price = Number(data.price || 0);
             const stats = data.stats24h || {};
@@ -188,25 +191,35 @@
             if (lowEl) lowEl.textContent = stats.low ? `KSh ${Number(stats.low).toFixed(4)}` : 'Data unavailable';
             if (volEl) volEl.textContent = stats.volume ? `${Number(stats.volume).toLocaleString('en-US')} PLAY` : 'Data unavailable';
 
-            if (statusEl) statusEl.textContent = data.status || 'PLAYCOIN INTERNAL MARKET';
-            if (supplyEl) supplyEl.textContent = data.totalCirculatingCoins !== undefined ? `${Number(data.totalCirculatingCoins).toLocaleString('en-US')} PLAY` : 'Data unavailable';
+            if (statusEl) statusEl.textContent = data.status || '● LIVE TERMINAL';
+            if (supplyEl) supplyEl.textContent = data.totalCirculatingCoins !== undefined ? `Circulating: ${Number(data.totalCirculatingCoins).toLocaleString('en-US')} PLAY` : 'Circulating: Data unavailable';
 
             // Authoritative user balance
             let currentCoins = 0;
+            let currentCash = 0;
             try {
                 const stored = localStorage.getItem('spin_user_data');
                 if (stored) {
                     const u = JSON.parse(stored);
                     currentCoins = Number(u.coins || 0);
+                    currentCash = Number(u.balance || 0);
                 }
             } catch (e) {}
 
-            if (window.APP_STATE && window.APP_STATE.coins !== undefined) {
-                currentCoins = window.APP_STATE.coins;
+            if (window.APP_STATE) {
+                if (window.APP_STATE.coins !== undefined) currentCoins = window.APP_STATE.coins;
+                if (window.APP_STATE.balance !== undefined) currentCash = window.APP_STATE.balance;
             }
 
             if (userBalEl) userBalEl.textContent = `${Number(currentCoins).toLocaleString('en-US')} PLAY`;
+            if (tradeCashEl) tradeCashEl.textContent = `KSh ${Number(currentCash).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (tradeCoinsEl) tradeCoinsEl.textContent = `${Number(currentCoins).toLocaleString('en-US')} PLAY`;
+            if (tradeValEl) {
+                const totalVal = currentCash + (currentCoins * price);
+                tradeValEl.textContent = `KSh ${totalVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
         },
+
 
         renderOverviewError: function () {
             const priceEl = document.getElementById('marketLivePrice');
@@ -437,17 +450,37 @@
             const getY = (val) => paddingTop + candlePlotHeight - ((val - minPrice) / priceRange) * candlePlotHeight;
             const getVolY = (vol) => paddingTop + plotHeight - (maxVolume > 0 ? (vol / maxVolume) * volumeHeight : 0);
 
+            // Update Live HUD Readout
+            const hudCandle = (this.hoveredIndex >= 0 && visibleSlice[this.hoveredIndex]) ? visibleSlice[this.hoveredIndex] : visibleSlice[visibleSlice.length - 1];
+            if (hudCandle) {
+                const hO = document.getElementById('hudOpen');
+                const hH = document.getElementById('hudHigh');
+                const hL = document.getElementById('hudLow');
+                const hC = document.getElementById('hudClose');
+                const hV = document.getElementById('hudVol');
+                if (hO) hO.textContent = hudCandle.open.toFixed(4);
+                if (hH) hH.textContent = hudCandle.high.toFixed(4);
+                if (hL) hL.textContent = hudCandle.low.toFixed(4);
+                if (hC) {
+                    hC.textContent = hudCandle.close.toFixed(4);
+                    hC.style.color = hudCandle.close >= hudCandle.open ? '#00e676' : '#ff1744';
+                }
+                if (hV) hV.textContent = Number(hudCandle.volume || 0).toLocaleString('en-US');
+            }
+
             const candleStep = plotWidth / visibleSlice.length;
             const candleWidth = Math.max(2, candleStep * 0.68);
 
             // 1. Draw Grid Lines & Price Axis
             ctx.save();
+
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.lineWidth = 1;
             ctx.font = '10px Sora, sans-serif';
             ctx.fillStyle = 'rgba(160, 175, 200, 0.7)';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
+
 
             const gridSteps = 5;
             for (let i = 0; i <= gridSteps; i++) {
@@ -770,7 +803,34 @@
                     this.openRedeemConfirmation();
                 });
             });
+
+            // Pay & Trade Buttons
+            document.querySelectorAll('.trigger-pay-and-trade').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.triggerPayAndTrade();
+                });
+            });
         },
+
+        /**
+         * Trigger Pay & Trade entry point using the existing authoritative M-Pesa payment system
+         */
+        triggerPayAndTrade: function () {
+            if (window.showToast) {
+                window.showToast('Opening secure M-Pesa STK Deposit terminal...', 'info');
+            }
+            if (typeof window.openDepositModal === 'function') {
+                window.openDepositModal();
+            } else {
+                const depositModal = document.getElementById('depositModal');
+                if (depositModal) {
+                    depositModal.classList.add('open', 'active');
+                    depositModal.setAttribute('style', 'display: flex !important; z-index: 99999999;');
+                }
+            }
+        },
+
 
         /**
          * Open Telegram Redemption Confirmation Modal

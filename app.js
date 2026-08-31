@@ -408,6 +408,21 @@ window.updateBalanceUI = function (balance = 0, coins = 0) {
     const redeemModalBalanceText = document.getElementById('redeemModalBalanceText');
     if (redeemModalBalanceText) redeemModalBalanceText.textContent = `${fmtCoins} PLAY`;
 
+    const tradeAvailableCash = document.getElementById('tradeAvailableCash');
+    if (tradeAvailableCash) tradeAvailableCash.textContent = `KSh ${fmtBal}`;
+    const tradeAvailableCoins = document.getElementById('tradeAvailableCoins');
+    if (tradeAvailableCoins) tradeAvailableCoins.textContent = `${fmtCoins} PLAY`;
+    const tradeTotalValuation = document.getElementById('tradeTotalValuation');
+    if (tradeTotalValuation) {
+        let price = 0.50;
+        if (window.MarketEngine && window.MarketEngine.marketOverview && window.MarketEngine.marketOverview.price) {
+            price = Number(window.MarketEngine.marketOverview.price);
+        }
+        const tot = finalBal + (finalCoins * price);
+        tradeTotalValuation.textContent = `KSh ${tot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+
 
     // Mobile Withdrawal Button State (< KSh 500 disabled)
     const minWithdrawal = 500;
