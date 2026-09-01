@@ -1507,15 +1507,59 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
-    <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- 💳 PLAYCOIN TRADING M-PESA DEPOSIT MODAL -->
+    <div id="tradeDepositPromptModal" class="game-modal-overlay" style="display:none; z-index:999999999;">
+        <div class="game-modal-card glass-modal" style="max-width:420px; width:92%; border:2px solid var(--gold-primary); box-shadow: 0 0 35px rgba(255,215,0,0.4); text-align:center; padding:20px; border-radius:20px; background:linear-gradient(145deg, #0e172a 0%, #080e1a 100%);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.2); padding-bottom:10px; margin-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:20px;">💳</span>
+                    <h2 style="font-family:'Orbitron',sans-serif; font-size:15px; color:var(--gold-primary); margin:0;">M-PESA TRADING DEPOSIT</h2>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeTradeDepositModal(); else document.getElementById('tradeDepositPromptModal').style.display='none';" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer;">&times;</button>
+            </div>
+            
+            <p style="font-size:12.5px; color:#cbd5e1; margin-bottom:14px; text-align:left;">
+                Deposit funds directly via Safaricom M-Pesa STK Push to fund your trading wallet:
+            </p>
+
+            <!-- Quick Preset Amount Chips -->
+            <div style="text-align:left; margin-bottom:8px;">
+                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">SELECT DEPOSIT AMOUNT (MIN KSh 200):</label>
+                <div class="trade-deposit-presets" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-top:6px;">
+                    <button type="button" class="deposit-chip active" data-amt="200" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(200, this);">200</button>
+                    <button type="button" class="deposit-chip" data-amt="500" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(500, this);">500</button>
+                    <button type="button" class="deposit-chip" data-amt="1000" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(1000, this);">1,000</button>
+                    <button type="button" class="deposit-chip" data-amt="2500" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(2500, this);">2,500</button>
+                </div>
+            </div>
+
+            <!-- Custom Amount Input -->
+            <div class="form-group" style="text-align:left; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--cyan-accent);">CUSTOM AMOUNT (KSh):</label>
+                    <span style="font-size:10px; color:#94a3b8;">Min: KSh 200</span>
+                </div>
+                <input type="number" id="tradeDepositAmountInput" min="200" step="50" value="200" placeholder="Min 200" style="width:100%; box-sizing:border-box; padding:11px; background:rgba(6,10,22,0.95); border:1.5px solid var(--cyan-accent); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:4px; outline:none;" />
+            </div>
+
+            <!-- Safaricom Phone Input -->
+            <div class="form-group" style="text-align:left; margin-bottom:14px;">
+                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">SAFARICOM M-PESA PHONE NUMBER:</label>
+                <input type="tel" id="tradeDepositPhoneInput" placeholder="07XXXXXXXX or 01XXXXXXXX" style="width:100%; box-sizing:border-box; padding:11px; background:rgba(6,10,22,0.95); border:1.5px solid var(--gold-primary); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:4px; outline:none;" required />
+            </div>
+
+            <!-- Live STK Push Progress Banner -->
+            <div id="tradeDepositStatusBanner" style="display:none; margin-bottom:14px; padding:10px 12px; border-radius:10px; background:rgba(0,240,255,0.1); border:1px solid var(--cyan-accent); font-size:12px; color:#fff; text-align:left;">
+                <span id="tradeDepositStatusText">📲 Initializing...</span>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="button" id="btnSubmitTradeDeposit" onclick="if(window.MarketEngine) window.MarketEngine.submitTradeDeposit();" class="spin-gold-btn" style="width:100%; min-height:46px; font-size:14.5px; font-weight:bold; letter-spacing:0.5px; border-radius:10px; cursor:pointer;">
+                ⚡ SEND M-PESA PROMPT
+            </button>
+        </div>
+    </div>
+
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
@@ -1523,6 +1567,7 @@
         <div class="market-dashboard-modal glass-modal trade-terminal-theme mobile-app-terminal" id="marketDashboardModal">
             <!-- Native App Header Bar -->
             <div class="market-header-block app-header-bar">
+
                 <div class="market-title-area">
                     <div class="market-token-icon">⚡</div>
                     <div class="market-titles">

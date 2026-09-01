@@ -1690,26 +1690,238 @@
         },
 
         /**
-         * Trigger Deposit entry point using the existing authoritative M-Pesa payment system (Min KSh 200)
+         * Trigger Deposit entry point using authoritative M-Pesa payment system (Min KSh 200)
          */
         triggerDeposit: function () {
-            if (window.showToast) {
-                window.showToast('Opening secure M-Pesa STK Deposit terminal (Min KSh 200)...', 'info');
-            }
-            if (typeof window.openDepositModal === 'function') {
-                window.openDepositModal();
-            } else {
-                const depositModal = document.getElementById('depositModal');
-                if (depositModal) {
-                    depositModal.classList.add('open', 'active');
-                    depositModal.setAttribute('style', 'display: flex !important; z-index: 99999999;');
+            const modal = document.getElementById('tradeDepositPromptModal');
+            if (!modal) {
+                if (typeof window.openDepositModal === 'function') {
+                    window.openDepositModal();
+                } else {
+                    const depositModal = document.getElementById('depositModal');
+                    if (depositModal) {
+                        depositModal.classList.add('open', 'active');
+                        depositModal.setAttribute('style', 'display: flex !important; z-index: 99999999;');
+                    }
                 }
+                return;
+            }
+
+            const phoneInput = document.getElementById('tradeDepositPhoneInput');
+            const amtInput = document.getElementById('tradeDepositAmountInput');
+            const statusBanner = document.getElementById('tradeDepositStatusBanner');
+            const btn = document.getElementById('btnSubmitTradeDeposit');
+
+            let savedPhone = '';
+            try {
+                const u = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+                savedPhone = u.phone || '';
+            } catch (e) {}
+
+            if (phoneInput && !phoneInput.value) phoneInput.value = savedPhone;
+            if (amtInput && !amtInput.value) amtInput.value = '200';
+            if (statusBanner) statusBanner.style.display = 'none';
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '⚡ SEND M-PESA PROMPT';
+            }
+
+            modal.style.display = 'flex';
+            modal.classList.add('open', 'active');
+        },
+
+        closeTradeDepositModal: function () {
+            const modal = document.getElementById('tradeDepositPromptModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('open', 'active');
+            }
+        },
+
+        setTradeDepositAmount: function (amt, btnEl) {
+            const input = document.getElementById('tradeDepositAmountInput');
+            if (input) input.value = amt;
+            document.querySelectorAll('.deposit-chip').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+        },
+
+        submitTradeDeposit: async function () {
+            const amtInput = document.getElementById('tradeDepositAmountInput');
+            const phoneInput = document.getElementById('tradeDepositPhoneInput');
+            const statusBanner = document.getElementById('tradeDepositStatusBanner');
+            const statusText = document.getElementById('tradeDepositStatusText');
+            const btn = document.getElementById('btnSubmitTradeDeposit');
+
+            const amount = Number(amtInput ? amtInput.value : 200);
+            let phone = phoneInput ? phoneInput.value.trim() : '';
+
+            if (!amount || amount < 200) {
+                if (window.showToast) window.showToast('Minimum deposit amount is KSh 200', 'error');
+                return;
+            }
+
+            const cleanP = phone.replace(/\D/g, '');
+            if (!phone || cleanP.length < 9) {
+                if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number (e.g. 07XXXXXXXX)', 'error');
+                return;
+            }
+
+            // Save phone locally
+            try {
+                const u = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+                u.phone = phone;
+                localStorage.setItem('spin_user_data', JSON.stringify(u));
+            } catch (e) {}
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Initializing STK Push...';
+            }
+            if (statusBanner) {
+                statusBanner.style.display = 'block';
+                statusBanner.style.borderColor = '#00f0ff';
+                statusBanner.style.background = 'rgba(0, 240, 255, 0.1)';
+                if (statusText) statusText.textContent = '⏳ Connecting to Safaricom Daraja Gateway...';
+            }
+
+            let userId = 'demo-user-1';
+            try {
+                const u = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+                if (u.id) userId = u.id;
+            } catch (e) {}
+            if (window.APP_STATE && window.APP_STATE.userId) userId = window.APP_STATE.userId;
+
+            try {
+                const res = await fetch('/api/deposit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId,
+                        amount,
+                        phone,
+                        gameAction: 'DEPOSIT_TRADE'
+                    })
+                }).then(r => r.json());
+
+                if (!res || !res.success) {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Retry Deposit';
+                    }
+                    const rawError = res?.error || res?.message || 'Failed to initiate M-Pesa prompt';
+                    if (statusBanner) {
+                        statusBanner.style.borderColor = '#ff4444';
+                        statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                        if (statusText) statusText.textContent = `❌ ${rawError}`;
+                    }
+                    if (window.showToast) window.showToast(`Deposit failed: ${rawError}`, 'error');
+                    return;
+                }
+
+                if (statusBanner) {
+                    statusBanner.style.borderColor = 'var(--gold-primary)';
+                    statusBanner.style.background = 'rgba(255, 215, 0, 0.15)';
+                    if (statusText) statusText.textContent = '📲 Prompt sent! Check your phone and enter M-Pesa PIN...';
+                }
+                if (btn) btn.textContent = 'Awaiting PIN...';
+                if (window.showToast) window.showToast(`Prompt sent to ${phone}. Enter your M-Pesa PIN.`, 'info');
+
+                const checkoutRequestId = res.CheckoutRequestID;
+                if (!checkoutRequestId) return;
+
+                let attempts = 0;
+                const maxAttempts = 60;
+                let isResolved = false;
+
+                const pollInterval = setInterval(async () => {
+                    if (isResolved) {
+                        clearInterval(pollInterval);
+                        return;
+                    }
+                    attempts++;
+                    try {
+                        const statusRes = await fetch(`/api/deposit/status/${checkoutRequestId}`).then(r => r.json());
+                        const statusUpper = (statusRes?.status || '').toUpperCase();
+                        const isConfirmed = statusUpper === 'COMPLETED' || statusUpper === 'SUCCESS' || statusUpper === 'CONFIRMED' || (statusRes?.success === true && statusRes?.amount > 0);
+
+                        if (isConfirmed) {
+                            isResolved = true;
+                            clearInterval(pollInterval);
+                            if (btn) btn.textContent = '✅ Confirmed!';
+                            if (statusBanner) {
+                                statusBanner.style.borderColor = '#00ff66';
+                                statusBanner.style.background = 'rgba(0, 255, 100, 0.15)';
+                                if (statusText) statusText.textContent = `✅ KSh ${amount.toLocaleString()} credited successfully!`;
+                            }
+                            if (window.showToast) window.showToast(`Payment Confirmed! KSh ${amount.toLocaleString()} added to Trading Wallet`, 'success');
+
+                            if (statusRes.user) {
+                                if (window.APP_STATE) {
+                                    window.APP_STATE.balance = statusRes.user.balance;
+                                    window.APP_STATE.coins = statusRes.user.coins;
+                                }
+                                if (window.updateUserState) window.updateUserState(statusRes.user, statusRes.amount || amount);
+                                if (window.updateBalanceUI) window.updateBalanceUI();
+                            }
+
+                            if (window.triggerConfetti) window.triggerConfetti();
+
+                            // Update trade available cash in Trade panel
+                            const tradeCash = document.getElementById('tradeAvailableCash');
+                            if (tradeCash && statusRes.user) {
+                                tradeCash.textContent = `KSh ${Number(statusRes.user.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                            }
+
+                            setTimeout(() => {
+                                this.closeTradeDepositModal();
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.textContent = '⚡ SEND M-PESA PROMPT';
+                                }
+                                this.switchSection('trade');
+                            }, 1200);
+
+                        } else if (statusUpper === 'FAILED') {
+                            isResolved = true;
+                            clearInterval(pollInterval);
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.textContent = 'Retry Deposit';
+                            }
+                            if (statusBanner) {
+                                statusBanner.style.borderColor = '#ff4444';
+                                statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                                if (statusText) statusText.textContent = '❌ Payment Cancelled or Failed';
+                            }
+                            if (window.showToast) window.showToast('Payment Cancelled or Failed', 'error');
+                        } else if (attempts >= maxAttempts) {
+                            isResolved = true;
+                            clearInterval(pollInterval);
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.textContent = 'Check Status';
+                            }
+                            if (statusBanner) {
+                                statusBanner.style.borderColor = '#ffbb00';
+                                if (statusText) statusText.textContent = '⚠️ Request timed out. Balance will update automatically once confirmed.';
+                            }
+                        }
+                    } catch (pollErr) {}
+                }, 2000);
+
+            } catch (err) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Retry Deposit';
+                }
+                if (window.showToast) window.showToast(err.message || 'Network error initiating deposit', 'error');
             }
         },
 
         triggerPayAndTrade: function () {
             this.triggerDeposit();
         },
+
 
         /**
          * Open Telegram Redemption Confirmation Modal
