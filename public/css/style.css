@@ -4905,6 +4905,44 @@ html, body {
   box-shadow: 0 0 10px rgba(255, 23, 68, 0.25);
 }
 
+.app-trade-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-type-badge {
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 240, 255, 0.12);
+  color: #00f0ff;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+}
+
+.btn-micro-deposit {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 215, 0, 0.1));
+  border: 1px solid var(--gold-primary);
+  color: var(--gold-primary);
+  font-family: 'Orbitron', 'Sora', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-micro-deposit:hover {
+  background: rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
 .trade-input-form {
   display: flex;
   flex-direction: column;
@@ -4917,7 +4955,6 @@ html, body {
   color: #64748b;
   letter-spacing: 0.5px;
   display: block;
-  margin-bottom: 3px;
 }
 
 .trade-input-wrapper {
@@ -4926,31 +4963,64 @@ html, body {
   align-items: center;
 }
 
-.trade-input-wrapper input {
-  width: 100%;
-  background: rgba(4, 7, 15, 0.9);
+.app-stepper-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(4, 7, 15, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  padding: 9px 45px 9px 12px;
+  padding: 2px;
+  position: relative;
+}
+
+.app-stepper-wrapper:focus-within {
+  border-color: var(--cyan-accent);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+}
+
+.trade-stepper-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 900;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.trade-stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.app-stepper-wrapper input {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px 38px 8px 8px;
   color: #fff;
   font-family: 'Orbitron', 'Sora', monospace;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  text-align: center;
   outline: none;
-  transition: all 0.2s ease;
-}
-
-.trade-input-wrapper input:focus {
-  border-color: var(--cyan-accent);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+  min-width: 0;
 }
 
 .trade-input-unit {
   position: absolute;
-  right: 12px;
+  right: 38px;
   color: #64748b;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
+  pointer-events: none;
 }
 
 .trade-quick-chips {
@@ -4966,7 +5036,7 @@ html, body {
   color: #94a3b8;
   font-size: 10px;
   font-weight: 700;
-  padding: 4px;
+  padding: 5px 2px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -5000,7 +5070,7 @@ html, body {
 
 .btn-execute-trade {
   width: 100%;
-  padding: 11px;
+  padding: 12px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
@@ -5037,26 +5107,6 @@ html, body {
   box-shadow: 0 0 25px rgba(255, 23, 68, 0.65);
 }
 
-.btn-quick-deposit {
-  width: 100%;
-  background: rgba(255, 215, 0, 0.08);
-  border: 1px solid rgba(255, 215, 0, 0.35);
-  border-radius: 8px;
-  color: var(--gold-primary);
-  font-size: 11px;
-  font-weight: 800;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.15s ease;
-}
-
-.btn-quick-deposit:hover {
-  background: rgba(255, 215, 0, 0.15);
-}
 
 .trading-secondary-actions {
   margin-top: 4px;

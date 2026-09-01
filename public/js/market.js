@@ -1327,7 +1327,17 @@
             this.calculateOrderPreview();
         },
 
+        stepTradeAmount: function (delta) {
+            const input = document.getElementById('tradeOrderAmount');
+            if (!input) return;
+            let current = parseFloat(input.value) || 0;
+            current = Math.max(10, current + delta);
+            input.value = current;
+            this.calculateOrderPreview();
+        },
+
         calculateOrderPreview: function () {
+
             const input = document.getElementById('tradeOrderAmount');
             const previewLabel = document.getElementById('tradePreviewLabel');
             const previewVal = document.getElementById('tradePreviewValue');

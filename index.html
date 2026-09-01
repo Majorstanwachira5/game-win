@@ -1692,21 +1692,21 @@
                 </div>
             </div>
 
-            <!-- Bottom Trading & Settlement Workspace -->
+            <!-- Bottom Trading & Settlement Workspace (Native Android Card Architecture) -->
             <div class="market-bottom-section" id="marketBottomSection">
                 <!-- Left: Multi-Tab Positions, Orders, History & Ledger Workspace -->
                 <div class="market-activity-card" id="marketActivityCard">
                     <div class="workspace-tabs-header">
-                        <button type="button" class="workspace-tab-btn active" data-target-pane="panePositions">
+                        <button type="button" class="workspace-tab-btn active" data-target-pane="panePositions" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('panePositions');">
                             <span>📊</span> POSITIONS <span class="workspace-tab-badge" id="posCountBadge">0</span>
                         </button>
-                        <button type="button" class="workspace-tab-btn" data-target-pane="paneOrders">
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneOrders" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneOrders');">
                             <span>📜</span> ORDERS
                         </button>
-                        <button type="button" class="workspace-tab-btn" data-target-pane="paneHistory">
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneHistory" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneHistory');">
                             <span>🕒</span> HISTORY
                         </button>
-                        <button type="button" class="workspace-tab-btn" data-target-pane="paneLedger">
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneLedger" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneLedger');">
                             <span>🛡️</span> SETTLEMENT FEED
                         </button>
                     </div>
@@ -1717,7 +1717,7 @@
                             <div id="marketPositionsList" class="market-positions-list">
                                 <div class="market-empty-activity">
                                     <span>📊</span>
-                                    <p>No open positions. Tap BUY or SELL to open a position.</p>
+                                    <p>No open positions. Tap BUY or SELL below to open a position.</p>
                                 </div>
                             </div>
                         </div>
@@ -1756,8 +1756,9 @@
 
                 <!-- Right: Professional Order Placement & Trading Capital Panel -->
                 <div class="market-trading-panel" id="marketTradingPanel">
-                    <div class="market-section-title">
-                        <span>⚡</span> ORDER EXECUTION
+                    <div class="market-section-title app-trade-title">
+                        <span>⚡ ORDER EXECUTION</span>
+                        <span class="order-type-badge">MARKET ORDER</span>
                     </div>
 
                     <!-- Buy / Sell Side Selector Tabs -->
@@ -1770,12 +1771,18 @@
                         </button>
                     </div>
                     
+                    <!-- Capital & Instant Deposit Box -->
                     <div class="trading-capital-box">
                         <div class="capital-row">
-                            <span class="capital-label" id="tradeAvailableLabel">Available Cash:</span>
-                            <strong class="capital-val" id="tradeAvailableCash" style="color:var(--gold-primary);">KSh 0.00</strong>
+                            <div>
+                                <span class="capital-label" id="tradeAvailableLabel">Available Cash:</span>
+                                <strong class="capital-val" id="tradeAvailableCash" style="color:var(--gold-primary); display:block;">KSh 0.00</strong>
+                            </div>
+                            <button type="button" class="btn-micro-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Fund Wallet via M-Pesa">
+                                <span>💳</span> + Deposit
+                            </button>
                         </div>
-                        <div class="capital-row">
+                        <div class="capital-row" style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.06);">
                             <span class="capital-label">Coin Holdings:</span>
                             <strong class="capital-val" id="tradeAvailableCoins" style="color:var(--cyan-accent);">0 PLAY</strong>
                         </div>
@@ -1788,10 +1795,15 @@
                     <!-- Order Input Form -->
                     <div class="trade-input-form">
                         <div class="trade-input-group">
-                            <label for="tradeOrderAmount" id="tradeAmountLabel">AMOUNT (KSh):</label>
-                            <div class="trade-input-wrapper">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label for="tradeOrderAmount" id="tradeAmountLabel">AMOUNT (KSh):</label>
+                                <span style="font-size:9.5px; color:#64748b;">Min 10</span>
+                            </div>
+                            <div class="trade-input-wrapper app-stepper-wrapper">
+                                <button type="button" class="trade-stepper-btn minus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(-50);" title="Decrease amount">−</button>
                                 <input type="number" id="tradeOrderAmount" min="10" step="10" placeholder="Min 10" oninput="if(window.MarketEngine) window.MarketEngine.calculateOrderPreview();" />
                                 <span class="trade-input-unit" id="tradeAmountUnit">KSh</span>
+                                <button type="button" class="trade-stepper-btn plus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(50);" title="Increase amount">+</button>
                             </div>
                         </div>
 
@@ -1813,12 +1825,6 @@
                         <button type="button" id="btnExecuteTrade" class="btn-execute-trade buy" onclick="if(window.MarketEngine) window.MarketEngine.executeCurrentOrder();">
                             <span class="exec-icon">⚡</span>
                             <span class="exec-title" id="btnExecuteText">EXECUTE BUY ORDER</span>
-                        </button>
-                    </div>
-
-                    <div class="trading-secondary-actions">
-                        <button type="button" class="btn-quick-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();">
-                            <span>💳</span> Deposit via M-Pesa (Min KSh 200)
                         </button>
                     </div>
 
@@ -1849,6 +1855,7 @@
             </div>
         </div>
     </div>
+
 
 
 
