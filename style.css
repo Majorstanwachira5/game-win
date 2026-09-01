@@ -4449,6 +4449,7 @@ html, body {
 .market-dashboard-modal.fullscreen-chart-mode .market-stats-row,
 .market-dashboard-modal.fullscreen-chart-mode .terminal-section-nav-bar,
 .market-dashboard-modal.fullscreen-chart-mode .market-bottom-section,
+.market-dashboard-modal.fullscreen-chart-mode .app-bottom-nav-bar,
 .market-dashboard-modal.fullscreen-chart-mode .btn-terminal-deposit {
   display: none !important;
 }
@@ -4475,56 +4476,41 @@ html, body {
   transition: none !important;
 }
 
-/* Section Switcher Navigation Bar */
-.terminal-section-nav-bar {
+/* Native Android Mobile App Header Styles */
+.app-header-bar {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding: 2px 0 6px 0;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  scrollbar-width: none;
 }
 
-
-.terminal-section-nav-bar::-webkit-scrollbar {
-  display: none;
+.app-header-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
 }
 
-.section-nav-pill {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #94a3b8;
-  font-family: 'Orbitron', 'Sora', sans-serif;
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  display: inline-flex;
+.app-header-price {
+  font-family: 'Orbitron', 'Sora', monospace;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #00f0ff;
+}
+
+.app-header-controls {
+  display: flex;
   align-items: center;
   gap: 5px;
-  transition: none !important;
 }
 
-.section-nav-pill:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.section-nav-pill.active {
-  background: rgba(0, 240, 255, 0.2);
-  color: #00f0ff;
-  border-color: rgba(0, 240, 255, 0.45);
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
-}
-
-/* Section Dropdown for Mobile Quick Select */
-.market-section-dropdown-wrap {
+.app-control-dropdown {
   display: inline-block;
 }
 
-.trading-section-select, .market-select-pill {
+.app-select-pill, .app-select-pill-sm {
   background: #080d1a;
   border: 1px solid rgba(0, 240, 255, 0.35);
   color: #00f0ff;
@@ -4537,10 +4523,129 @@ html, body {
   cursor: pointer;
 }
 
-.trading-section-select option, .market-select-pill option {
+.app-select-pill-sm {
+  font-size: 9.5px;
+  padding: 4px 6px;
+}
+
+.app-select-pill option, .app-select-pill-sm option {
   background: #040711;
   color: #f1f5f9;
 }
+
+.app-close-icon-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.app-close-icon-btn:hover {
+  background: rgba(255, 23, 68, 0.3);
+  color: #ff1744;
+}
+
+/* Streamlined Chart Toolbar */
+.app-chart-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-toolbar-dropdown {
+  display: inline-block;
+}
+
+.app-time-tabs {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+}
+
+.app-drawing-tools {
+  display: flex;
+  gap: 2px;
+}
+
+.app-hud-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: #94a3b8;
+  font-family: 'Orbitron', 'Sora', monospace;
+  margin-left: auto;
+}
+
+/* Native App Fixed Bottom Navigation Bar (Mobile Viewports) */
+.app-bottom-nav-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-bottom-nav-bar {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr 1.3fr 1.2fr;
+    gap: 5px;
+    background: rgba(6, 10, 22, 0.98);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 6px 8px;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+
+  .app-nav-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 6px 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    color: #94a3b8;
+    font-family: 'Orbitron', 'Sora', sans-serif;
+  }
+
+  .app-nav-item.active {
+    background: rgba(0, 240, 255, 0.18);
+    color: #00f0ff;
+    border-color: rgba(0, 240, 255, 0.4);
+  }
+
+  .app-nav-item.buy-action {
+    background: linear-gradient(135deg, rgba(0, 230, 118, 0.3), rgba(0, 230, 118, 0.1));
+    border: 1px solid rgba(0, 230, 118, 0.6);
+    color: #00e676;
+    font-weight: 900;
+  }
+
+  .app-nav-item.sell-action {
+    background: linear-gradient(135deg, rgba(255, 23, 68, 0.3), rgba(255, 23, 68, 0.1));
+    border: 1px solid rgba(255, 23, 68, 0.6);
+    color: #ff1744;
+    font-weight: 900;
+  }
+
+  .app-nav-label {
+    font-size: 9px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+}
+
 
 /* Technical Indicators Toggles */
 .market-indicators-group {

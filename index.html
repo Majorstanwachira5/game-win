@@ -1516,68 +1516,50 @@
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div id="modal-market" class="game-modal-overlay terminal-modal-overlay" style="display:none">
-        <div class="market-dashboard-modal glass-modal trade-terminal-theme" id="marketDashboardModal">
-            <!-- Terminal Top Navigation & Ticker Bar -->
-            <div class="market-header-block">
+        <div class="market-dashboard-modal glass-modal trade-terminal-theme mobile-app-terminal" id="marketDashboardModal">
+            <!-- Native App Header Bar -->
+            <div class="market-header-block app-header-bar">
                 <div class="market-title-area">
                     <div class="market-token-icon">⚡</div>
                     <div class="market-titles">
                         <h2>
                             <span class="terminal-brand-glow">PLAYCOIN TRADE</span>
                             <span class="terminal-pair-badge">PLAY / KSh</span>
-                            <span id="marketStatusBadge" class="market-status-pill">● LIVE TERMINAL</span>
                         </h2>
-                        <small style="color:#64748b; font-size:11px;">Authoritative Order Flow · 5s Tick Heartbeat · Real-time Valuation</small>
+                        <div class="app-header-sub">
+                            <span class="app-header-price" id="marketHeaderPrice">KSh 0.5000</span>
+                            <span id="marketStatusBadge" class="market-status-pill">● LIVE</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="market-header-actions">
-                    <!-- Mobile Section Quick-Select Dropdown -->
-                    <div class="market-section-dropdown-wrap">
-                        <select id="tradingSectionDropdown" class="trading-section-select" onchange="if(window.MarketEngine) window.MarketEngine.switchSection(this.value);" title="Switch Section View">
-                            <option value="all">📱 All Sections</option>
+                <div class="market-header-actions app-header-controls">
+                    <!-- Section Dropdown Selector -->
+                    <div class="app-control-dropdown">
+                        <select id="tradingSectionDropdown" class="app-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.switchSection(this.value);" title="Switch View">
+                            <option value="all">📱 All Views</option>
                             <option value="chart">📈 Chart View</option>
-                            <option value="trade">⚡ Order & Trade</option>
-                            <option value="positions">📊 Positions & History</option>
+                            <option value="trade">⚡ Buy / Sell</option>
+                            <option value="positions">📊 Positions</option>
                         </select>
                     </div>
 
-                    <!-- Unified Actions Dropdown (Expand, Deposit, Exit) -->
-                    <div class="market-action-dropdown-wrap">
-                        <select id="terminalActionDropdown" class="terminal-action-select" onchange="if(window.MarketEngine) window.MarketEngine.handleActionSelect(this);" title="Terminal Actions">
-                            <option value="" disabled selected>⚡ Actions ▾</option>
-                            <option value="expand">⛶ Expand Chart</option>
+                    <!-- Actions Dropdown Selector -->
+                    <div class="app-control-dropdown">
+                        <select id="terminalActionDropdown" class="app-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.handleActionSelect(this);" title="Menu">
+                            <option value="" disabled selected>⚙️ Menu ▾</option>
+                            <option value="expand">⛶ Expand Graph</option>
                             <option value="deposit">💳 Deposit (M-Pesa)</option>
-                            <option value="exit">❌ Exit</option>
+                            <option value="exit">❌ Close Terminal</option>
                         </select>
                     </div>
 
-                    <button type="button" class="btn-chart-expand" id="btnFullscreenToggle" onclick="if(window.MarketEngine) window.MarketEngine.toggleFullscreenChart();" title="Toggle Fullscreen Chart Mode">
-                        <span class="expand-icon">⛶</span> <span class="expand-btn-text">Expand</span>
-                    </button>
-                    <button type="button" class="btn-terminal-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Deposit funds via M-Pesa (Min KSh 200)">
-                        <span>💳</span> DEPOSIT
-                    </button>
-                    <button type="button" class="close-modal-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" title="Exit">&times;</button>
+                    <button type="button" class="app-close-icon-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" title="Close Terminal">&times;</button>
                 </div>
-
-            </div>
-
-            <!-- Terminal Top Section Switcher Navigation Bar (Mobile / Android Friendly) -->
-            <div class="terminal-section-nav-bar" id="terminalSectionNavBar">
-                <button type="button" class="section-nav-pill active" data-section="all" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('all');">
-                    <span>📱</span> Full Terminal
-                </button>
-                <button type="button" class="section-nav-pill" data-section="chart" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('chart');">
-                    <span>📈</span> Chart
-                </button>
-                <button type="button" class="section-nav-pill" data-section="trade" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('trade');">
-                    <span>⚡</span> Order & Trade
-                </button>
-                <button type="button" class="section-nav-pill" data-section="positions" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('positions');">
-                    <span>📊</span> Positions (<span id="posSectionCount">0</span>)
-                </button>
             </div>
 
             <!-- Terminal Ticker Metrics Strip -->
@@ -1590,29 +1572,29 @@
                 <div class="market-card">
                     <span class="market-card-label">24H HIGH / LOW</span>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                        <span style="font-size:13px; font-weight:700; color:#00e676;" id="market24hHigh">KSh 0.5000</span>
-                        <span style="font-size:13px; font-weight:700; color:#ff1744;" id="market24hLow">KSh 0.5000</span>
+                        <span style="font-size:12px; font-weight:700; color:#00e676;" id="market24hHigh">KSh 0.5000</span>
+                        <span style="font-size:12px; font-weight:700; color:#ff1744;" id="market24hLow">KSh 0.5000</span>
                     </div>
-                    <span style="font-size:10px; color:#64748b;">24H Range Spread</span>
+                    <span style="font-size:9px; color:#64748b;">24H Range Spread</span>
                 </div>
                 <div class="market-card">
                     <span class="market-card-label">24H VOLUME</span>
-                    <div class="market-card-value" id="market24hVolume">0 PLAY</div>
-                    <span style="font-size:10px; color:#64748b;">Platform Net Volume</span>
+                    <div class="market-card-value" id="market24hVolume" style="font-size:13px;">0 PLAY</div>
+                    <span style="font-size:9px; color:#64748b;">Platform Net Volume</span>
                 </div>
                 <div class="market-card user-bal-card">
-                    <span class="market-card-label">TRADING ASSET BALANCE</span>
-                    <div class="market-card-value" id="marketUserCoinBal" style="color:var(--cyan-accent);">0 PLAY</div>
-                    <span style="font-size:10px; color:#64748b;" id="marketCirculatingSupply">Circulating: 0 PLAY</span>
+                    <span class="market-card-label">TRADING BALANCE</span>
+                    <div class="market-card-value" id="marketUserCoinBal" style="font-size:13px; color:var(--cyan-accent);">0 PLAY</div>
+                    <span style="font-size:9px; color:#64748b;" id="marketCirculatingSupply">Circulating: 0 PLAY</span>
                 </div>
             </div>
 
-            <!-- Candlestick Chart Area with Live HUD & Multi-Tool Toolbar -->
+            <!-- Streamlined Candlestick Chart Area -->
             <div class="market-chart-section" id="marketChartSection">
-                <div class="market-chart-toolbar">
-                    <!-- Chart Type Dropdown / Tabs -->
-                    <div class="market-toolbar-dropdown-item">
-                        <select id="selectChartType" class="market-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.setChartType(this.value);" title="Select Chart Type">
+                <div class="market-chart-toolbar app-chart-toolbar">
+                    <!-- Dropdown 1: Chart Presentation Type -->
+                    <div class="app-toolbar-dropdown">
+                        <select id="selectChartType" class="app-select-pill-sm" onchange="if(window.MarketEngine) window.MarketEngine.setChartType(this.value);" title="Chart Type">
                             <option value="candles">🕯️ Candles</option>
                             <option value="line">📈 Line</option>
                             <option value="area">🏔️ Area</option>
@@ -1620,8 +1602,20 @@
                         </select>
                     </div>
 
-                    <!-- Timeframe Selector -->
-                    <div class="market-time-tabs">
+                    <!-- Dropdown 2: Technical Indicators Selector -->
+                    <div class="app-toolbar-dropdown">
+                        <select id="selectIndicatorQuick" class="app-select-pill-sm" onchange="if(window.MarketEngine) window.MarketEngine.toggleIndicatorFromDropdown(this.value);" title="Indicators">
+                            <option value="" disabled selected>📊 Indicators ▾</option>
+                            <option value="ma">MA (7, 25, 99)</option>
+                            <option value="ema">EMA (12, 26)</option>
+                            <option value="boll">Bollinger Bands</option>
+                            <option value="rsi">RSI (14 Sub-Pane)</option>
+                            <option value="vol">Volume Histogram</option>
+                        </select>
+                    </div>
+
+                    <!-- Swipeable Timeframe Selector -->
+                    <div class="market-time-tabs app-time-tabs">
                         <button type="button" class="market-time-tab" data-interval="1m">1m</button>
                         <button type="button" class="market-time-tab" data-interval="5m">5m</button>
                         <button type="button" class="market-time-tab" data-interval="15m">15m</button>
@@ -1630,32 +1624,21 @@
                         <button type="button" class="market-time-tab" data-interval="1d">1D</button>
                     </div>
 
-                    <!-- Technical Indicators Toggles -->
-                    <div class="market-indicators-group" id="marketIndicatorsGroup">
-                        <button type="button" class="market-indicator-btn active" data-indicator="ma" title="Moving Average (7, 25, 99)">MA</button>
-                        <button type="button" class="market-indicator-btn" data-indicator="ema" title="Exponential Moving Average (12, 26)">EMA</button>
-                        <button type="button" class="market-indicator-btn" data-indicator="boll" title="Bollinger Bands (20, 2)">BOLL</button>
-                        <button type="button" class="market-indicator-btn" data-indicator="rsi" title="Relative Strength Index (14)">RSI</button>
-                        <button type="button" class="market-indicator-btn active" data-indicator="vol" title="Volume Histogram">VOL</button>
-                    </div>
-
-                    <!-- Drawing Tools Toolbar -->
-                    <div class="market-drawing-tools" id="marketDrawingTools">
+                    <!-- Compact Drawing Tools -->
+                    <div class="market-drawing-tools app-drawing-tools" id="marketDrawingTools">
                         <button type="button" class="drawing-tool-btn active" data-tool="crosshair" title="Crosshair / Magnifier">✛</button>
                         <button type="button" class="drawing-tool-btn" data-tool="trendline" title="Trendline Drawing">📏</button>
                         <button type="button" class="drawing-tool-btn" data-tool="hline" title="Horizontal Price Line">➖</button>
                         <button type="button" class="drawing-tool-btn" data-tool="clear" title="Clear Drawings">🗑️</button>
                     </div>
 
-                    <!-- Live Cursor OHLC HUD Readout -->
-                    <div id="marketHudBar" class="market-hud-bar">
+                    <!-- Compact OHLC HUD Bar -->
+                    <div id="marketHudBar" class="market-hud-bar app-hud-bar">
                         <span class="hud-item"><strong class="hud-lbl">O:</strong> <span id="hudOpen">---</span></span>
                         <span class="hud-item"><strong class="hud-lbl">H:</strong> <span id="hudHigh">---</span></span>
                         <span class="hud-item"><strong class="hud-lbl">L:</strong> <span id="hudLow">---</span></span>
                         <span class="hud-item"><strong class="hud-lbl">C:</strong> <span id="hudClose">---</span></span>
-                        <span class="hud-item"><strong class="hud-lbl">VOL:</strong> <span id="hudVol">---</span></span>
-                        <span class="hud-item" id="hudMaWrap" style="display:none;"><strong class="hud-lbl">MA7:</strong> <span id="hudMa">---</span></span>
-                        <span class="hud-item" id="hudRsiWrap" style="display:none;"><strong class="hud-lbl">RSI:</strong> <span id="hudRsi">---</span></span>
+                        <span class="hud-item"><strong class="hud-lbl">V:</strong> <span id="hudVol">---</span></span>
                     </div>
                 </div>
 
@@ -1689,7 +1672,7 @@
                             <div id="marketPositionsList" class="market-positions-list">
                                 <div class="market-empty-activity">
                                     <span>📊</span>
-                                    <p>No open positions. Execute a BUY or SELL order to open a position.</p>
+                                    <p>No open positions. Tap BUY or SELL to open a position.</p>
                                 </div>
                             </div>
                         </div>
@@ -1729,7 +1712,7 @@
                 <!-- Right: Professional Order Placement & Trading Capital Panel -->
                 <div class="market-trading-panel" id="marketTradingPanel">
                     <div class="market-section-title">
-                        <span>⚡</span> ORDER PLACEMENT
+                        <span>⚡</span> ORDER EXECUTION
                     </div>
 
                     <!-- Buy / Sell Side Selector Tabs -->
@@ -1752,7 +1735,7 @@
                             <strong class="capital-val" id="tradeAvailableCoins" style="color:var(--cyan-accent);">0 PLAY</strong>
                         </div>
                         <div class="capital-row valuation-row">
-                            <span class="capital-label">Market Execution Price:</span>
+                            <span class="capital-label">Execution Price:</span>
                             <strong class="capital-val" id="tradeExecutionPriceDisplay" style="color:#00f0ff;">KSh 0.5000</strong>
                         </div>
                     </div>
@@ -1795,12 +1778,33 @@
                     </div>
 
                     <div class="terminal-note-box">
-                        <span>🛡️</span> All order executions & settlements are backend-authoritative and recorded in the immutable ledger.
+                        <span>🛡️</span> Backend-authoritative order execution & ledger settlement.
                     </div>
                 </div>
             </div>
+
+            <!-- Native App Fixed Bottom Navigation Bar (Mobile Viewports) -->
+            <div class="app-bottom-nav-bar" id="appBottomNavBar">
+                <button type="button" class="app-nav-item active" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('chart');">
+                    <span class="app-nav-icon">📈</span>
+                    <span class="app-nav-label">Chart</span>
+                </button>
+                <button type="button" class="app-nav-item buy-action" onclick="if(window.MarketEngine) { window.MarketEngine.setTradeSide('BUY'); window.MarketEngine.switchSection('trade'); }">
+                    <span class="app-nav-icon">🟢</span>
+                    <span class="app-nav-label">BUY PLAY</span>
+                </button>
+                <button type="button" class="app-nav-item sell-action" onclick="if(window.MarketEngine) { window.MarketEngine.setTradeSide('SELL'); window.MarketEngine.switchSection('trade'); }">
+                    <span class="app-nav-icon">🔴</span>
+                    <span class="app-nav-label">SELL PLAY</span>
+                </button>
+                <button type="button" class="app-nav-item" onclick="if(window.MarketEngine) window.MarketEngine.switchSection('positions');">
+                    <span class="app-nav-icon">📊</span>
+                    <span class="app-nav-label">Positions (<span id="posBottomCount">0</span>)</span>
+                </button>
+            </div>
         </div>
     </div>
+
 
 
 

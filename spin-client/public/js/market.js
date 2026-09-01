@@ -265,13 +265,17 @@
             const changePct = Number(stats.changePercent || 0);
             const isPos = change >= 0;
 
+            const headerPrice = document.getElementById('marketHeaderPrice');
+
             if (priceEl) priceEl.textContent = `KSh ${price.toFixed(4)}`;
+            if (headerPrice) headerPrice.textContent = `KSh ${price.toFixed(4)}`;
             if (tradePriceDisplay) tradePriceDisplay.textContent = `KSh ${price.toFixed(4)}`;
             
             if (changeEl) {
                 changeEl.textContent = `${isPos ? '+' : ''}${changePct.toFixed(2)}% (${isPos ? '+' : ''}${change.toFixed(4)})`;
                 changeEl.className = `market-stat-badge ${isPos ? 'bullish' : 'bearish'}`;
             }
+
 
             if (highEl) highEl.textContent = stats.high ? `KSh ${Number(stats.high).toFixed(4)}` : 'Data unavailable';
             if (lowEl) lowEl.textContent = stats.low ? `KSh ${Number(stats.low).toFixed(4)}` : 'Data unavailable';
@@ -370,6 +374,15 @@
                 pill.classList.toggle('active', pill.getAttribute('data-section') === section);
             });
 
+            // Sync Bottom App Nav Bar
+            document.querySelectorAll('.app-nav-item').forEach(item => {
+                const label = item.textContent || '';
+                const isChart = section === 'chart' && label.includes('Chart');
+                const isTrade = section === 'trade' && (label.includes('BUY') || label.includes('SELL'));
+                const isPos = section === 'positions' && label.includes('Positions');
+                item.classList.toggle('active', (section === 'all' && label.includes('Chart')) || isChart || isTrade || isPos);
+            });
+
             const chartSec = document.getElementById('marketChartSection');
             const bottomSec = document.getElementById('marketBottomSection');
             const actCard = document.getElementById('marketActivityCard');
@@ -408,6 +421,17 @@
         },
 
         /**
+         * Toggle Technical Indicator From Dropdown
+         */
+        toggleIndicatorFromDropdown: function (ind) {
+            if (ind) {
+                this.toggleIndicator(ind);
+                const sel = document.getElementById('selectIndicatorQuick');
+                if (sel) sel.selectedIndex = 0; // reset to placeholder
+            }
+        },
+
+        /**
          * Set Active Timeframe
          */
         setInterval: function (interval) {
@@ -421,6 +445,7 @@
 
             this.fetchCandles(false);
         },
+
 
         /**
          * Set Chart Presentation Type
@@ -1414,6 +1439,8 @@
                         if (countBadge) countBadge.textContent = data.positions.length;
                         const secCount = document.getElementById('posSectionCount');
                         if (secCount) secCount.textContent = data.positions.length;
+                        const bottomCount = document.getElementById('posBottomCount');
+                        if (bottomCount) bottomCount.textContent = data.positions.length;
                     }
                 })
                 .catch(() => {});
@@ -1423,7 +1450,10 @@
             const listEl = document.getElementById('marketPositionsList');
             const secCount = document.getElementById('posSectionCount');
             if (secCount) secCount.textContent = (positions && positions.length) || 0;
+            const bottomCount = document.getElementById('posBottomCount');
+            if (bottomCount) bottomCount.textContent = (positions && positions.length) || 0;
             if (!listEl) return;
+
 
 
             if (!positions || positions.length === 0) {
