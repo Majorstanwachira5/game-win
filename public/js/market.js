@@ -1773,7 +1773,7 @@
 
             const cleanP = phone.replace(/\D/g, '');
             if (!phone || cleanP.length < 9) {
-                if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number (e.g. 07XXXXXXXX)', 'error');
+                if (window.showToast) window.showToast('Please enter a valid phone number (e.g. 07XXXXXXXX)', 'error');
                 return;
             }
 
@@ -1786,13 +1786,13 @@
 
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = 'Initializing STK Push...';
+                btn.textContent = 'Initializing Deposit...';
             }
             if (statusBanner) {
                 statusBanner.style.display = 'block';
                 statusBanner.style.borderColor = '#00f0ff';
                 statusBanner.style.background = 'rgba(0, 240, 255, 0.1)';
-                if (statusText) statusText.textContent = '⏳ Connecting to Safaricom Daraja Gateway...';
+                if (statusText) statusText.textContent = '⏳ Connecting to Payment Gateway...';
             }
 
             let userId = 'demo-user-1';
@@ -1819,7 +1819,7 @@
                         btn.disabled = false;
                         btn.textContent = 'Retry Deposit';
                     }
-                    const rawError = res?.error || res?.message || 'Failed to initiate M-Pesa prompt';
+                    const rawError = res?.error || res?.message || 'Failed to initiate deposit prompt';
                     if (statusBanner) {
                         statusBanner.style.borderColor = '#ff4444';
                         statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
@@ -1832,10 +1832,11 @@
                 if (statusBanner) {
                     statusBanner.style.borderColor = 'var(--gold-primary)';
                     statusBanner.style.background = 'rgba(255, 215, 0, 0.15)';
-                    if (statusText) statusText.textContent = '📲 Prompt sent! Check your phone and enter M-Pesa PIN...';
+                    if (statusText) statusText.textContent = '📲 Prompt sent! Check your phone and enter your PIN...';
                 }
                 if (btn) btn.textContent = 'Awaiting PIN...';
-                if (window.showToast) window.showToast(`Prompt sent to ${phone}. Enter your M-Pesa PIN.`, 'info');
+                if (window.showToast) window.showToast(`Prompt sent to ${phone}. Enter your PIN.`, 'info');
+
 
                 const checkoutRequestId = res.CheckoutRequestID;
                 if (!checkoutRequestId) return;

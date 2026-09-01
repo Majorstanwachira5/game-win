@@ -1200,18 +1200,18 @@
         </div>
     </div>
 
-    <!-- DARAJA M-PESA PAYMENT MODAL (BYPASSED UNTIL LIVE APIS SET) -->
+    <!-- M-PESA PAYMENT MODAL -->
     <div id="mpesaStkModal" class="game-modal-overlay" style="display:none">
         <div class="game-modal-card glass-modal mpesa-modal-card">
             <div class="modal-header">
-                <h2>M-PESA DARAJA CHECKOUT</h2>
+                <h2>M-PESA ACCOUNT FUNDING</h2>
                 <button class="close-modal-btn" onclick="window.closeModal(this)">&times;</button>
             </div>
             <div class="modal-body text-center">
                 <div class="mpesa-brand-badge">
-                    <span class="mpesa-green-text">M-PESA</span> EXPRESS STK PUSH
+                    <span class="mpesa-green-text">M-PESA</span> INSTANT DEPOSIT
                 </div>
-                <p class="modal-subtitle">Enter your Safaricom M-Pesa phone number to authorize game play:</p>
+                <p class="modal-subtitle">Enter your phone number to fund your account and play:</p>
                 <div class="form-group margin-top">
                     <label>M-PESA PHONE NUMBER:</label>
                     <input type="text" id="mpesaPhoneInput" value="0712345678" placeholder="07XXXXXXXX"
@@ -1227,6 +1227,7 @@
             </div>
         </div>
     </div>
+
 
 
 
@@ -1273,7 +1274,7 @@
         </button>
     </nav>
 
-    <!-- REAL SAFARICOM M-PESA DEPOSIT MODAL -->
+    <!-- M-PESA DEPOSIT MODAL -->
     <div id="depositModal" class="game-modal-overlay" style="display:none">
         <div class="game-modal-card glass-modal deposit-modal-card" style="max-width:440px; width:92%;">
             <div class="modal-header">
@@ -1281,7 +1282,7 @@
                 <button class="close-modal-btn" id="closeDepositBtn" onclick="if(window.closeModal) window.closeModal(this); else { var depositModalEl = document.getElementById('depositModal'); if(depositModalEl) depositModalEl.style.display='none'; }">&times;</button>
             </div>
             <div class="modal-body text-center" style="padding:16px;">
-                <p class="modal-subtitle" style="font-size:12px; color:var(--gold-primary);">Instant Lipa Na M-Pesa STK Push Deposit (Minimum: KSh 200)</p>
+                <p class="modal-subtitle" style="font-size:12px; color:var(--gold-primary);">Fund Your Account (Minimum: KSh 200)</p>
                 
                 <div class="deposit-presets margin-top" style="margin-top:12px;">
                     <span class="bet-label" style="font-size:11px; color:var(--text-muted);">QUICK AMOUNT (KSH):</span>
@@ -1302,15 +1303,15 @@
                 <div class="form-group margin-top" style="text-align:left; margin-top:12px;">
                     <label style="font-size:11px; font-weight:bold; color:var(--cyan-accent);">M-PESA PHONE NUMBER:</label>
                     <input type="tel" id="depositPhoneInput" placeholder="07XXXXXXXX or 01XXXXXXXX" class="mpesa-input" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(6,10,22,0.9); border:1px solid var(--cyan-accent); border-radius:8px; color:#fff; font-size:14px; font-weight:bold; margin-top:4px;" required>
-                    <small style="color: var(--text-muted); font-size:11px; display:block; margin-top:4px;">An STK Push prompt will be sent directly to this phone asking for your M-Pesa PIN.</small>
+                    <small style="color: var(--text-muted); font-size:11px; display:block; margin-top:4px;">A payment prompt will be sent directly to this phone to enter your PIN.</small>
                 </div>
 
 
-                <!-- STK Push Live Progress Banner -->
+                <!-- Payment Request Live Progress Banner -->
                 <div id="stkStatusBanner" style="display:none; margin-top:14px; padding:12px; border-radius:8px; background:rgba(0, 240, 255, 0.1); border:1.5px solid var(--cyan-accent); color:#fff; text-align:left;">
                     <div style="display:flex; align-items:center; gap:8px; font-weight:bold; color:var(--gold-primary);">
                         <span class="spinner-icon" style="font-size:16px;">🔄</span>
-                        <span id="stkStatusTitle">STK Push Sent!</span>
+                        <span id="stkStatusTitle">Payment Request Sent!</span>
                     </div>
                     <div id="stkStatusDesc" style="font-size:12px; margin-top:4px; color:#e0e0e0;">
                         Check your phone screen and enter your M-Pesa PIN to authorize payment.
@@ -1333,11 +1334,11 @@
             </div>
             
             <p id="phonePaySubTitle" style="font-size:13px; color:#e0e0e0; margin-bottom:14px;">
-                Enter your Safaricom M-Pesa phone number to play:
+                Enter your phone number to fund your account and play:
             </p>
 
             <div class="form-group" style="text-align:left; margin-bottom:14px;">
-                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary); letter-spacing:0.5px;">SAFARICOM M-PESA NUMBER:</label>
+                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary); letter-spacing:0.5px;">M-PESA PHONE NUMBER:</label>
                 <input type="tel" id="directPayPhoneInput" placeholder="07XXXXXXXX or 01XXXXXXXX" style="width:100%; box-sizing:border-box; padding:12px; background:rgba(6,10,22,0.95); border:1.5px solid var(--gold-primary); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:6px; outline:none;" required>
             </div>
 
@@ -1366,11 +1367,12 @@
             <!-- Account Activation Notice -->
             <div id="refActivationBanner" style="display:none; background:linear-gradient(135deg, rgba(255,215,0,0.12), rgba(0,240,255,0.12)); border:1px solid var(--gold-primary); border-radius:12px; padding:12px; margin-bottom:14px; text-align:left;">
                 <div style="font-size:12px; font-weight:bold; color:var(--gold-primary);">🚀 ACTIVATE RECRUITER STATUS (KSh 250)</div>
-                <div style="font-size:11px; color:#cbd5e1; margin-top:2px;">Pay KSh 250 via M-Pesa STK push to activate your account, get 250 Virtual Credits + 250 Play Coins, and start earning referral cash!</div>
+                <div style="font-size:11px; color:#cbd5e1; margin-top:2px;">Pay KSh 250 via M-Pesa to fund your account, activate recruiter status, get 250 Virtual Credits + 250 Play Coins, and start earning referral cash!</div>
                 <button type="button" id="refActivateBtn" onclick="window.activateReferralAccount()" class="spin-gold-btn" style="width:100%; margin-top:8px; padding:8px; font-size:12px; font-weight:bold; border-radius:8px; cursor:pointer;">⚡ ACTIVATE ACCOUNT (KSh 250 M-PESA)</button>
             </div>
 
             <!-- Active Status Badge -->
+
             <div id="refActiveBadge" style="display:none; margin-bottom:12px;">
                 <span style="display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981;">
                     <span>✅</span> ACTIVE RECRUITER
@@ -1463,7 +1465,7 @@
                 <button type="button" class="close-modal-btn" onclick="document.getElementById('referralWithdrawPromptModal').style.display='none'; document.getElementById('referralWithdrawPromptModal').classList.remove('open','active');" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">&times;</button>
             </div>
             <p style="font-size:13px; color:#cbd5e1; margin-bottom:14px;">
-                Withdraw your accumulated commissions directly to your Safaricom M-Pesa.
+                Withdraw your accumulated commissions directly to your M-Pesa.
             </p>
             <div style="background:rgba(255,215,0,0.08); border:1px solid var(--gold-primary); border-radius:10px; padding:12px; margin-bottom:14px;">
                 <div style="font-size:11px; color:var(--text-muted);">AMOUNT TO WITHDRAW:</div>
@@ -1487,7 +1489,7 @@
                 <button type="button" class="close-modal-btn" onclick="window.closeWalletWithdrawModal()" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">&times;</button>
             </div>
             <p style="font-size:13px; color:#cbd5e1; margin-bottom:14px;">
-                Withdraw funds from your active cash balance directly to your Safaricom M-Pesa.
+                Withdraw funds from your active cash balance directly to your M-Pesa.
             </p>
             <div style="background:rgba(255,215,0,0.08); border:1px solid var(--gold-primary); border-radius:10px; padding:12px; margin-bottom:14px;">
                 <div style="font-size:11px; color:var(--text-muted);">AVAILABLE CASH BALANCE:</div>
@@ -1519,7 +1521,7 @@
             </div>
             
             <p style="font-size:12.5px; color:#cbd5e1; margin-bottom:14px; text-align:left;">
-                Deposit funds directly via Safaricom M-Pesa STK Push to fund your trading wallet:
+                Fund your trading wallet directly via M-Pesa:
             </p>
 
             <!-- Quick Preset Amount Chips -->
@@ -1542,23 +1544,24 @@
                 <input type="number" id="tradeDepositAmountInput" min="200" step="50" value="200" placeholder="Min 200" style="width:100%; box-sizing:border-box; padding:11px; background:rgba(6,10,22,0.95); border:1.5px solid var(--cyan-accent); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:4px; outline:none;" />
             </div>
 
-            <!-- Safaricom Phone Input -->
+            <!-- M-Pesa Phone Input -->
             <div class="form-group" style="text-align:left; margin-bottom:14px;">
-                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">SAFARICOM M-PESA PHONE NUMBER:</label>
+                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">M-PESA PHONE NUMBER:</label>
                 <input type="tel" id="tradeDepositPhoneInput" placeholder="07XXXXXXXX or 01XXXXXXXX" style="width:100%; box-sizing:border-box; padding:11px; background:rgba(6,10,22,0.95); border:1.5px solid var(--gold-primary); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:4px; outline:none;" required />
             </div>
 
-            <!-- Live STK Push Progress Banner -->
+            <!-- Live Progress Banner -->
             <div id="tradeDepositStatusBanner" style="display:none; margin-bottom:14px; padding:10px 12px; border-radius:10px; background:rgba(0,240,255,0.1); border:1px solid var(--cyan-accent); font-size:12px; color:#fff; text-align:left;">
                 <span id="tradeDepositStatusText">📲 Initializing...</span>
             </div>
 
             <!-- Submit Button -->
             <button type="button" id="btnSubmitTradeDeposit" onclick="if(window.MarketEngine) window.MarketEngine.submitTradeDeposit();" class="spin-gold-btn" style="width:100%; min-height:46px; font-size:14.5px; font-weight:bold; letter-spacing:0.5px; border-radius:10px; cursor:pointer;">
-                ⚡ SEND M-PESA PROMPT
+                ⚡ FUND ACCOUNT
             </button>
         </div>
     </div>
+
 
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->

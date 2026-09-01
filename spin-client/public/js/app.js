@@ -943,7 +943,7 @@ function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
     }
 
     if (subTitle) {
-        subTitle.innerHTML = `Deposit <strong style="color:var(--gold-primary)">KSh ${amount.toLocaleString()}</strong> via Safaricom M-Pesa to Play:`;
+        subTitle.innerHTML = `Fund your account with <strong style="color:var(--gold-primary)">KSh ${amount.toLocaleString()}</strong> to Play:`;
     }
 
     if (statusBanner) statusBanner.style.display = 'none';
@@ -968,9 +968,10 @@ function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
         let phone = curPhoneInput ? curPhoneInput.value.trim() : '';
         const cleanP = phone.replace(/\D/g, '');
         if (!phone || cleanP.length < 9) {
-            showToast('Please enter a valid Safaricom phone number (e.g. 0712345678)', 'error');
+            showToast('Please enter a valid phone number (e.g. 0712345678)', 'error');
             return;
         }
+
 
 window.formatMpesaReason = function (rawReason, code) {
     if (code !== undefined && code !== null && code !== '') {
@@ -1279,7 +1280,7 @@ function bindDepositModal() {
 
 
             if (!phone || phone.length < 9) {
-                showToast('Please enter a valid Safaricom M-Pesa phone number (e.g. 07XXXXXXXX)', 'error');
+                showToast('Please enter a valid phone number (e.g. 07XXXXXXXX)', 'error');
                 return;
             }
 
@@ -1395,10 +1396,11 @@ function bindDepositModal() {
                     }
                 }, 1000);
             } catch (err) {
-                showToast(err.message || 'M-Pesa STK Push failed. Check your details.', 'error');
+                showToast(err.message || 'Payment request failed. Check your details.', 'error');
                 confirmBtn.disabled = false;
-                confirmBtn.textContent = '⚡ SEND M-PESA STK PUSH PROMPT';
+                confirmBtn.textContent = '⚡ SEND M-PESA PROMPT';
             }
+
         });
     }
 }
@@ -1601,13 +1603,13 @@ function startSeededLiveLoop() {
         { text: 'Hii Free Spin ya pili imenipea {coins} coins + cash! 🎁', emoji: '🎁', isWin: true, coinsMin: 500, coinsMax: 3000 },
         { text: 'Walai hii wheel ni moto! From KSh 250 to KSh {amount} in 10 minutes ⚡', emoji: '🔥', isWin: true, min: 3500, max: 9500 },
         { text: 'Leo niko na bahati mbaya or what 😂 let me try one more spin', emoji: '😂', isWin: false },
-        { text: 'M-Pesa STK push iko swift sana, 2 seconds tu deposit iko kwa balance 📱', emoji: '📱', isWin: false },
+        { text: 'Instant deposit iko swift sana, 2 seconds tu deposit iko kwa balance 📱', emoji: '📱', isWin: false },
         { text: 'Nice system, very transparent. Even downline earnings are tracked in real time 📈', emoji: '💎', isWin: false },
         { text: 'Someone tell me what happens on Level 2 referral? Ahh nimeona, KSh 50 per recruit! Nice 🎉', emoji: '🤝', isWin: false },
         { text: 'Bro I just woke up and saw 4 people joined through my link... KSh 400 cash added 🤑', emoji: '💰', isWin: true },
         { text: 'Almost landed on x50 Jackpot! Missed by one slice lakini x10 is still super sweet 🎯', emoji: '✨', isWin: true },
         { text: 'Nani ako na free spins hapa? Nikitaka kuanza game ya dice inakuwaje?', emoji: '❓', isWin: false },
-        { text: 'Withdrawal received! Safaricom message confirmed RCX772... legit 💯', emoji: '✅', isWin: true },
+        { text: 'Withdrawal received! M-Pesa message confirmed RCX772... legit 💯', emoji: '✅', isWin: true },
         { text: 'That sound effect when the wheel is decelerating gives me adrenaline frfr 🔊', emoji: '🎰', isWin: false },
         { text: 'Level 1 recruiter badge achieved! Moving to Silver VIP tonight 👑', emoji: '👑', isWin: false },
         { text: 'Hapa PlayCoin hakuna kubahatisha, payouts ziko on point 💰', emoji: '🏆', isWin: false },
@@ -1631,7 +1633,8 @@ function startSeededLiveLoop() {
         { text: 'Is there a limit on how many people I can refer? Need to maximize L1 and L2 💡', emoji: '🤔', isWin: false },
         { text: 'No limit on referrals bro! I have 18 downlines already earning daily 💵', emoji: '💬', isWin: false },
         { text: 'That Try Again slice gave me a scare but next spin was x5! Phew 😅', emoji: '🎯', isWin: true },
-        { text: 'Fastest deposit ever, Daraja STK push responded instantly 📲', emoji: '⚡', isWin: false },
+        { text: 'Fastest deposit ever, instant deposit responded immediately 📲', emoji: '⚡', isWin: false },
+
         { text: 'KSh {amount} withdrawal successful! Time for celebrations tonight 🥳🍾', emoji: '🎉', isWin: true, min: 2500, max: 15000 },
         { text: 'Just hit Silver VIP tier! Free coins bonus credited immediately 🥈', emoji: '✨', isWin: false },
         { text: 'Love the dark mode UI, very sleek and fast on mobile 📱👌', emoji: '🔥', isWin: false },
@@ -2222,7 +2225,7 @@ window.executeReferralWithdrawal = async function() {
     const phone = phoneInput ? phoneInput.value.trim() : '';
 
     if (!phone || phone.length < 9) {
-        if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number!', 'error');
+        if (window.showToast) window.showToast('Please enter a valid M-Pesa phone number!', 'error');
         return;
     }
 
@@ -2315,7 +2318,7 @@ window.executeWalletWithdrawal = async function() {
     const amount = Number(amountInput ? amountInput.value : 0);
 
     if (!phone || phone.length < 9) {
-        if (window.showToast) window.showToast('Please enter a valid Safaricom M-Pesa phone number!', 'error');
+        if (window.showToast) window.showToast('Please enter a valid M-Pesa phone number!', 'error');
         return;
     }
     if (!amount || amount < 500) {
@@ -2368,14 +2371,15 @@ window.executeWalletWithdrawal = async function() {
 // ─── ACCOUNT ACTIVATION TRIGGER ────────────────────────────────────────────
 window.activateReferralAccount = async function() {
     const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
-    const phone = savedUser.phone || savedUser.email || prompt('Enter your Safaricom M-Pesa number for KSh 250 Activation (2547XXXXXXXX):');
+    const phone = savedUser.phone || savedUser.email || prompt('Enter your phone number for KSh 250 Activation (2547XXXXXXXX):');
     if (!phone) return;
 
     const btn = document.getElementById('refActivateBtn');
     if (btn) {
         btn.disabled = true;
-        btn.textContent = 'SENDING STK PUSH (KSh 250)...';
+        btn.textContent = 'PROCESSING ACTIVATION (KSh 250)...';
     }
+
 
     try {
         const res = await apiPost('/api/referral/activate', { phone });
