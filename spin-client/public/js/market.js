@@ -54,7 +54,8 @@
         hoverPos: null,
 
         // Configuration
-        redeemTelegramUrl: 'https://t.me/PlayCoinRedemptionBot',
+        redeemTelegramUrl: 'https://t.me/playcoinapp_bot',
+
 
         /**
          * Initialize Market Engine
@@ -1969,10 +1970,16 @@
         },
 
         proceedToTelegramRedeem: function () {
-            const targetUrl = this.redeemTelegramUrl || 'https://t.me/PlayCoinRedemptionBot';
+            const targetUrl = this.redeemTelegramUrl || 'https://t.me/playcoinapp_bot';
             this.closeRedeemConfirmation();
             window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        },
+
+        proceedToTelegramRedemption: function () {
+            this.proceedToTelegramRedeem();
         }
+
+
     };
 
     window.MarketEngine = MarketEngine;

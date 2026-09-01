@@ -16,7 +16,7 @@ class MarketService {
         this.symbol = currencyConfig.symbol || '$PLAY';
         this.currencyCode = currencyConfig.currencyCode || 'PLAY';
         this.status = 'PLAYCOIN INTERNAL MARKET';
-        this.redeemTelegramUrl = process.env.PLAYCOIN_REDEEM_TELEGRAM_URL || 'https://t.me/PlayCoinRedemptionBot';
+        this.redeemTelegramUrl = process.env.PLAYCOIN_REDEEM_TELEGRAM_URL || 'https://t.me/playcoinapp_bot';
         
         // Base economic anchor: 1 PLAY = KSh 0.50 initial reference value
         this.basePrice = parseFloat(process.env.PLAYCOIN_INITIAL_PRICE || '0.50');

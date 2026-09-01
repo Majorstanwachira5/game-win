@@ -20,8 +20,9 @@ services:
       - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: PLAYCOIN_REDEEM_TELEGRAM_URL
-        value: https://t.me/PlayCoinRedemptionBot
+        value: https://t.me/playcoinapp_bot
       - key: PLAYCOIN_INITIAL_PRICE
+
         value: "0.50"
 
 
