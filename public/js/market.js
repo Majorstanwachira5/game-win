@@ -158,8 +158,26 @@
             setTimeout(() => {
                 this.resizeCanvas();
                 this.drawChart();
-            }, 60);
+            }, 30);
         },
+
+        /**
+         * Handle Action Dropdown Selection (Expand, Deposit, Exit)
+         */
+        handleActionSelect: function (selectEl) {
+            if (!selectEl) return;
+            const val = selectEl.value;
+            selectEl.selectedIndex = 0; // Reset placeholder
+
+            if (val === 'expand') {
+                this.toggleFullscreenChart();
+            } else if (val === 'deposit') {
+                this.triggerDeposit();
+            } else if (val === 'exit') {
+                this.closeMarket();
+            }
+        },
+
 
         /**
          * Start polling loop

@@ -1543,14 +1543,25 @@
                         </select>
                     </div>
 
+                    <!-- Unified Actions Dropdown (Expand, Deposit, Exit) -->
+                    <div class="market-action-dropdown-wrap">
+                        <select id="terminalActionDropdown" class="terminal-action-select" onchange="if(window.MarketEngine) window.MarketEngine.handleActionSelect(this);" title="Terminal Actions">
+                            <option value="" disabled selected>⚡ Actions ▾</option>
+                            <option value="expand">⛶ Expand Chart</option>
+                            <option value="deposit">💳 Deposit (M-Pesa)</option>
+                            <option value="exit">❌ Exit</option>
+                        </select>
+                    </div>
+
                     <button type="button" class="btn-chart-expand" id="btnFullscreenToggle" onclick="if(window.MarketEngine) window.MarketEngine.toggleFullscreenChart();" title="Toggle Fullscreen Chart Mode">
                         <span class="expand-icon">⛶</span> <span class="expand-btn-text">Expand</span>
                     </button>
                     <button type="button" class="btn-terminal-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Deposit funds via M-Pesa (Min KSh 200)">
                         <span>💳</span> DEPOSIT
                     </button>
-                    <button type="button" class="close-modal-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer; padding:4px 8px;">&times;</button>
+                    <button type="button" class="close-modal-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" title="Exit">&times;</button>
                 </div>
+
             </div>
 
             <!-- Terminal Top Section Switcher Navigation Bar (Mobile / Android Friendly) -->

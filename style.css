@@ -4422,7 +4422,7 @@ html, body {
   box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
 }
 
-/* Fullscreen Chart Mode — Pure user controlled, zero auto-shifting or animations */
+/* Fullscreen Chart Mode — Pure user controlled, graph-focused, zero auto-shifting or animations */
 .market-dashboard-modal.fullscreen-chart-mode {
   position: fixed !important;
   top: 0 !important;
@@ -4434,34 +4434,44 @@ html, body {
   max-width: 100vw !important;
   max-height: 100vh !important;
   border-radius: 0 !important;
+  border: none !important;
   margin: 0 !important;
   padding: 8px 10px !important;
   z-index: 9999999 !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
+  gap: 4px !important;
   transition: none !important;
   animation: none !important;
 }
 
+/* In expand mode, hide all non-chart panels completely */
+.market-dashboard-modal.fullscreen-chart-mode .market-stats-row,
+.market-dashboard-modal.fullscreen-chart-mode .terminal-section-nav-bar,
 .market-dashboard-modal.fullscreen-chart-mode .market-bottom-section,
-.market-dashboard-modal.fullscreen-chart-mode .terminal-section-nav-bar {
+.market-dashboard-modal.fullscreen-chart-mode .btn-terminal-deposit {
   display: none !important;
+}
+
+.market-dashboard-modal.fullscreen-chart-mode .market-header-block {
+  padding-bottom: 4px !important;
+  margin-bottom: 2px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .market-dashboard-modal.fullscreen-chart-mode .market-chart-section {
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
-  height: auto !important;
-  min-height: 380px !important;
+  height: calc(100vh - 65px) !important;
+  min-height: calc(100vh - 65px) !important;
   transition: none !important;
 }
 
 .market-dashboard-modal.fullscreen-chart-mode .market-canvas-container {
   flex: 1 !important;
-  height: auto !important;
-  min-height: 360px !important;
+  height: calc(100vh - 115px) !important;
+  min-height: calc(100vh - 115px) !important;
   transition: none !important;
 }
 
@@ -4474,6 +4484,7 @@ html, body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   scrollbar-width: none;
 }
+
 
 .terminal-section-nav-bar::-webkit-scrollbar {
   display: none;
