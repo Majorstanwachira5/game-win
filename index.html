@@ -1282,23 +1282,24 @@
                 <button class="close-modal-btn" id="closeDepositBtn" onclick="if(window.closeModal) window.closeModal(this); else { var depositModalEl = document.getElementById('depositModal'); if(depositModalEl) depositModalEl.style.display='none'; }">&times;</button>
             </div>
             <div class="modal-body text-center" style="padding:16px;">
-                <p class="modal-subtitle" style="font-size:12px; color:var(--gold-primary);">Fund Your Account (Minimum: KSh 200)</p>
+                <p class="modal-subtitle" style="font-size:12px; color:var(--gold-primary);">Fund Your Account (Minimum: KSh 500)</p>
                 
                 <div class="deposit-presets margin-top" style="margin-top:12px;">
                     <span class="bet-label" style="font-size:11px; color:var(--text-muted);">QUICK AMOUNT (KSH):</span>
                     <div class="bet-chips margin-top-sm" style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-top:6px;">
-                        <button type="button" class="bet-chip preset-btn active" data-amt="200">KSh 200</button>
-                        <button type="button" class="bet-chip preset-btn" data-amt="250">KSh 250</button>
-                        <button type="button" class="bet-chip preset-btn" data-amt="500">KSh 500</button>
+                        <button type="button" class="bet-chip preset-btn active" data-amt="500">KSh 500</button>
                         <button type="button" class="bet-chip preset-btn" data-amt="1000">KSh 1,000</button>
+                        <button type="button" class="bet-chip preset-btn" data-amt="2500">KSh 2,500</button>
                         <button type="button" class="bet-chip preset-btn" data-amt="5000">KSh 5,000</button>
+                        <button type="button" class="bet-chip preset-btn" data-amt="10000">KSh 10,000</button>
                     </div>
                 </div>
 
                 <div class="form-group margin-top" style="text-align:left; margin-top:14px;">
                     <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">DEPOSIT AMOUNT (KSH):</label>
-                    <input type="number" id="depositAmountInput" value="200" min="200" max="150000" class="mpesa-input" placeholder="Enter amount (min KSh 200)" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(6,10,22,0.9); border:1px solid rgba(255,215,0,0.4); border-radius:8px; color:#fff; font-size:14px; font-weight:bold; margin-top:4px;">
+                    <input type="number" id="depositAmountInput" value="500" min="500" max="150000" class="mpesa-input" placeholder="Enter amount (min KSh 500)" style="width:100%; box-sizing:border-box; padding:10px; background:rgba(6,10,22,0.9); border:1px solid rgba(255,215,0,0.4); border-radius:8px; color:#fff; font-size:14px; font-weight:bold; margin-top:4px;">
                 </div>
+
 
                 <div class="form-group margin-top" style="text-align:left; margin-top:12px;">
                     <label style="font-size:11px; font-weight:bold; color:var(--cyan-accent);">M-PESA PHONE NUMBER:</label>
@@ -1526,12 +1527,12 @@
 
             <!-- Quick Preset Amount Chips -->
             <div style="text-align:left; margin-bottom:8px;">
-                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">SELECT DEPOSIT AMOUNT (MIN KSh 200):</label>
+                <label style="font-size:11px; font-weight:bold; color:var(--gold-primary);">SELECT DEPOSIT AMOUNT (MIN KSh 500):</label>
                 <div class="trade-deposit-presets" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-top:6px;">
-                    <button type="button" class="deposit-chip active" data-amt="200" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(200, this);">200</button>
-                    <button type="button" class="deposit-chip" data-amt="500" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(500, this);">500</button>
+                    <button type="button" class="deposit-chip active" data-amt="500" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(500, this);">500</button>
                     <button type="button" class="deposit-chip" data-amt="1000" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(1000, this);">1,000</button>
                     <button type="button" class="deposit-chip" data-amt="2500" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(2500, this);">2,500</button>
+                    <button type="button" class="deposit-chip" data-amt="5000" onclick="if(window.MarketEngine) window.MarketEngine.setTradeDepositAmount(5000, this);">5,000</button>
                 </div>
             </div>
 
@@ -1539,10 +1540,11 @@
             <div class="form-group" style="text-align:left; margin-bottom:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-size:11px; font-weight:bold; color:var(--cyan-accent);">CUSTOM AMOUNT (KSh):</label>
-                    <span style="font-size:10px; color:#94a3b8;">Min: KSh 200</span>
+                    <span style="font-size:10px; color:#94a3b8;">Min: KSh 500</span>
                 </div>
-                <input type="number" id="tradeDepositAmountInput" min="200" step="50" value="200" placeholder="Min 200" style="width:100%; box-sizing:border-box; padding:11px; background:rgba(6,10,22,0.95); border:1.5px solid var(--cyan-accent); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:4px; outline:none;" />
+                <input type="number" id="tradeDepositAmountInput" min="500" step="50" value="500" placeholder="Min 500" style="width:100%; box-sizing:border-box; padding:11px; background:rgba(6,10,22,0.95); border:1.5px solid var(--cyan-accent); border-radius:10px; color:#fff; font-size:15px; font-weight:bold; margin-top:4px; outline:none;" />
             </div>
+
 
             <!-- M-Pesa Phone Input -->
             <div class="form-group" style="text-align:left; margin-bottom:14px;">

@@ -83,10 +83,21 @@
             this.fetchMarketConfig();
         },
 
+        _bindUIEvents: function () {
+            document.addEventListener('click', (e) => {
+                const depositBtn = e.target.closest('.trigger-trading-deposit, .btn-micro-deposit, .btn-quick-deposit, [data-action="deposit"], .action-deposit');
+                if (depositBtn) {
+                    e.preventDefault();
+                    this.triggerDeposit();
+                }
+            });
+        },
+
         /**
          * Fetch public market configuration
          */
         fetchMarketConfig: function () {
+
             fetch('/api/market/playcoin/config')
                 .then(res => res.json())
                 .then(data => {
@@ -1730,11 +1741,12 @@
             } catch (e) {}
 
             if (phoneInput && !phoneInput.value) phoneInput.value = savedPhone;
-            if (amtInput && !amtInput.value) amtInput.value = '200';
+            if (amtInput && (!amtInput.value || Number(amtInput.value) < 500)) amtInput.value = '500';
+            this.setTradeDepositAmount(500);
             if (statusBanner) statusBanner.style.display = 'none';
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = '⚡ SEND M-PESA PROMPT';
+                btn.textContent = '⚡ FUND ACCOUNT';
             }
 
             modal.style.display = 'flex';
@@ -1752,7 +1764,13 @@
         setTradeDepositAmount: function (amt, btnEl) {
             const input = document.getElementById('tradeDepositAmountInput');
             if (input) input.value = amt;
-            document.querySelectorAll('.deposit-chip').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.deposit-chip').forEach(b => {
+                if (Number(b.dataset.amt) === Number(amt)) {
+                    b.classList.add('active');
+                } else {
+                    b.classList.remove('active');
+                }
+            });
             if (btnEl) btnEl.classList.add('active');
         },
 
@@ -1763,13 +1781,14 @@
             const statusText = document.getElementById('tradeDepositStatusText');
             const btn = document.getElementById('btnSubmitTradeDeposit');
 
-            const amount = Number(amtInput ? amtInput.value : 200);
+            const amount = Number(amtInput ? amtInput.value : 500);
             let phone = phoneInput ? phoneInput.value.trim() : '';
 
-            if (!amount || amount < 200) {
-                if (window.showToast) window.showToast('Minimum deposit amount is KSh 200', 'error');
+            if (!amount || amount < 500) {
+                if (window.showToast) window.showToast('Minimum deposit amount is KSh 500', 'error');
                 return;
             }
+
 
             const cleanP = phone.replace(/\D/g, '');
             if (!phone || cleanP.length < 9) {
