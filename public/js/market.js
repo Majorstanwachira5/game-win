@@ -238,7 +238,7 @@
         },
 
         /**
-         * Set Active Expiry Timeframe
+         * Set Active Expiry Timeframe for Predictions
          */
         setTimeframe: function (tf, btnEl) {
             if (!tf) return;
@@ -253,6 +253,20 @@
 
             this.calculateOrderPreview();
         },
+
+        /**
+         * Set Active Candlestick Chart Interval
+         */
+        setChartInterval: function (interval, btnEl) {
+            if (!interval) return;
+            this.activeInterval = interval;
+            document.querySelectorAll('#chartIntervalTabs .market-time-tab').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-interval') === interval);
+            });
+            if (btnEl) btnEl.classList.add('active');
+            this.fetchCandles(false);
+        },
+
 
         /**
          * Set Wager Amount
@@ -1380,9 +1394,45 @@
             }
         },
 
+        _updateHoverHud: function () {
+            if (!this.hoverPos || !this.candles || this.candles.length === 0 || !this.canvas) return;
+            const width = parseFloat(this.canvas.style.width) || 600;
+            const paddingLeft = 10;
+            const paddingRight = 65;
+            const plotWidth = Math.max(10, width - paddingLeft - paddingRight);
+            const totalCandles = this.candles.length;
+            const count = Math.min(totalCandles, Math.max(15, this.visibleCandlesCount));
+            const maxPan = Math.max(0, totalCandles - count);
+            const clampedPan = Math.max(0, Math.min(maxPan, this.panOffset));
+            const startIndex = Math.max(0, totalCandles - count - clampedPan);
+            const endIndex = Math.min(totalCandles, startIndex + count);
+            const visibleSlice = this.candles.slice(startIndex, endIndex);
+            if (visibleSlice.length === 0) return;
+
+            const candleStep = plotWidth / visibleSlice.length;
+            const relX = this.hoverPos.x - paddingLeft;
+            const idx = Math.floor(relX / candleStep);
+            if (idx >= 0 && idx < visibleSlice.length) {
+                const c = visibleSlice[idx];
+                const decimals = this.marketOverview ? (this.marketOverview.decimals || 2) : 2;
+                const prefix = this.activePair === 'PLAY/KES' ? 'KSh ' : '$';
+                const hOpen = document.getElementById('hudOpen');
+                const hHigh = document.getElementById('hudHigh');
+                const hLow = document.getElementById('hudLow');
+                const hClose = document.getElementById('hudClose');
+                const hVol = document.getElementById('hudVol');
+                if (hOpen) hOpen.textContent = `${prefix}${c.open.toFixed(decimals)}`;
+                if (hHigh) hHigh.textContent = `${prefix}${c.high.toFixed(decimals)}`;
+                if (hLow) hLow.textContent = `${prefix}${c.low.toFixed(decimals)}`;
+                if (hClose) hClose.textContent = `${prefix}${c.close.toFixed(decimals)}`;
+                if (hVol) hVol.textContent = Number(c.volume || 0).toLocaleString();
+            }
+        },
+
         _bindCanvasEvents: function () {
             if (!this.canvas) return;
 
+            // 1. Desktop Mouse Events
             this.canvas.addEventListener('mousedown', (e) => {
                 this.isDragging = true;
                 this.dragStartX = e.clientX;
@@ -1407,6 +1457,7 @@
                     this.panOffset = Math.max(0, this.dragStartOffset + offsetDelta);
                 }
 
+                this._updateHoverHud();
                 this.drawChart();
             });
 
@@ -1421,7 +1472,73 @@
                 this.visibleCandlesCount = Math.max(15, Math.min(150, Math.round(this.visibleCandlesCount * zoomFactor)));
                 this.drawChart();
             }, { passive: false });
+
+            // 2. Native Android Mobile Touch Gestures (Drag, Pinch-to-Zoom, Tap Selection)
+            let lastTouchDist = null;
+
+            this.canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.isDragging = true;
+                    this.dragStartX = touch.clientX;
+                    this.dragStartOffset = this.panOffset;
+                    this.hoverPos = {
+                        x: touch.clientX - rect.left,
+                        y: touch.clientY - rect.top
+                    };
+                    this._updateHoverHud();
+                    this.drawChart();
+                } else if (e.touches.length === 2) {
+                    this.isDragging = false;
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    lastTouchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                }
+            }, { passive: true });
+
+            this.canvas.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && this.isDragging) {
+                    const touch = e.touches[0];
+                    const rect = this.canvas.getBoundingClientRect();
+                    const deltaX = touch.clientX - this.dragStartX;
+                    const candleStep = (rect.width - 75) / Math.max(1, this.visibleCandlesCount);
+                    const offsetDelta = Math.round(deltaX / candleStep);
+                    this.panOffset = Math.max(0, this.dragStartOffset + offsetDelta);
+
+                    this.hoverPos = {
+                        x: touch.clientX - rect.left,
+                        y: touch.clientY - rect.top
+                    };
+                    this._updateHoverHud();
+                    this.drawChart();
+                } else if (e.touches.length === 2 && lastTouchDist) {
+                    const t1 = e.touches[0];
+                    const t2 = e.touches[1];
+                    const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                    const diff = currentDist - lastTouchDist;
+                    if (Math.abs(diff) > 5) {
+                        const zoomDelta = diff > 0 ? -2 : 2;
+                        this.visibleCandlesCount = Math.max(15, Math.min(150, this.visibleCandlesCount + zoomDelta));
+                        lastTouchDist = currentDist;
+                        this.drawChart();
+                    }
+                }
+            }, { passive: true });
+
+            this.canvas.addEventListener('touchend', (e) => {
+                if (e.touches.length === 0) {
+                    this.isDragging = false;
+                    lastTouchDist = null;
+                } else if (e.touches.length === 1) {
+                    lastTouchDist = null;
+                    this.isDragging = true;
+                    this.dragStartX = e.touches[0].clientX;
+                    this.dragStartOffset = this.panOffset;
+                }
+            }, { passive: true });
         },
+
 
         /**
          * Trigger Universal Trading Deposit (Min 500 KSh)

@@ -5638,25 +5638,400 @@ html, body {
   font-weight: 700;
 }
 
-@media (max-width: 480px) {
+/* ═══════════════════════════════════════════════════════════════════════════
+   📱 ANDROID NATIVE TRADING TERMINAL MOBILE-FIRST STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.terminal-modal-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 15, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+}
+
+.mobile-app-terminal {
+  width: 96%;
+  max-width: 1080px;
+  max-height: 94vh;
+  background: radial-gradient(circle at 50% 0%, #0c1427 0%, #060a14 70%, #020408 100%);
+  border: 1.5px solid rgba(0, 240, 255, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(0, 240, 255, 0.12);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  color: #f1f5f9;
+  position: relative;
+}
+
+/* App Header Bar */
+.app-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.market-title-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header-price-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-header-price {
+  font-family: 'Orbitron', 'Sora', monospace;
+  font-size: 14.5px;
+  font-weight: 900;
+  color: #00f0ff;
+  letter-spacing: 0.5px;
+}
+
+.btn-fullscreen-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #00f0ff;
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-fullscreen-toggle:hover {
+  background: rgba(0, 240, 255, 0.2);
+  transform: scale(1.05);
+}
+
+/* Compact 24H Market Info Ribbon */
+.market-stats-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.ribbon-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ribbon-lbl {
+  color: #64748b;
+  font-weight: 700;
+  font-size: 9.5px;
+}
+
+.ribbon-val {
+  font-weight: 800;
+  color: #cbd5e1;
+}
+
+.ribbon-val.high { color: #00e676; }
+.ribbon-val.low { color: #ff1744; }
+.ribbon-val.vol { color: #00f0ff; }
+
+/* Chart Section & Toolbar */
+.market-chart-section {
+  background: rgba(4, 7, 15, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.app-chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left-group, .toolbar-right-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.app-select-pill-sm {
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.app-select-pill-sm option {
+  background: #0f172a;
+  color: #fff;
+}
+
+.drawing-tool-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 11px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.drawing-tool-btn.active, .drawing-tool-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00f0ff;
+  color: #00f0ff;
+}
+
+/* Wager Controls & Stepper */
+.wager-controls-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.app-stepper-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.trade-stepper-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #00f0ff;
+  font-size: 16px;
+  font-weight: 900;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.trade-stepper-btn:hover {
+  background: rgba(0, 240, 255, 0.25);
+  color: #fff;
+}
+
+.app-stepper-wrapper input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ffd700;
+  font-family: 'Orbitron', 'Sora', monospace;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+  outline: none;
+  min-width: 60px;
+}
+
+.trade-input-unit {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  padding-right: 8px;
+}
+
+.preview-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.preview-val.total {
+  font-size: 13px;
+  color: #ffd700;
+  font-weight: 900;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   📱 DEDICATED FULLSCREEN MOBILE TRADING TERMINAL MODE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mobile-app-terminal.fullscreen-chart-mode {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding: 8px !important;
+  z-index: 9999999 !important;
+  background: #030712 !important;
+  gap: 6px !important;
+}
+
+.mobile-app-terminal.fullscreen-chart-mode .market-stats-ribbon,
+.mobile-app-terminal.fullscreen-chart-mode .market-activity-card {
+  display: none !important;
+}
+
+.mobile-app-terminal.fullscreen-chart-mode .market-chart-section {
+  flex: 1 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.mobile-app-terminal.fullscreen-chart-mode .market-canvas-container {
+  height: calc(100dvh - 170px) !important;
+  min-height: 250px !important;
+}
+
+.mobile-app-terminal.fullscreen-chart-mode .btn-fullscreen-toggle {
+  background: var(--gold-primary);
+  color: #000;
+  font-weight: 900;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   📱 RESPONSIVE BREAKPOINTS (360px, 375px, 390px, 412px, 430px)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .mobile-app-terminal {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+
+  .market-canvas-container {
+    height: 48vh !important;
+    min-height: 220px !important;
+  }
+
+  .market-bottom-section {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
   .binary-actions-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 8px;
   }
 
   .btn-predict-action {
-    min-height: 64px;
+    min-height: 56px;
     padding: 8px 4px;
   }
+}
 
-  .btn-predict-action .action-direction {
+@media (max-width: 480px) {
+  .app-header-price {
     font-size: 13px;
   }
 
-  .perf-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .terminal-header-balance-chip .bal-value {
+    font-size: 10.5px;
+  }
+
+  .interval-chip {
+    font-size: 9.5px;
+    padding: 5px 2px;
+  }
+
+  .wager-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .trade-quick-chips.binary-chips {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+  }
+
+  .quick-chip {
+    padding: 5px 2px;
+    font-size: 10px;
+  }
+
+  .market-canvas-container {
+    height: 44vh !important;
+    min-height: 200px !important;
   }
 }
+
+@media (max-width: 380px) {
+  .app-header-bar {
+    gap: 4px;
+  }
+
+  .terminal-back-btn, .btn-fullscreen-toggle, .app-close-icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .app-pair-select-pill {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+
+  .app-header-price {
+    font-size: 12px;
+  }
+
+  .btn-predict-action .action-direction {
+    font-size: 12px;
+  }
+}
+
 
 
 

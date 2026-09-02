@@ -1573,141 +1573,109 @@
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div id="modal-market" class="game-modal-overlay terminal-modal-overlay" style="display:none">
         <div class="market-dashboard-modal glass-modal trade-terminal-theme mobile-app-terminal" id="marketDashboardModal">
-            <!-- Native App Header Bar -->
+            <!-- Native Android App Bar -->
             <div class="market-header-block app-header-bar">
                 <div class="market-title-area">
                     <button type="button" class="terminal-back-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" title="Back">‹</button>
-                    <div class="market-token-icon">⚡</div>
-                    <div class="market-titles">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span class="terminal-brand-glow">PLAYCOIN PREDICT</span>
-                            <!-- Asset Pair Selector Dropdown -->
-                            <div class="app-pair-selector-wrap">
-                                <select id="terminalAssetPairSelect" class="app-pair-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.setAssetPair(this.value);" title="Select Trading Pair">
-                                    <option value="BTC/USD" selected>₿ BTC/USD</option>
-                                    <option value="ETH/USD">Ξ ETH/USD</option>
-                                    <option value="SOL/USD">◎ SOL/USD</option>
-                                    <option value="PLAY/KES">⚡ PLAY/KES</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="app-header-sub">
-                            <span class="app-header-price" id="marketHeaderPrice">$64,250.00</span>
-                            <span id="marketStatusBadge" class="market-status-pill">● LIVE MARKET</span>
-                        </div>
+                    
+                    <!-- Asset Pair Selector Dropdown Pill -->
+                    <div class="app-pair-selector-wrap">
+                        <select id="terminalAssetPairSelect" class="app-pair-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.setAssetPair(this.value);" title="Select Trading Pair">
+                            <option value="BTC/USD" selected>₿ BTC/USD</option>
+                            <option value="ETH/USD">Ξ ETH/USD</option>
+                            <option value="SOL/USD">◎ SOL/USD</option>
+                            <option value="PLAY/KES">⚡ PLAY/KES</option>
+                        </select>
+                    </div>
+
+                    <!-- Live Header Price & Change Badge -->
+                    <div class="app-header-price-badge">
+                        <span class="app-header-price" id="marketHeaderPrice">$64,250.00</span>
+                        <span id="marketLiveChange" class="market-stat-badge bullish">▲ +2.45%</span>
                     </div>
                 </div>
 
                 <div class="market-header-actions app-header-controls">
                     <!-- Real PLAYCOIN Balance Chip -->
                     <div class="terminal-header-balance-chip" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Click to Fund Account">
-                        <span class="bal-label">BALANCE:</span>
+                        <span class="bal-label">BAL:</span>
                         <strong class="bal-value" id="terminalHeaderCoinBal">0.00 PLAY</strong>
                         <span class="bal-plus">+</span>
                     </div>
 
-                    <!-- View Dropdown Selector -->
-                    <div class="app-control-dropdown">
-                        <select id="tradingSectionDropdown" class="app-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.switchSection(this.value);" title="Switch View">
-                            <option value="all">📱 All Views</option>
-                            <option value="chart">📈 Chart Only</option>
-                            <option value="predict">⚡ Prediction Deck</option>
-                            <option value="positions">📊 Active Predictions</option>
-                        </select>
-                    </div>
+                    <!-- Fullscreen Toggle Button -->
+                    <button type="button" class="btn-fullscreen-toggle" id="btnTerminalFullscreen" onclick="if(window.MarketEngine) window.MarketEngine.toggleFullscreenChart();" title="Toggle Fullscreen Chart">⛶</button>
 
-                    <!-- Actions Dropdown Selector -->
-                    <div class="app-control-dropdown">
-                        <select id="terminalActionDropdown" class="app-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.handleActionSelect(this);" title="Menu">
-                            <option value="" disabled selected>⚙️ Menu ▾</option>
-                            <option value="expand">⛶ Expand Chart</option>
-                            <option value="deposit">💳 Fund Account (M-Pesa)</option>
-                            <option value="stats">📈 Performance Stats</option>
-                            <option value="exit">❌ Close Terminal</option>
-                        </select>
-                    </div>
-
+                    <!-- Close Modal Button -->
                     <button type="button" class="app-close-icon-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" title="Close Terminal">&times;</button>
                 </div>
             </div>
 
-            <!-- Asset Information Strip -->
-            <div class="market-stats-row terminal-metrics-strip" id="marketMetricsStrip">
-                <div class="market-card highlight-card">
-                    <span class="market-card-label">CURRENT PRICE</span>
-                    <div class="market-card-value live-price-glow" id="marketLivePrice">$64,250.00</div>
-                    <span id="marketLiveChange" class="market-stat-badge bullish">▲ +2.45%</span>
+            <!-- Compact 24H Market Info Ribbon -->
+            <div class="market-stats-ribbon" id="marketStatsRibbon">
+                <div class="ribbon-item">
+                    <span class="ribbon-lbl">24h H:</span>
+                    <strong class="ribbon-val high" id="market24hHigh">$65,120.00</strong>
                 </div>
-                <div class="market-card">
-                    <span class="market-card-label">24H HIGH / LOW</span>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                        <span style="font-size:12px; font-weight:700; color:#00e676;" id="market24hHigh">$65,120.00</span>
-                        <span style="font-size:12px; font-weight:700; color:#ff1744;" id="market24hLow">$62,800.00</span>
-                    </div>
-                    <span style="font-size:9px; color:#64748b;" id="marketSpreadText">Spread: 0.02%</span>
+                <div class="ribbon-item">
+                    <span class="ribbon-lbl">24h L:</span>
+                    <strong class="ribbon-val low" id="market24hLow">$62,800.00</strong>
                 </div>
-                <div class="market-card">
-                    <span class="market-card-label">24H VOLUME</span>
-                    <div class="market-card-value" id="market24hVolume" style="font-size:13px;">1,845.50 BTC</div>
-                    <span style="font-size:9px; color:#64748b;">Market Turnover</span>
+                <div class="ribbon-item">
+                    <span class="ribbon-lbl">Vol:</span>
+                    <strong class="ribbon-val vol" id="market24hVolume">1,845.50 BTC</strong>
                 </div>
-                <div class="market-card user-bal-card">
-                    <span class="market-card-label">AVAILABLE WAGER CAPITAL</span>
-                    <div class="market-card-value" id="marketUserCoinBal" style="font-size:13px; color:var(--cyan-accent);">0.00 PLAY</div>
-                    <span style="font-size:9px; color:#00e676;" id="marketReturnBadge">⚡ 85% Win Return Rate</span>
+                <div class="ribbon-item">
+                    <span id="marketStatusBadge" class="market-status-pill">● LIVE</span>
                 </div>
             </div>
 
-            <!-- Candlestick & Price Action Chart Area -->
+            <!-- HERO Candlestick & Price Action Chart Area -->
             <div class="market-chart-section" id="marketChartSection">
                 <div class="market-chart-toolbar app-chart-toolbar">
-                    <!-- Dropdown 1: Chart Presentation Type -->
-                    <div class="app-toolbar-dropdown">
+                    <div class="toolbar-left-group">
+                        <!-- Dropdown 1: Chart Presentation Type -->
                         <select id="selectChartType" class="app-select-pill-sm" onchange="if(window.MarketEngine) window.MarketEngine.setChartType(this.value);" title="Chart Type">
-                            <option value="candles">🕯️ Candlesticks</option>
-                            <option value="line">📈 Line Chart</option>
-                            <option value="area">🏔️ Area Trend</option>
-                            <option value="ohlc">📊 OHLC Bars</option>
+                            <option value="candles">🕯️ Candles</option>
+                            <option value="line">📈 Line</option>
+                            <option value="area">🏔️ Area</option>
+                            <option value="ohlc">📊 OHLC</option>
                         </select>
+
+                        <!-- Chart Timeframe Tabs -->
+                        <div class="market-time-tabs app-time-tabs" id="chartIntervalTabs">
+                            <button type="button" class="market-time-tab active" data-interval="30s" onclick="if(window.MarketEngine) window.MarketEngine.setChartInterval('30s', this);">30s</button>
+                            <button type="button" class="market-time-tab" data-interval="1m" onclick="if(window.MarketEngine) window.MarketEngine.setChartInterval('1m', this);">1m</button>
+                            <button type="button" class="market-time-tab" data-interval="5m" onclick="if(window.MarketEngine) window.MarketEngine.setChartInterval('5m', this);">5m</button>
+                            <button type="button" class="market-time-tab" data-interval="15m" onclick="if(window.MarketEngine) window.MarketEngine.setChartInterval('15m', this);">15m</button>
+                            <button type="button" class="market-time-tab" data-interval="1h" onclick="if(window.MarketEngine) window.MarketEngine.setChartInterval('1h', this);">1h</button>
+                        </div>
                     </div>
 
-                    <!-- Dropdown 2: Technical Indicators Selector -->
-                    <div class="app-toolbar-dropdown">
+                    <div class="toolbar-right-group">
+                        <!-- Dropdown 2: Technical Indicators Selector -->
                         <select id="selectIndicatorQuick" class="app-select-pill-sm" onchange="if(window.MarketEngine) window.MarketEngine.toggleIndicatorFromDropdown(this.value);" title="Indicators">
-                            <option value="" disabled selected>📊 Indicators ▾</option>
-                            <option value="ma">MA (7, 25, 99)</option>
-                            <option value="ema">EMA (12, 26)</option>
-                            <option value="boll">Bollinger Bands</option>
-                            <option value="rsi">RSI (14 Oscillator)</option>
-                            <option value="vol">Volume Bars</option>
+                            <option value="" disabled selected>📊 Ind ▾</option>
+                            <option value="ma">MA (7,25,99)</option>
+                            <option value="ema">EMA (12,26)</option>
+                            <option value="boll">BOLL</option>
+                            <option value="rsi">RSI</option>
+                            <option value="vol">Volume</option>
                         </select>
-                    </div>
 
-                    <!-- Chart Timeframe Tabs -->
-                    <div class="market-time-tabs app-time-tabs">
-                        <button type="button" class="market-time-tab active" data-interval="30s">30s</button>
-                        <button type="button" class="market-time-tab" data-interval="1m">1m</button>
-                        <button type="button" class="market-time-tab" data-interval="5m">5m</button>
-                        <button type="button" class="market-time-tab" data-interval="15m">15m</button>
-                        <button type="button" class="market-time-tab" data-interval="1h">1h</button>
+                        <!-- Compact Crosshair and Reset Tools -->
+                        <button type="button" class="drawing-tool-btn active" data-tool="crosshair" onclick="if(window.MarketEngine) window.MarketEngine.setDrawingTool('crosshair');" title="Crosshair">✛</button>
+                        <button type="button" class="drawing-tool-btn" data-tool="clear" onclick="if(window.MarketEngine) window.MarketEngine.setDrawingTool('clear');" title="Reset Chart">↺</button>
                     </div>
+                </div>
 
-                    <!-- Compact Drawing Tools -->
-                    <div class="market-drawing-tools app-drawing-tools" id="marketDrawingTools">
-                        <button type="button" class="drawing-tool-btn active" data-tool="crosshair" title="Crosshair">✛</button>
-                        <button type="button" class="drawing-tool-btn" data-tool="trendline" title="Trendline">📏</button>
-                        <button type="button" class="drawing-tool-btn" data-tool="hline" title="Horizontal Price Line">➖</button>
-                        <button type="button" class="drawing-tool-btn" data-tool="clear" title="Clear Drawings">🗑️</button>
-                    </div>
-
-                    <!-- Compact OHLC HUD Bar -->
-                    <div id="marketHudBar" class="market-hud-bar app-hud-bar">
-                        <span class="hud-item"><strong class="hud-lbl">O:</strong> <span id="hudOpen">---</span></span>
-                        <span class="hud-item"><strong class="hud-lbl">H:</strong> <span id="hudHigh">---</span></span>
-                        <span class="hud-item"><strong class="hud-lbl">L:</strong> <span id="hudLow">---</span></span>
-                        <span class="hud-item"><strong class="hud-lbl">C:</strong> <span id="hudClose">---</span></span>
-                        <span class="hud-item"><strong class="hud-lbl">V:</strong> <span id="hudVol">---</span></span>
-                    </div>
+                <!-- Compact OHLC HUD Bar Over Canvas -->
+                <div id="marketHudBar" class="market-hud-bar app-hud-bar">
+                    <span class="hud-item"><strong class="hud-lbl">O:</strong> <span id="hudOpen">---</span></span>
+                    <span class="hud-item"><strong class="hud-lbl">H:</strong> <span id="hudHigh">---</span></span>
+                    <span class="hud-item"><strong class="hud-lbl">L:</strong> <span id="hudLow">---</span></span>
+                    <span class="hud-item"><strong class="hud-lbl">C:</strong> <span id="hudClose">---</span></span>
+                    <span class="hud-item"><strong class="hud-lbl">V:</strong> <span id="hudVol">---</span></span>
                 </div>
 
                 <div class="market-canvas-container" id="marketCanvasContainer">
@@ -1717,20 +1685,93 @@
 
             <!-- Binary Prediction Control Deck & Active Positions Panel -->
             <div class="market-bottom-section" id="marketBottomSection">
-                <!-- Left: Multi-Tab Positions, History, Stats & Order Book Workspace -->
+                <!-- Binary Prediction Deck (Timeframe, Wager, CALL/PUT Actions) -->
+                <div class="market-trading-panel binary-trading-deck" id="marketTradingPanel">
+                    <!-- Expiry Time Interval Selector -->
+                    <div class="binary-interval-section">
+                        <div class="interval-header-row">
+                            <label class="binary-section-label">EXPIRY INTERVAL:</label>
+                            <span class="binary-countdown-badge" id="binaryCountdownIndicator">⏱️ 30s READY</span>
+                        </div>
+                        <div class="binary-interval-tabs" id="binaryIntervalTabs">
+                            <button type="button" class="interval-chip active" data-interval="30s" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('30s', this);">30s</button>
+                            <button type="button" class="interval-chip" data-interval="1m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('1m', this);">1 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="2m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('2m', this);">2 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="5m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('5m', this);">5 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="10m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('10m', this);">10 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="15m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('15m', this);">15 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="30m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('30m', this);">30 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="1h" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('1h', this);">1H</button>
+                        </div>
+                    </div>
+
+                    <!-- Wager Amount Input, Stepper & Quick Chips -->
+                    <div class="trade-input-form binary-form">
+                        <div class="wager-controls-row">
+                            <div class="trade-input-wrapper app-stepper-wrapper">
+                                <button type="button" class="trade-stepper-btn minus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(-100);" title="Decrease amount">−</button>
+                                <input type="number" id="tradeOrderAmount" value="1000" min="100" max="50000" step="100" placeholder="1000" oninput="if(window.MarketEngine) window.MarketEngine.calculateOrderPreview();" />
+                                <span class="trade-input-unit" id="tradeAmountUnit">PLAY</span>
+                                <button type="button" class="trade-stepper-btn plus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(100);" title="Increase amount">+</button>
+                            </div>
+                            <div class="trade-quick-chips binary-chips">
+                                <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(100, this);">100</button>
+                                <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(500, this);">500</button>
+                                <button type="button" class="quick-chip active" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(1000, this);">1K</button>
+                                <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(5000, this);">5K</button>
+                                <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(10000, this);">10K</button>
+                            </div>
+                        </div>
+
+                        <!-- Potential Payout & Return Calculation Strip -->
+                        <div class="trade-preview-strip binary-payout-strip">
+                            <div class="preview-line">
+                                <span class="preview-label">Profit (+85%):</span>
+                                <strong class="preview-val" id="tradePreviewPayout">+850.00 PLAY</strong>
+                            </div>
+                            <div class="preview-line">
+                                <span class="preview-label">Total Payout:</span>
+                                <strong class="preview-val total" id="tradePreviewTotalReturn">1,850.00 PLAY</strong>
+                            </div>
+                        </div>
+
+                        <!-- Primary Dual Direction Prediction Actions (CALL vs PUT) -->
+                        <div class="binary-actions-grid">
+                            <button type="button" id="btnPredictCall" class="btn-predict-action call" onclick="if(window.MarketEngine) window.MarketEngine.promptPredictionOrder('CALL');">
+                                <div class="action-direction">
+                                    <span class="dir-icon">▲</span>
+                                    <span class="dir-text">CALL / UP</span>
+                                </div>
+                                <div class="action-subtext">Above <span id="btnCallTargetPrice">$64,250.00</span></div>
+                                <div class="action-payout-badge">+85% PROFIT</div>
+                            </button>
+
+                            <button type="button" id="btnPredictPut" class="btn-predict-action put" onclick="if(window.MarketEngine) window.MarketEngine.promptPredictionOrder('PUT');">
+                                <div class="action-direction">
+                                    <span class="dir-icon">▼</span>
+                                    <span class="dir-text">PUT / DOWN</span>
+                                </div>
+                                <div class="action-subtext">Below <span id="btnPutTargetPrice">$64,250.00</span></div>
+                                <div class="action-payout-badge">+85% PROFIT</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Tabs Workspace: Positions, History, Stats & Order Book -->
                 <div class="market-activity-card" id="marketActivityCard">
                     <div class="workspace-tabs-header">
                         <button type="button" class="workspace-tab-btn active" data-target-pane="panePositions" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('panePositions');">
-                            <span>⚡</span> ACTIVE PREDICTIONS <span class="workspace-tab-badge" id="posCountBadge">0</span>
+                            <span>⚡</span> ACTIVE <span class="workspace-tab-badge" id="posCountBadge">0</span>
                         </button>
                         <button type="button" class="workspace-tab-btn" data-target-pane="paneHistory" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneHistory');">
-                            <span>🕒</span> TRADE HISTORY
+                            <span>🕒</span> HISTORY
                         </button>
                         <button type="button" class="workspace-tab-btn" data-target-pane="paneStats" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneStats');">
-                            <span>📈</span> PERFORMANCE
+                            <span>📈</span> STATS
                         </button>
                         <button type="button" class="workspace-tab-btn" data-target-pane="paneOrderbook" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneOrderbook');">
-                            <span>📖</span> ORDER BOOK
+                            <span>📖</span> DEPTH
                         </button>
                     </div>
 
@@ -1740,7 +1781,7 @@
                             <div id="marketPositionsList" class="market-positions-list">
                                 <div class="market-empty-activity">
                                     <span>⚡</span>
-                                    <p>No active predictions. Select an expiry interval, choose CALL or PUT, and place your wager below.</p>
+                                    <p>No active predictions. Choose CALL or PUT above to predict.</p>
                                 </div>
                             </div>
                         </div>
@@ -1760,7 +1801,7 @@
                             <div id="marketPerformanceStats" class="market-performance-view">
                                 <div class="perf-stats-grid">
                                     <div class="perf-stat-box">
-                                        <span class="perf-stat-label">TOTAL PREDICTIONS</span>
+                                        <span class="perf-stat-label">TOTAL TRADES</span>
                                         <strong class="perf-stat-num" id="perfTotalTrades">0</strong>
                                     </div>
                                     <div class="perf-stat-box">
@@ -1772,15 +1813,15 @@
                                         <strong class="perf-stat-num" id="perfWinsLosses">0W / 0L</strong>
                                     </div>
                                     <div class="perf-stat-box">
-                                        <span class="perf-stat-label">NET PROFIT / LOSS</span>
+                                        <span class="perf-stat-label">NET PROFIT</span>
                                         <strong class="perf-stat-num" id="perfNetPnL" style="color:#ffd700;">0.00 PLAY</strong>
                                     </div>
                                     <div class="perf-stat-box">
-                                        <span class="perf-stat-label">CURRENT WIN STREAK</span>
+                                        <span class="perf-stat-label">STREAK</span>
                                         <strong class="perf-stat-num" id="perfStreak" style="color:#00f0ff;">0 🔥</strong>
                                     </div>
                                     <div class="perf-stat-box">
-                                        <span class="perf-stat-label">BEST WIN STREAK</span>
+                                        <span class="perf-stat-label">BEST STREAK</span>
                                         <strong class="perf-stat-num" id="perfBestStreak" style="color:#a855f7;">0 👑</strong>
                                     </div>
                                 </div>
@@ -1791,9 +1832,9 @@
                         <div id="paneOrderbook" class="workspace-pane" style="display:none;">
                             <div id="marketOrderbookView" class="market-orderbook-container">
                                 <div class="orderbook-header-row">
-                                    <span>BID / BUY (PLAY)</span>
+                                    <span>BID / BUY</span>
                                     <span>PRICE</span>
-                                    <span>ASK / SELL (PLAY)</span>
+                                    <span>ASK / SELL</span>
                                 </div>
                                 <div class="orderbook-grid" id="marketOrderbookRows">
                                     <!-- Populated dynamically -->
@@ -1802,110 +1843,10 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Right: Binary Prediction Deck (Timeframe, Wager, CALL/PUT Actions) -->
-                <div class="market-trading-panel binary-trading-deck" id="marketTradingPanel">
-                    <div class="market-section-title app-trade-title">
-                        <span>⚡ PLACE PREDICTION</span>
-                        <span class="order-type-badge binary-badge">85% RETURN</span>
-                    </div>
-
-                    <!-- Expiry Time Interval Selector -->
-                    <div class="binary-interval-section">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                            <label class="binary-section-label">EXPIRY INTERVAL:</label>
-                            <span class="binary-countdown-badge" id="binaryCountdownIndicator">⏱️ READY</span>
-                        </div>
-                        <div class="binary-interval-tabs" id="binaryIntervalTabs">
-                            <button type="button" class="interval-chip active" data-interval="30s" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('30s', this);">30s</button>
-                            <button type="button" class="interval-chip" data-interval="1m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('1m', this);">1 MIN</button>
-                            <button type="button" class="interval-chip" data-interval="2m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('2m', this);">2 MIN</button>
-                            <button type="button" class="interval-chip" data-interval="5m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('5m', this);">5 MIN</button>
-                            <button type="button" class="interval-chip" data-interval="10m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('10m', this);">10 MIN</button>
-                            <button type="button" class="interval-chip" data-interval="15m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('15m', this);">15 MIN</button>
-                            <button type="button" class="interval-chip" data-interval="30m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('30m', this);">30 MIN</button>
-                            <button type="button" class="interval-chip" data-interval="1h" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('1h', this);">1H</button>
-                        </div>
-                    </div>
-
-                    <!-- Available Capital & Deposit Strip -->
-                    <div class="trading-capital-box binary-capital-box">
-                        <div class="capital-row">
-                            <div>
-                                <span class="capital-label">PLAYCOIN Wallet:</span>
-                                <strong class="capital-val" id="tradeAvailableCoins" style="color:var(--cyan-accent); font-size:15px; display:block;">0.00 PLAY</strong>
-                            </div>
-                            <button type="button" class="btn-micro-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Fund Wallet via M-Pesa">
-                                <span>💳</span> + Deposit
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Wager Amount Input & Stepper -->
-                    <div class="trade-input-form binary-form">
-                        <div class="trade-input-group">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label for="tradeOrderAmount" id="tradeAmountLabel">WAGER AMOUNT (PLAYCOIN):</label>
-                                <span style="font-size:9.5px; color:#64748b;">Min 100 • Max 50,000</span>
-                            </div>
-                            <div class="trade-input-wrapper app-stepper-wrapper">
-                                <button type="button" class="trade-stepper-btn minus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(-100);" title="Decrease amount">−</button>
-                                <input type="number" id="tradeOrderAmount" value="1000" min="100" max="50000" step="100" placeholder="1000" oninput="if(window.MarketEngine) window.MarketEngine.calculateOrderPreview();" />
-                                <span class="trade-input-unit" id="tradeAmountUnit">PLAY</span>
-                                <button type="button" class="trade-stepper-btn plus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(100);" title="Increase amount">+</button>
-                            </div>
-                        </div>
-
-                        <!-- Quick Wager Chips -->
-                        <div class="trade-quick-chips binary-chips">
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(100, this);">100</button>
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(500, this);">500</button>
-                            <button type="button" class="quick-chip active" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(1000, this);">1K</button>
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(5000, this);">5K</button>
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(10000, this);">10K</button>
-                        </div>
-
-                        <!-- Potential Payout & Return Calculation Strip -->
-                        <div class="trade-preview-strip binary-payout-strip">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span class="preview-label">Potential Profit (+85%):</span>
-                                <strong class="preview-val" id="tradePreviewPayout" style="color:#00e676;">+850.00 PLAY</strong>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
-                                <span class="preview-label" style="font-size:10px; color:#94a3b8;">Total Payout Return:</span>
-                                <strong id="tradePreviewTotalReturn" style="font-size:12px; color:#ffd700;">1,850.00 PLAY</strong>
-                            </div>
-                        </div>
-
-                        <!-- Primary Dual Direction Prediction Actions (CALL vs PUT) -->
-                        <div class="binary-actions-grid">
-                            <button type="button" id="btnPredictCall" class="btn-predict-action call" onclick="if(window.MarketEngine) window.MarketEngine.promptPredictionOrder('CALL');">
-                                <div class="action-direction">
-                                    <span class="dir-icon">▲</span>
-                                    <span class="dir-text">CALL / UP</span>
-                                </div>
-                                <div class="action-subtext">Higher than <span id="btnCallTargetPrice">$64,250.00</span></div>
-                                <div class="action-payout-badge">+85% PAYOUT</div>
-                            </button>
-
-                            <button type="button" id="btnPredictPut" class="btn-predict-action put" onclick="if(window.MarketEngine) window.MarketEngine.promptPredictionOrder('PUT');">
-                                <div class="action-direction">
-                                    <span class="dir-icon">▼</span>
-                                    <span class="dir-text">PUT / DOWN</span>
-                                </div>
-                                <div class="action-subtext">Lower than <span id="btnPutTargetPrice">$64,250.00</span></div>
-                                <div class="action-payout-badge">+85% PAYOUT</div>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="terminal-note-box">
-                        <span>🛡️</span> Authoritative backend execution • Instant settlement at expiry.
-                    </div>
-                </div>
             </div>
         </div>
     </div>
+
 
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- ⚡ BINARY ORDER CONFIRMATION TICKET (PREMIUM BOTTOM SHEET)                  -->
