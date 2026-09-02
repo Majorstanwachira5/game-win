@@ -31,14 +31,23 @@ const referralService = require('./spin-api/services/ReferralService');
 const adminService = require('./spin-api/services/AdminService');
 const marketService = require('./spin-api/services/MarketService');
 const tradingService = require('./spin-api/services/TradingService');
+const BinaryTradingService = require('./spin-api/services/BinaryTradingService');
+const binaryTradingService = new BinaryTradingService(marketService);
 
 // Hook authoritative wallet coin events to market volume
-
 platformEvents.on('WALLET_UPDATED', (payload) => {
     if (payload && (payload.assetType === 'PLAY' || payload.assetType === 'PLAY_COINS')) {
         marketService.recordActivityVolume(payload.amountCredited || 0);
     }
 });
+
+binaryTradingService.on('tradeSettled', (trade) => {
+    if (trade && trade.userId && users[trade.userId] && trade.totalReturn > 0) {
+        users[trade.userId].coins = parseFloat(((users[trade.userId].coins || 0) + trade.totalReturn).toFixed(2));
+        saveUsersCache();
+    }
+});
+
 
 
 // ─── POSTGRESQL DATABASE CONFIG & POOL ──────────────────────────────────────
@@ -2605,6 +2614,183 @@ app.get(['/api/trading/history', '/api/market/trade-history'], requirePlayerAuth
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BINARY OPTIONS & PREDICTION TRADING APIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// GET /api/market/pairs — Get all multi-asset pairs overview
+app.get('/api/market/pairs', (req, res) => {
+    try {
+        const pairs = binaryTradingService.getAllPairsSummary();
+        res.json({
+            success: true,
+            count: Object.keys(pairs).length,
+            pairs
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/realtime/:pair — Real-time price & stats for pair
+app.get(['/api/market/realtime/:pair', '/api/market/realtime'], (req, res) => {
+    try {
+        let pair = decodeURIComponent(req.params.pair || req.query.pair || 'BTC/USD');
+        if (pair === 'BTC-USD') pair = 'BTC/USD';
+        if (pair === 'ETH-USD') pair = 'ETH/USD';
+        if (pair === 'SOL-USD') pair = 'SOL/USD';
+        if (pair === 'PLAY-KES') pair = 'PLAY/KES';
+
+        const pairs = binaryTradingService.getAllPairsSummary();
+        const data = pairs[pair] || pairs['BTC/USD'];
+        res.json({
+            success: true,
+            ...data
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/orderbook/:pair — Live order book with depth
+app.get(['/api/market/orderbook/:pair', '/api/market/orderbook'], (req, res) => {
+    try {
+        let pair = decodeURIComponent(req.params.pair || req.query.pair || 'BTC/USD');
+        if (pair === 'BTC-USD') pair = 'BTC/USD';
+        if (pair === 'ETH-USD') pair = 'ETH/USD';
+        if (pair === 'SOL-USD') pair = 'SOL/USD';
+        if (pair === 'PLAY-KES') pair = 'PLAY/KES';
+
+        const orderbook = binaryTradingService.getOrderBook(pair);
+        res.json({
+            success: true,
+            pair,
+            ...orderbook
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/market/candles/:pair/:timeframe — Multi-pair candles
+app.get(['/api/market/candles/:pair/:timeframe', '/api/market/candles/:pair', '/api/market/candles'], (req, res) => {
+    try {
+        let pair = decodeURIComponent(req.params.pair || req.query.pair || 'BTC/USD');
+        if (pair === 'BTC-USD') pair = 'BTC/USD';
+        if (pair === 'ETH-USD') pair = 'ETH/USD';
+        if (pair === 'SOL-USD') pair = 'SOL/USD';
+        if (pair === 'PLAY-KES') pair = 'PLAY/KES';
+        const timeframe = req.params.timeframe || req.query.timeframe || req.query.interval || '1m';
+
+        const candles = binaryTradingService.getCandles(pair, timeframe);
+        res.json({
+            success: true,
+            pair,
+            timeframe,
+            count: candles.length,
+            candles
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/trade/binary/place — Place a binary prediction (CALL/PUT) with real PLAYCOIN
+app.post(['/api/trade/binary/place', '/api/trading/binary/place'], requirePlayerAuth, (req, res) => {
+    try {
+        const { pair = 'BTC/USD', direction, amount, timeframe = '1m', idempotencyKey } = req.body;
+        const user = getOrCreateUser(req.userId, req.userEmail, req.isTester);
+
+        const trade = binaryTradingService.placePrediction({
+            userId: req.userId,
+            userEmail: req.userEmail,
+            pair,
+            direction: (direction || '').toUpperCase(),
+            amount,
+            timeframe,
+            idempotencyKey,
+            userObj: user
+        });
+
+        saveUsersCache();
+
+        res.json({
+            success: true,
+            trade,
+            user: {
+                balance: user.balance,
+                coins: user.coins
+            }
+        });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/trade/binary/active — Get active predictions for user
+app.get(['/api/trade/binary/active', '/api/trading/binary/active'], requirePlayerAuth, (req, res) => {
+    try {
+        const activeTrades = binaryTradingService.getUserActiveTrades(req.userId);
+        res.json({
+            success: true,
+            count: activeTrades.length,
+            trades: activeTrades
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/trade/binary/history — Get settled prediction history
+app.get(['/api/trade/binary/history', '/api/trading/binary/history'], requirePlayerAuth, (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit || '50', 10);
+        const history = binaryTradingService.getUserTradeHistory(req.userId, limit);
+        res.json({
+            success: true,
+            count: history.length,
+            history
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST /api/trade/binary/close/:id — Early close prediction
+app.post(['/api/trade/binary/close/:id', '/api/trade/binary/close'], requirePlayerAuth, (req, res) => {
+    try {
+        const tradeId = req.params.id || req.body.tradeId || req.body.id;
+        const user = getOrCreateUser(req.userId, req.userEmail, req.isTester);
+        const trade = binaryTradingService.closeEarly(tradeId, req.userId, user);
+        saveUsersCache();
+
+        res.json({
+            success: true,
+            trade,
+            user: {
+                balance: user.balance,
+                coins: user.coins
+            }
+        });
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+});
+
+// GET /api/trade/performance — User trading metrics & streak analytics
+app.get(['/api/trade/performance', '/api/trading/performance'], requirePlayerAuth, (req, res) => {
+    try {
+        const stats = binaryTradingService.getUserPerformance(req.userId);
+        res.json({
+            success: true,
+            stats
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════

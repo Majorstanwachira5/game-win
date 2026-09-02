@@ -1568,33 +1568,51 @@
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <!-- 📈 PLAYCOIN AUTHORITATIVE MARKET & CANDLESTICK TRADE VIEW MODAL           -->
     <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- 📈 PLAYCOIN PROFESSIONAL BINARY & PREDICTION OPTIONS TRADING TERMINAL        -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
     <div id="modal-market" class="game-modal-overlay terminal-modal-overlay" style="display:none">
         <div class="market-dashboard-modal glass-modal trade-terminal-theme mobile-app-terminal" id="marketDashboardModal">
             <!-- Native App Header Bar -->
             <div class="market-header-block app-header-bar">
-
                 <div class="market-title-area">
+                    <button type="button" class="terminal-back-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeMarket(); else window.closeModal(this);" title="Back">‹</button>
                     <div class="market-token-icon">⚡</div>
                     <div class="market-titles">
-                        <h2>
-                            <span class="terminal-brand-glow">PLAYCOIN TRADE</span>
-                            <span class="terminal-pair-badge">PLAY / KSh</span>
-                        </h2>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span class="terminal-brand-glow">PLAYCOIN PREDICT</span>
+                            <!-- Asset Pair Selector Dropdown -->
+                            <div class="app-pair-selector-wrap">
+                                <select id="terminalAssetPairSelect" class="app-pair-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.setAssetPair(this.value);" title="Select Trading Pair">
+                                    <option value="BTC/USD" selected>₿ BTC/USD</option>
+                                    <option value="ETH/USD">Ξ ETH/USD</option>
+                                    <option value="SOL/USD">◎ SOL/USD</option>
+                                    <option value="PLAY/KES">⚡ PLAY/KES</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="app-header-sub">
-                            <span class="app-header-price" id="marketHeaderPrice">KSh 0.5000</span>
-                            <span id="marketStatusBadge" class="market-status-pill">● LIVE</span>
+                            <span class="app-header-price" id="marketHeaderPrice">$64,250.00</span>
+                            <span id="marketStatusBadge" class="market-status-pill">● LIVE MARKET</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="market-header-actions app-header-controls">
-                    <!-- Section Dropdown Selector -->
+                    <!-- Real PLAYCOIN Balance Chip -->
+                    <div class="terminal-header-balance-chip" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Click to Fund Account">
+                        <span class="bal-label">BALANCE:</span>
+                        <strong class="bal-value" id="terminalHeaderCoinBal">0.00 PLAY</strong>
+                        <span class="bal-plus">+</span>
+                    </div>
+
+                    <!-- View Dropdown Selector -->
                     <div class="app-control-dropdown">
                         <select id="tradingSectionDropdown" class="app-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.switchSection(this.value);" title="Switch View">
                             <option value="all">📱 All Views</option>
-                            <option value="chart">📈 Chart View</option>
-                            <option value="trade">⚡ Buy / Sell</option>
-                            <option value="positions">📊 Positions</option>
+                            <option value="chart">📈 Chart Only</option>
+                            <option value="predict">⚡ Prediction Deck</option>
+                            <option value="positions">📊 Active Predictions</option>
                         </select>
                     </div>
 
@@ -1602,8 +1620,9 @@
                     <div class="app-control-dropdown">
                         <select id="terminalActionDropdown" class="app-select-pill" onchange="if(window.MarketEngine) window.MarketEngine.handleActionSelect(this);" title="Menu">
                             <option value="" disabled selected>⚙️ Menu ▾</option>
-                            <option value="expand">⛶ Expand Graph</option>
-                            <option value="deposit">💳 Deposit (M-Pesa)</option>
+                            <option value="expand">⛶ Expand Chart</option>
+                            <option value="deposit">💳 Fund Account (M-Pesa)</option>
+                            <option value="stats">📈 Performance Stats</option>
                             <option value="exit">❌ Close Terminal</option>
                         </select>
                     </div>
@@ -1612,43 +1631,43 @@
                 </div>
             </div>
 
-            <!-- Terminal Ticker Metrics Strip -->
+            <!-- Asset Information Strip -->
             <div class="market-stats-row terminal-metrics-strip" id="marketMetricsStrip">
                 <div class="market-card highlight-card">
-                    <span class="market-card-label">LAST PRICE</span>
-                    <div class="market-card-value live-price-glow" id="marketLivePrice">KSh 0.5000</div>
-                    <span id="marketLiveChange" class="market-stat-badge bullish">+0.00%</span>
+                    <span class="market-card-label">CURRENT PRICE</span>
+                    <div class="market-card-value live-price-glow" id="marketLivePrice">$64,250.00</div>
+                    <span id="marketLiveChange" class="market-stat-badge bullish">▲ +2.45%</span>
                 </div>
                 <div class="market-card">
                     <span class="market-card-label">24H HIGH / LOW</span>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                        <span style="font-size:12px; font-weight:700; color:#00e676;" id="market24hHigh">KSh 0.5000</span>
-                        <span style="font-size:12px; font-weight:700; color:#ff1744;" id="market24hLow">KSh 0.5000</span>
+                        <span style="font-size:12px; font-weight:700; color:#00e676;" id="market24hHigh">$65,120.00</span>
+                        <span style="font-size:12px; font-weight:700; color:#ff1744;" id="market24hLow">$62,800.00</span>
                     </div>
-                    <span style="font-size:9px; color:#64748b;">24H Range Spread</span>
+                    <span style="font-size:9px; color:#64748b;" id="marketSpreadText">Spread: 0.02%</span>
                 </div>
                 <div class="market-card">
                     <span class="market-card-label">24H VOLUME</span>
-                    <div class="market-card-value" id="market24hVolume" style="font-size:13px;">0 PLAY</div>
-                    <span style="font-size:9px; color:#64748b;">Platform Net Volume</span>
+                    <div class="market-card-value" id="market24hVolume" style="font-size:13px;">1,845.50 BTC</div>
+                    <span style="font-size:9px; color:#64748b;">Market Turnover</span>
                 </div>
                 <div class="market-card user-bal-card">
-                    <span class="market-card-label">TRADING BALANCE</span>
-                    <div class="market-card-value" id="marketUserCoinBal" style="font-size:13px; color:var(--cyan-accent);">0 PLAY</div>
-                    <span style="font-size:9px; color:#64748b;" id="marketCirculatingSupply">Circulating: 0 PLAY</span>
+                    <span class="market-card-label">AVAILABLE WAGER CAPITAL</span>
+                    <div class="market-card-value" id="marketUserCoinBal" style="font-size:13px; color:var(--cyan-accent);">0.00 PLAY</div>
+                    <span style="font-size:9px; color:#00e676;" id="marketReturnBadge">⚡ 85% Win Return Rate</span>
                 </div>
             </div>
 
-            <!-- Streamlined Candlestick Chart Area -->
+            <!-- Candlestick & Price Action Chart Area -->
             <div class="market-chart-section" id="marketChartSection">
                 <div class="market-chart-toolbar app-chart-toolbar">
                     <!-- Dropdown 1: Chart Presentation Type -->
                     <div class="app-toolbar-dropdown">
                         <select id="selectChartType" class="app-select-pill-sm" onchange="if(window.MarketEngine) window.MarketEngine.setChartType(this.value);" title="Chart Type">
-                            <option value="candles">🕯️ Candles</option>
-                            <option value="line">📈 Line</option>
-                            <option value="area">🏔️ Area</option>
-                            <option value="ohlc">📊 Bars</option>
+                            <option value="candles">🕯️ Candlesticks</option>
+                            <option value="line">📈 Line Chart</option>
+                            <option value="area">🏔️ Area Trend</option>
+                            <option value="ohlc">📊 OHLC Bars</option>
                         </select>
                     </div>
 
@@ -1659,25 +1678,24 @@
                             <option value="ma">MA (7, 25, 99)</option>
                             <option value="ema">EMA (12, 26)</option>
                             <option value="boll">Bollinger Bands</option>
-                            <option value="rsi">RSI (14 Sub-Pane)</option>
-                            <option value="vol">Volume Histogram</option>
+                            <option value="rsi">RSI (14 Oscillator)</option>
+                            <option value="vol">Volume Bars</option>
                         </select>
                     </div>
 
-                    <!-- Swipeable Timeframe Selector -->
+                    <!-- Chart Timeframe Tabs -->
                     <div class="market-time-tabs app-time-tabs">
+                        <button type="button" class="market-time-tab active" data-interval="30s">30s</button>
                         <button type="button" class="market-time-tab" data-interval="1m">1m</button>
                         <button type="button" class="market-time-tab" data-interval="5m">5m</button>
                         <button type="button" class="market-time-tab" data-interval="15m">15m</button>
-                        <button type="button" class="market-time-tab active" data-interval="1h">1h</button>
-                        <button type="button" class="market-time-tab" data-interval="4h">4h</button>
-                        <button type="button" class="market-time-tab" data-interval="1d">1D</button>
+                        <button type="button" class="market-time-tab" data-interval="1h">1h</button>
                     </div>
 
                     <!-- Compact Drawing Tools -->
                     <div class="market-drawing-tools app-drawing-tools" id="marketDrawingTools">
-                        <button type="button" class="drawing-tool-btn active" data-tool="crosshair" title="Crosshair / Magnifier">✛</button>
-                        <button type="button" class="drawing-tool-btn" data-tool="trendline" title="Trendline Drawing">📏</button>
+                        <button type="button" class="drawing-tool-btn active" data-tool="crosshair" title="Crosshair">✛</button>
+                        <button type="button" class="drawing-tool-btn" data-tool="trendline" title="Trendline">📏</button>
                         <button type="button" class="drawing-tool-btn" data-tool="hline" title="Horizontal Price Line">➖</button>
                         <button type="button" class="drawing-tool-btn" data-tool="clear" title="Clear Drawings">🗑️</button>
                     </div>
@@ -1697,147 +1715,253 @@
                 </div>
             </div>
 
-            <!-- Bottom Trading & Settlement Workspace (Native Android Card Architecture) -->
+            <!-- Binary Prediction Control Deck & Active Positions Panel -->
             <div class="market-bottom-section" id="marketBottomSection">
-                <!-- Left: Multi-Tab Positions, Orders, History & Ledger Workspace -->
+                <!-- Left: Multi-Tab Positions, History, Stats & Order Book Workspace -->
                 <div class="market-activity-card" id="marketActivityCard">
                     <div class="workspace-tabs-header">
                         <button type="button" class="workspace-tab-btn active" data-target-pane="panePositions" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('panePositions');">
-                            <span>📊</span> POSITIONS <span class="workspace-tab-badge" id="posCountBadge">0</span>
-                        </button>
-                        <button type="button" class="workspace-tab-btn" data-target-pane="paneOrders" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneOrders');">
-                            <span>📜</span> ORDERS
+                            <span>⚡</span> ACTIVE PREDICTIONS <span class="workspace-tab-badge" id="posCountBadge">0</span>
                         </button>
                         <button type="button" class="workspace-tab-btn" data-target-pane="paneHistory" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneHistory');">
-                            <span>🕒</span> HISTORY
+                            <span>🕒</span> TRADE HISTORY
                         </button>
-                        <button type="button" class="workspace-tab-btn" data-target-pane="paneLedger" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneLedger');">
-                            <span>🛡️</span> SETTLEMENT FEED
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneStats" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneStats');">
+                            <span>📈</span> PERFORMANCE
+                        </button>
+                        <button type="button" class="workspace-tab-btn" data-target-pane="paneOrderbook" onclick="if(window.MarketEngine) window.MarketEngine.setWorkspaceTab('paneOrderbook');">
+                            <span>📖</span> ORDER BOOK
                         </button>
                     </div>
 
                     <div class="workspace-tab-content">
-                        <!-- Pane 1: Active Open Positions with Live P/L -->
+                        <!-- Pane 1: Active Open Predictions with Live Floating P/L & Countdown -->
                         <div id="panePositions" class="workspace-pane active">
                             <div id="marketPositionsList" class="market-positions-list">
                                 <div class="market-empty-activity">
-                                    <span>📊</span>
-                                    <p>No open positions. Tap BUY or SELL below to open a position.</p>
+                                    <span>⚡</span>
+                                    <p>No active predictions. Select an expiry interval, choose CALL or PUT, and place your wager below.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pane 2: User Orders -->
-                        <div id="paneOrders" class="workspace-pane" style="display:none;">
-                            <div id="marketOrdersList" class="market-orders-list">
-                                <div class="market-empty-activity">
-                                    <span>📜</span>
-                                    <p>No recent orders found.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pane 3: Trade History -->
+                        <!-- Pane 2: Trade History (Settled Predictions) -->
                         <div id="paneHistory" class="workspace-pane" style="display:none;">
                             <div id="marketHistoryList" class="market-history-list">
                                 <div class="market-empty-activity">
                                     <span>🕒</span>
-                                    <p>No completed trade history.</p>
+                                    <p>No completed prediction history.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pane 4: Authoritative Double-Entry Ledger Feed -->
-                        <div id="paneLedger" class="workspace-pane" style="display:none;">
-                            <div id="marketActivityList" class="market-activity-list">
-                                <div class="market-empty-activity">
-                                    <span>⏳</span>
-                                    <p>Loading ledger transactions...</p>
+                        <!-- Pane 3: Performance & Win Rate Analytics -->
+                        <div id="paneStats" class="workspace-pane" style="display:none;">
+                            <div id="marketPerformanceStats" class="market-performance-view">
+                                <div class="perf-stats-grid">
+                                    <div class="perf-stat-box">
+                                        <span class="perf-stat-label">TOTAL PREDICTIONS</span>
+                                        <strong class="perf-stat-num" id="perfTotalTrades">0</strong>
+                                    </div>
+                                    <div class="perf-stat-box">
+                                        <span class="perf-stat-label">WIN RATE</span>
+                                        <strong class="perf-stat-num" id="perfWinRate" style="color:#00e676;">0.0%</strong>
+                                    </div>
+                                    <div class="perf-stat-box">
+                                        <span class="perf-stat-label">WINS / LOSSES</span>
+                                        <strong class="perf-stat-num" id="perfWinsLosses">0W / 0L</strong>
+                                    </div>
+                                    <div class="perf-stat-box">
+                                        <span class="perf-stat-label">NET PROFIT / LOSS</span>
+                                        <strong class="perf-stat-num" id="perfNetPnL" style="color:#ffd700;">0.00 PLAY</strong>
+                                    </div>
+                                    <div class="perf-stat-box">
+                                        <span class="perf-stat-label">CURRENT WIN STREAK</span>
+                                        <strong class="perf-stat-num" id="perfStreak" style="color:#00f0ff;">0 🔥</strong>
+                                    </div>
+                                    <div class="perf-stat-box">
+                                        <span class="perf-stat-label">BEST WIN STREAK</span>
+                                        <strong class="perf-stat-num" id="perfBestStreak" style="color:#a855f7;">0 👑</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pane 4: Live Order Book Depth -->
+                        <div id="paneOrderbook" class="workspace-pane" style="display:none;">
+                            <div id="marketOrderbookView" class="market-orderbook-container">
+                                <div class="orderbook-header-row">
+                                    <span>BID / BUY (PLAY)</span>
+                                    <span>PRICE</span>
+                                    <span>ASK / SELL (PLAY)</span>
+                                </div>
+                                <div class="orderbook-grid" id="marketOrderbookRows">
+                                    <!-- Populated dynamically -->
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Right: Professional Order Placement & Trading Capital Panel -->
-                <div class="market-trading-panel" id="marketTradingPanel">
+                <!-- Right: Binary Prediction Deck (Timeframe, Wager, CALL/PUT Actions) -->
+                <div class="market-trading-panel binary-trading-deck" id="marketTradingPanel">
                     <div class="market-section-title app-trade-title">
-                        <span>⚡ ORDER EXECUTION</span>
-                        <span class="order-type-badge">MARKET ORDER</span>
+                        <span>⚡ PLACE PREDICTION</span>
+                        <span class="order-type-badge binary-badge">85% RETURN</span>
                     </div>
 
-                    <!-- Buy / Sell Side Selector Tabs -->
-                    <div class="trade-side-tabs">
-                        <button type="button" class="trade-side-tab active-buy" id="btnSideBuy" onclick="if(window.MarketEngine) window.MarketEngine.setTradeSide('BUY');">
-                            <span>🟢</span> BUY PLAY
-                        </button>
-                        <button type="button" class="trade-side-tab" id="btnSideSell" onclick="if(window.MarketEngine) window.MarketEngine.setTradeSide('SELL');">
-                            <span>🔴</span> SELL PLAY
-                        </button>
+                    <!-- Expiry Time Interval Selector -->
+                    <div class="binary-interval-section">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <label class="binary-section-label">EXPIRY INTERVAL:</label>
+                            <span class="binary-countdown-badge" id="binaryCountdownIndicator">⏱️ READY</span>
+                        </div>
+                        <div class="binary-interval-tabs" id="binaryIntervalTabs">
+                            <button type="button" class="interval-chip active" data-interval="30s" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('30s', this);">30s</button>
+                            <button type="button" class="interval-chip" data-interval="1m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('1m', this);">1 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="2m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('2m', this);">2 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="5m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('5m', this);">5 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="10m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('10m', this);">10 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="15m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('15m', this);">15 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="30m" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('30m', this);">30 MIN</button>
+                            <button type="button" class="interval-chip" data-interval="1h" onclick="if(window.MarketEngine) window.MarketEngine.setTimeframe('1h', this);">1H</button>
+                        </div>
                     </div>
-                    
-                    <!-- Capital & Instant Deposit Box -->
-                    <div class="trading-capital-box">
+
+                    <!-- Available Capital & Deposit Strip -->
+                    <div class="trading-capital-box binary-capital-box">
                         <div class="capital-row">
                             <div>
-                                <span class="capital-label" id="tradeAvailableLabel">Available Cash:</span>
-                                <strong class="capital-val" id="tradeAvailableCash" style="color:var(--gold-primary); display:block;">KSh 0.00</strong>
+                                <span class="capital-label">PLAYCOIN Wallet:</span>
+                                <strong class="capital-val" id="tradeAvailableCoins" style="color:var(--cyan-accent); font-size:15px; display:block;">0.00 PLAY</strong>
                             </div>
                             <button type="button" class="btn-micro-deposit trigger-trading-deposit" onclick="if(window.MarketEngine) window.MarketEngine.triggerDeposit();" title="Fund Wallet via M-Pesa">
                                 <span>💳</span> + Deposit
                             </button>
                         </div>
-                        <div class="capital-row" style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(255,255,255,0.06);">
-                            <span class="capital-label">Coin Holdings:</span>
-                            <strong class="capital-val" id="tradeAvailableCoins" style="color:var(--cyan-accent);">0 PLAY</strong>
-                        </div>
-                        <div class="capital-row valuation-row">
-                            <span class="capital-label">Execution Price:</span>
-                            <strong class="capital-val" id="tradeExecutionPriceDisplay" style="color:#00f0ff;">KSh 0.5000</strong>
-                        </div>
                     </div>
 
-                    <!-- Order Input Form -->
-                    <div class="trade-input-form">
+                    <!-- Wager Amount Input & Stepper -->
+                    <div class="trade-input-form binary-form">
                         <div class="trade-input-group">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label for="tradeOrderAmount" id="tradeAmountLabel">AMOUNT (KSh):</label>
-                                <span style="font-size:9.5px; color:#64748b;">Min 10</span>
+                                <label for="tradeOrderAmount" id="tradeAmountLabel">WAGER AMOUNT (PLAYCOIN):</label>
+                                <span style="font-size:9.5px; color:#64748b;">Min 100 • Max 50,000</span>
                             </div>
                             <div class="trade-input-wrapper app-stepper-wrapper">
-                                <button type="button" class="trade-stepper-btn minus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(-50);" title="Decrease amount">−</button>
-                                <input type="number" id="tradeOrderAmount" min="10" step="10" placeholder="Min 10" oninput="if(window.MarketEngine) window.MarketEngine.calculateOrderPreview();" />
-                                <span class="trade-input-unit" id="tradeAmountUnit">KSh</span>
-                                <button type="button" class="trade-stepper-btn plus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(50);" title="Increase amount">+</button>
+                                <button type="button" class="trade-stepper-btn minus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(-100);" title="Decrease amount">−</button>
+                                <input type="number" id="tradeOrderAmount" value="1000" min="100" max="50000" step="100" placeholder="1000" oninput="if(window.MarketEngine) window.MarketEngine.calculateOrderPreview();" />
+                                <span class="trade-input-unit" id="tradeAmountUnit">PLAY</span>
+                                <button type="button" class="trade-stepper-btn plus" onclick="if(window.MarketEngine) window.MarketEngine.stepTradeAmount(100);" title="Increase amount">+</button>
                             </div>
                         </div>
 
-                        <!-- Quick Percentage Chips -->
-                        <div class="trade-quick-chips">
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(25);">25%</button>
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(50);">50%</button>
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(75);">75%</button>
-                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setTradePercent(100);">100%</button>
+                        <!-- Quick Wager Chips -->
+                        <div class="trade-quick-chips binary-chips">
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(100, this);">100</button>
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(500, this);">500</button>
+                            <button type="button" class="quick-chip active" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(1000, this);">1K</button>
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(5000, this);">5K</button>
+                            <button type="button" class="quick-chip" onclick="if(window.MarketEngine) window.MarketEngine.setWagerAmount(10000, this);">10K</button>
                         </div>
 
-                        <!-- Estimated Conversion Preview -->
-                        <div class="trade-preview-strip">
-                            <span class="preview-label" id="tradePreviewLabel">Estimated Receive:</span>
-                            <strong class="preview-val" id="tradePreviewValue">0.00 PLAY</strong>
+                        <!-- Potential Payout & Return Calculation Strip -->
+                        <div class="trade-preview-strip binary-payout-strip">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="preview-label">Potential Profit (+85%):</span>
+                                <strong class="preview-val" id="tradePreviewPayout" style="color:#00e676;">+850.00 PLAY</strong>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+                                <span class="preview-label" style="font-size:10px; color:#94a3b8;">Total Payout Return:</span>
+                                <strong id="tradePreviewTotalReturn" style="font-size:12px; color:#ffd700;">1,850.00 PLAY</strong>
+                            </div>
                         </div>
 
-                        <!-- Primary Execute Trade Button -->
-                        <button type="button" id="btnExecuteTrade" class="btn-execute-trade buy" onclick="if(window.MarketEngine) window.MarketEngine.executeCurrentOrder();">
-                            <span class="exec-icon">⚡</span>
-                            <span class="exec-title" id="btnExecuteText">EXECUTE BUY ORDER</span>
-                        </button>
+                        <!-- Primary Dual Direction Prediction Actions (CALL vs PUT) -->
+                        <div class="binary-actions-grid">
+                            <button type="button" id="btnPredictCall" class="btn-predict-action call" onclick="if(window.MarketEngine) window.MarketEngine.promptPredictionOrder('CALL');">
+                                <div class="action-direction">
+                                    <span class="dir-icon">▲</span>
+                                    <span class="dir-text">CALL / UP</span>
+                                </div>
+                                <div class="action-subtext">Higher than <span id="btnCallTargetPrice">$64,250.00</span></div>
+                                <div class="action-payout-badge">+85% PAYOUT</div>
+                            </button>
+
+                            <button type="button" id="btnPredictPut" class="btn-predict-action put" onclick="if(window.MarketEngine) window.MarketEngine.promptPredictionOrder('PUT');">
+                                <div class="action-direction">
+                                    <span class="dir-icon">▼</span>
+                                    <span class="dir-text">PUT / DOWN</span>
+                                </div>
+                                <div class="action-subtext">Lower than <span id="btnPutTargetPrice">$64,250.00</span></div>
+                                <div class="action-payout-badge">+85% PAYOUT</div>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="terminal-note-box">
-                        <span>🛡️</span> Backend-authoritative order execution & ledger settlement.
+                        <span>🛡️</span> Authoritative backend execution • Instant settlement at expiry.
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <!-- ⚡ BINARY ORDER CONFIRMATION TICKET (PREMIUM BOTTOM SHEET)                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════════ -->
+    <div id="binaryOrderTicketModal" class="game-modal-overlay" style="display:none; z-index:9999999;">
+        <div class="game-modal-card glass-modal binary-ticket-sheet" style="max-width:420px; width:92%; border-radius:24px 24px 16px 16px; border:2px solid var(--gold-primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.8); background:linear-gradient(180deg, #0f172a 0%, #080d1a 100%); padding:22px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:22px;">⚡</span>
+                    <h3 style="margin:0; font-size:16px; font-weight:800; color:#fff; letter-spacing:0.5px;">CONFIRM PREDICTION</h3>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeOrderTicket(); else document.getElementById('binaryOrderTicketModal').style.display='none';" style="background:none; border:none; color:#94a3b8; font-size:22px; cursor:pointer;">&times;</button>
+            </div>
+
+            <div class="ticket-details-box" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px; margin-bottom:18px;">
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12.5px;">
+                    <span style="color:#94a3b8;">ASSET PAIR:</span>
+                    <strong id="ticketAssetPair" style="color:#fff;">BTC/USD</strong>
+                </div>
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12.5px;">
+                    <span style="color:#94a3b8;">DIRECTION:</span>
+                    <strong id="ticketDirection" style="color:#00e676; font-size:14px;">▲ CALL (UP)</strong>
+                </div>
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12.5px;">
+                    <span style="color:#94a3b8;">WAGER AMOUNT:</span>
+                    <strong id="ticketWagerAmount" style="color:var(--cyan-accent); font-size:14px;">1,000.00 PLAY</strong>
+                </div>
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12.5px;">
+                    <span style="color:#94a3b8;">TIMEFRAME / EXPIRY:</span>
+                    <strong id="ticketTimeframe" style="color:var(--gold-primary);">1 MIN (60s)</strong>
+                </div>
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12.5px;">
+                    <span style="color:#94a3b8;">ENTRY TARGET PRICE:</span>
+                    <strong id="ticketEntryPrice" style="color:#fff;">$64,250.00</strong>
+                </div>
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.1); font-size:13px;">
+                    <span style="color:#94a3b8;">POTENTIAL PROFIT:</span>
+                    <strong id="ticketPotentialProfit" style="color:#00e676;">+850.00 PLAY (+85%)</strong>
+                </div>
+                <div class="ticket-row" style="display:flex; justify-content:space-between; margin-top:4px; font-size:14px;">
+                    <span style="color:#cbd5e1; font-weight:700;">TOTAL PAYOUT:</span>
+                    <strong id="ticketTotalPayout" style="color:#ffd700; font-size:15px;">1,850.00 PLAY</strong>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1.6fr; gap:10px;">
+                <button type="button" class="ticket-cancel-btn" onclick="if(window.MarketEngine) window.MarketEngine.closeOrderTicket();" style="padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-weight:700; border-radius:12px; cursor:pointer;">
+                    CANCEL
+                </button>
+                <button type="button" id="btnConfirmPredictionWager" class="ticket-confirm-btn" onclick="if(window.MarketEngine) window.MarketEngine.executePredictionWager();" style="padding:12px; background:linear-gradient(135deg, #00e676 0%, #00b0ff 100%); border:none; color:#06101e; font-weight:800; font-size:14px; letter-spacing:0.5px; border-radius:12px; cursor:pointer; box-shadow:0 0 20px rgba(0,230,118,0.4);">
+                    ⚡ PLACE WAGER
+                </button>
+            </div>
+        </div>
+    </div>
+
 
             <!-- Native App Fixed Bottom Navigation Bar (Mobile Viewports) -->
             <div class="app-bottom-nav-bar" id="appBottomNavBar">
