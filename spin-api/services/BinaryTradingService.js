@@ -1,23 +1,25 @@
 /**
- * services/BinaryTradingService.js — Authoritative Binary / Prediction Options Engine
- *
- * Core Features:
- * 1. Multi-Asset Real-Time Price Feeds (BTC/USD, ETH/USD, SOL/USD, PLAY/KES).
- * 2. Multi-Timeframe OHLCV Candles & Live Order Books (Bids/Asks depth).
- * 3. Binary Options (CALL / PUT) Prediction Ledger.
- * 4. High-Frequency Expiry Settlement Engine (auto-settles at expiry timestamp).
- * 5. Early Settlement & Dynamic Floating P/L.
- * 6. User Performance Statistics (Win Rate, Streaks, Net P/L).
+ * BinaryTradingService.js — Authoritative Multi-Asset Binary Options & Systematic Market Engine
+ * 
+ * Features:
+ * - Multi-Asset Price Feeds (BTC/USD, ETH/USD, SOL/USD, PLAY/KES)
+ * - Systematic Multi-Harmonic Trend & Momentum Micro-Structure Engine
+ * - Smooth Candlestick Progression (30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h)
+ * - Authoritative Real-Time Binary Predictions Execution (CALL / PUT)
+ * - Dynamic Floating P/L Tracking & Early Close Salvage Action
+ * - Exact Expiry Auto-Settlement (+85% Winner Profit, Tie Refund, Loss Settlement)
+ * - Live Order Book Depth Generation
+ * - Performance Analytics (Win Rate, P/L, Streaks)
  */
 
 const EventEmitter = require('events');
 
 class BinaryTradingService extends EventEmitter {
-    constructor(marketService) {
+    constructor(marketService = null) {
         super();
         this.marketService = marketService;
 
-        // Supported Trading Asset Pairs
+        // Multi-Asset Baseline Configurations & Trend State
         this.pairs = {
             'BTC/USD': {
                 symbol: 'BTC/USD',
@@ -26,11 +28,18 @@ class BinaryTradingService extends EventEmitter {
                 decimals: 2,
                 price: 64250.00,
                 basePrice: 64250.00,
-                open24h: 63100.00,
+                open24h: 63500.00,
                 high24h: 65120.00,
                 low24h: 62800.00,
                 volume24h: 1845.50,
-                volatility: 0.0008,
+                volatility: 0.0006,
+                trendDirection: 1,
+                trendStrength: 1.25,
+                trendDuration: 45,
+                trendElapsed: 0,
+                wavePeriodFast: 28,
+                wavePeriodSlow: 140,
+                tickCount: 0,
                 status: 'LIVE_MARKET'
             },
             'ETH/USD': {
@@ -44,7 +53,14 @@ class BinaryTradingService extends EventEmitter {
                 high24h: 3520.00,
                 low24h: 3340.00,
                 volume24h: 14230.80,
-                volatility: 0.0012,
+                volatility: 0.0008,
+                trendDirection: -1,
+                trendStrength: 0.85,
+                trendDuration: 35,
+                trendElapsed: 0,
+                wavePeriodFast: 22,
+                wavePeriodSlow: 110,
+                tickCount: 15,
                 status: 'LIVE_MARKET'
             },
             'SOL/USD': {
@@ -58,7 +74,14 @@ class BinaryTradingService extends EventEmitter {
                 high24h: 154.20,
                 low24h: 139.80,
                 volume24h: 94500.00,
-                volatility: 0.0018,
+                volatility: 0.0012,
+                trendDirection: 1,
+                trendStrength: 0.12,
+                trendDuration: 50,
+                trendElapsed: 0,
+                wavePeriodFast: 18,
+                wavePeriodSlow: 90,
+                tickCount: 40,
                 status: 'LIVE_MARKET'
             },
             'PLAY/KES': {
@@ -72,7 +95,14 @@ class BinaryTradingService extends EventEmitter {
                 high24h: 0.65,
                 low24h: 0.48,
                 volume24h: 385000.00,
-                volatility: 0.0015,
+                volatility: 0.0010,
+                trendDirection: 1,
+                trendStrength: 0.0004,
+                trendDuration: 60,
+                trendElapsed: 0,
+                wavePeriodFast: 30,
+                wavePeriodSlow: 180,
+                tickCount: 5,
                 status: 'PLAYCOIN_INTERNAL'
             }
         };
@@ -102,9 +132,9 @@ class BinaryTradingService extends EventEmitter {
         });
 
         // Binary Trades In-Memory Store
-        this.activeTrades = new Map(); // tradeId -> trade object
-        this.settledTrades = []; // array of settled trade objects (most recent first)
-        this.userStats = new Map(); // userId -> stats object
+        this.activeTrades = new Map();
+        this.settledTrades = [];
+        this.userStats = new Map();
         this.idempotencyKeys = new Set();
 
         // Default Profit Multiplier for Winners: 85% profit (1.85x return)
@@ -112,15 +142,15 @@ class BinaryTradingService extends EventEmitter {
         this.MIN_WAGER = 100;
         this.MAX_WAGER = 50000;
 
-        // Initialize historical candle buffers
+        // Initialize historical systematic candle buffers
         this._initializeAllPairCandles();
 
-        // Start tick loop (runs every 1000ms for smooth real-time ticks & expiry checks)
+        // Start high-frequency engine loop (1000ms systematic ticks)
         this._startEngine();
     }
 
     /**
-     * Build baseline multi-pair historical candles
+     * Build baseline multi-pair historical candles with systematic momentum and harmonic waves
      */
     _initializeAllPairCandles() {
         const now = Date.now();
@@ -133,16 +163,25 @@ class BinaryTradingService extends EventEmitter {
                 const candleCount = 100;
                 const generated = [];
 
-                let runningPrice = pairConfig.price * (0.97 + Math.random() * 0.06);
+                let runningPrice = pairConfig.basePrice * 0.985;
+                const periodFactor = stepMs / 1000;
 
                 for (let i = candleCount; i >= 1; i--) {
                     const candleTime = now - (i * stepMs);
-                    const delta = (Math.random() - 0.49) * (pairConfig.price * pairConfig.volatility * Math.sqrt(stepMs / 1000));
+                    const t = candleTime / 1000;
+
+                    // Systematic multi-wave harmonics (macro cycle + swing wave + micro oscillation)
+                    const macroWave = Math.sin(t / (periodFactor * 16)) * 0.008;
+                    const swingWave = Math.cos(t / (periodFactor * 6)) * 0.004;
+                    const microWave = Math.sin(t / (periodFactor * 2)) * 0.002;
+                    const compositeDelta = (macroWave + swingWave + microWave) * pairConfig.basePrice;
+
                     const open = runningPrice;
-                    const close = Math.max(open * 0.5, open + delta);
-                    const high = Math.max(open, close) + Math.abs(delta * (0.2 + Math.random() * 0.6));
-                    const low = Math.min(open, close) - Math.abs(delta * (0.2 + Math.random() * 0.6));
-                    const volume = parseFloat((50 + Math.random() * 500).toFixed(2));
+                    const close = Math.max(pairConfig.basePrice * 0.5, open + compositeDelta);
+                    const range = Math.abs(close - open);
+                    const high = Math.max(open, close) + (range * 0.35) + (pairConfig.basePrice * pairConfig.volatility * 0.4);
+                    const low = Math.min(open, close) - (range * 0.35) - (pairConfig.basePrice * pairConfig.volatility * 0.4);
+                    const volume = parseFloat((120 + Math.abs(Math.sin(t / periodFactor)) * 400).toFixed(2));
 
                     generated.push({
                         time: Math.floor(candleTime / 1000),
@@ -162,17 +201,19 @@ class BinaryTradingService extends EventEmitter {
     }
 
     /**
-     * High-precision Engine Loop (1 second tick)
+     * Engine Loop (1 second tick)
      */
     _startEngine() {
-        setInterval(() => {
+        if (this._engineTimer) clearInterval(this._engineTimer);
+        this._engineTimer = setInterval(() => {
             this._tickPriceFeeds();
             this._checkExpiries();
         }, 1000);
     }
 
     /**
-     * Update live price feeds and append/update candles
+     * Systematic Market Price Feed Step
+     * Uses momentum velocity, harmonic wave oscillation, and mean-reverting drift
      */
     _tickPriceFeeds() {
         const now = Date.now();
@@ -180,22 +221,54 @@ class BinaryTradingService extends EventEmitter {
 
         Object.keys(this.pairs).forEach(pair => {
             const config = this.pairs[pair];
+            config.tickCount++;
+            config.trendElapsed++;
 
-            // If PLAY/KES, mirror MarketService price with slight tick jitter
+            // Periodically cycle trend direction (Bull wave -> Range -> Bear wave)
+            if (config.trendElapsed >= config.trendDuration) {
+                config.trendElapsed = 0;
+                config.trendDuration = 25 + Math.floor(Math.random() * 45); // 25s - 70s trend duration
+                // Rotate trend: 1 (Bull) -> -1 (Bear) -> 1 (Bull) with slight bias to maintain equilibrium
+                const meanDist = (config.price - config.basePrice) / config.basePrice;
+                if (meanDist > 0.04) {
+                    config.trendDirection = -1; // Overbought -> pull down
+                } else if (meanDist < -0.04) {
+                    config.trendDirection = 1; // Oversold -> pull up
+                } else {
+                    config.trendDirection = config.trendDirection === 1 ? -1 : 1;
+                }
+                config.trendStrength = (config.basePrice * config.volatility * 0.6) * (0.8 + Math.random() * 0.5);
+            }
+
+            // If PLAY/KES, couple to MarketService with smooth damping
             if (pair === 'PLAY/KES' && this.marketService) {
                 config.price = parseFloat(this.marketService.currentPrice.toFixed(config.decimals));
             } else {
-                // Micro-fluctuation (Brownian drift)
-                const drift = (Math.random() - 0.495) * (config.price * config.volatility);
-                config.price = parseFloat(Math.max(config.price * 0.1, config.price + drift).toFixed(config.decimals));
+                // 1. Harmonic Wave Component (Fast + Slow)
+                const fastAngle = (config.tickCount * 2 * Math.PI) / config.wavePeriodFast;
+                const slowAngle = (config.tickCount * 2 * Math.PI) / config.wavePeriodSlow;
+                const harmonicDelta = (Math.sin(fastAngle) * 0.45 + Math.cos(slowAngle) * 0.55) * (config.basePrice * config.volatility * 0.5);
+
+                // 2. Momentum Trend Drift
+                const trendDrift = (config.trendDirection * config.trendStrength * 0.25);
+
+                // 3. Ornstein-Uhlenbeck Mean Reversion
+                const ouReversion = (config.basePrice - config.price) * 0.0008;
+
+                // 4. Subtle Micro-Tick Jitter
+                const microJitter = (Math.sin(config.tickCount * 7.13) * 0.2) * (config.basePrice * config.volatility * 0.2);
+
+                const totalStep = harmonicDelta + trendDrift + ouReversion + microJitter;
+                const nextPrice = Math.max(config.basePrice * 0.2, config.price + totalStep);
+                config.price = parseFloat(nextPrice.toFixed(config.decimals));
             }
 
             // Update 24h High/Low/Volume
             if (config.price > config.high24h) config.high24h = config.price;
             if (config.price < config.low24h) config.low24h = config.price;
-            config.volume24h = parseFloat((config.volume24h + (Math.random() * 2)).toFixed(2));
+            config.volume24h = parseFloat((config.volume24h + 0.25 + Math.abs(Math.sin(config.tickCount)) * 0.5).toFixed(2));
 
-            // Update Candles for each timeframe
+            // Update multi-timeframe candles systematically
             ['30s', '1m', '5m', '15m', '1h'].forEach(tf => {
                 const stepSec = Math.floor((this.INTERVAL_MS[tf] || 60000) / 1000);
                 const candleList = this.candles[pair][tf];
@@ -205,13 +278,13 @@ class BinaryTradingService extends EventEmitter {
                 const currentCandleBucket = Math.floor(nowSec / stepSec) * stepSec;
 
                 if (lastCandle.time === currentCandleBucket) {
-                    // Update active candle
+                    // Update current live candle smoothly
                     lastCandle.high = Math.max(lastCandle.high, config.price);
                     lastCandle.low = Math.min(lastCandle.low, config.price);
                     lastCandle.close = config.price;
-                    lastCandle.volume = parseFloat((lastCandle.volume + 0.1).toFixed(2));
+                    lastCandle.volume = parseFloat((lastCandle.volume + 0.05).toFixed(2));
                 } else if (currentCandleBucket > lastCandle.time) {
-                    // Start a new candle
+                    // Form new candle cleanly starting at previous candle's close
                     candleList.push({
                         time: currentCandleBucket,
                         open: lastCandle.close,
@@ -250,232 +323,190 @@ class BinaryTradingService extends EventEmitter {
      * Authoritatively settle a binary trade
      */
     _settleTrade(trade, reason = 'EXPIRY') {
-        trade.status = 'SETTLED';
+        const pairConfig = this.pairs[trade.pair];
+        const exitPrice = pairConfig ? pairConfig.price : trade.entryPrice;
+        trade.exitPrice = exitPrice;
         trade.settlementTime = Date.now();
-        const currentPairPrice = this.getPairPrice(trade.pair);
-        trade.exitPrice = currentPairPrice;
+        trade.status = 'SETTLED';
 
         const isCall = trade.direction === 'CALL';
-        const isPut = trade.direction === 'PUT';
-
-        let result = 'LOST'; // WON, LOST, TIE
+        let result = 'LOST';
         let payout = 0;
         let totalReturn = 0;
-        let netProfit = -trade.amount;
 
-        if (trade.exitPrice === trade.entryPrice) {
-            result = 'TIE';
-            payout = 0;
-            totalReturn = trade.amount; // 100% refund
-            netProfit = 0;
-        } else if ((isCall && trade.exitPrice > trade.entryPrice) || (isPut && trade.exitPrice < trade.entryPrice)) {
-            result = 'WON';
-            payout = parseFloat((trade.amount * this.PAYOUT_RATE).toFixed(2));
-            totalReturn = parseFloat((trade.amount + payout).toFixed(2));
-            netProfit = payout;
+        if (reason === 'EARLY_CLOSE') {
+            const currentlyWinning = isCall ? (exitPrice > trade.entryPrice) : (exitPrice < trade.entryPrice);
+            if (currentlyWinning) {
+                result = 'WON_EARLY';
+                totalReturn = parseFloat((trade.amount * (1 + (this.PAYOUT_RATE * 0.65))).toFixed(2));
+                payout = parseFloat((totalReturn - trade.amount).toFixed(2));
+            } else {
+                result = 'LOST_EARLY';
+                totalReturn = parseFloat((trade.amount * 0.25).toFixed(2)); // 25% salvage refund
+                payout = 0;
+            }
         } else {
-            result = 'LOST';
-            payout = 0;
-            totalReturn = 0;
-            netProfit = -trade.amount;
+            // Standard Expiration
+            if (exitPrice === trade.entryPrice) {
+                result = 'TIE';
+                payout = 0;
+                totalReturn = trade.amount; // 100% refund
+            } else if ((isCall && exitPrice > trade.entryPrice) || (!isCall && exitPrice < trade.entryPrice)) {
+                result = 'WON';
+                payout = parseFloat((trade.amount * this.PAYOUT_RATE).toFixed(2));
+                totalReturn = parseFloat((trade.amount + payout).toFixed(2));
+            } else {
+                result = 'LOST';
+                payout = 0;
+                totalReturn = 0;
+            }
         }
 
         trade.result = result;
         trade.payout = payout;
         trade.totalReturn = totalReturn;
-        trade.netProfit = netProfit;
-        trade.reason = reason;
+        trade.netProfit = parseFloat((totalReturn - trade.amount).toFixed(2));
 
-        // Move from active to settled
+        // Credit user balance authoritatively
+        if (totalReturn > 0 && trade.userObj) {
+            trade.userObj.coins = parseFloat(((trade.userObj.coins || 0) + totalReturn).toFixed(2));
+        }
+
+        // Move from active to settled history
         this.activeTrades.delete(trade.id);
         this.settledTrades.unshift(trade);
-        if (this.settledTrades.length > 1000) this.settledTrades.pop();
+        if (this.settledTrades.length > 500) this.settledTrades.pop();
 
-        // Update user statistics
-        this._updateUserStats(trade.userId, result, netProfit);
+        // Update performance stats
+        this._updateUserStats(trade.userId, trade);
 
         // Emit settlement event
-        this.emit('tradeSettled', trade);
-
+        this.emit('settled', trade);
         return trade;
     }
 
     /**
-     * Update user lifetime & daily trading statistics
-     */
-    _updateUserStats(userId, result, netProfit) {
-        let stats = this.userStats.get(userId);
-        if (!stats) {
-            stats = {
-                userId,
-                totalTrades: 0,
-                wins: 0,
-                losses: 0,
-                ties: 0,
-                totalProfitLoss: 0,
-                winRate: 0,
-                currentStreak: 0,
-                bestStreak: 0,
-                lastTradeTime: Date.now()
-            };
-            this.userStats.set(userId, stats);
-        }
-
-        stats.totalTrades++;
-        stats.totalProfitLoss = parseFloat((stats.totalProfitLoss + netProfit).toFixed(2));
-        stats.lastTradeTime = Date.now();
-
-        if (result === 'WON') {
-            stats.wins++;
-            stats.currentStreak = stats.currentStreak > 0 ? stats.currentStreak + 1 : 1;
-            if (stats.currentStreak > stats.bestStreak) stats.bestStreak = stats.currentStreak;
-        } else if (result === 'LOST') {
-            stats.losses++;
-            stats.currentStreak = stats.currentStreak < 0 ? stats.currentStreak - 1 : -1;
-        } else {
-            stats.ties++;
-        }
-
-        const winnable = stats.wins + stats.losses;
-        stats.winRate = winnable > 0 ? parseFloat(((stats.wins / winnable) * 100).toFixed(1)) : 0;
-    }
-
-    /**
-     * Place a new authoritative binary prediction
+     * Place Binary Options Prediction
      */
     placePrediction({ userId, userEmail, pair, direction, amount, timeframe, idempotencyKey, userObj }) {
-        if (!userId) throw new Error('Authentication required.');
-        if (!pair || !this.pairs[pair]) throw new Error(`Invalid asset pair: ${pair}`);
-        if (!['CALL', 'PUT'].includes(direction)) throw new Error('Direction must be CALL or PUT.');
+        if (idempotencyKey && this.idempotencyKeys.has(idempotencyKey)) {
+            const existing = Array.from(this.activeTrades.values()).find(t => t.idempotencyKey === idempotencyKey);
+            if (existing) return existing;
+        }
 
-        const wager = parseFloat(Number(amount).toFixed(2));
-        if (isNaN(wager) || wager < this.MIN_WAGER) {
+        if (!this.pairs[pair]) {
+            throw new Error(`Unsupported trading pair: ${pair}`);
+        }
+
+        const upperDir = (direction || '').toUpperCase();
+        if (!['CALL', 'PUT'].includes(upperDir)) {
+            throw new Error('Direction must be either CALL or PUT');
+        }
+
+        const numAmount = parseFloat(amount);
+        if (isNaN(numAmount) || numAmount < this.MIN_WAGER) {
             throw new Error(`Minimum prediction wager is ${this.MIN_WAGER} PLAY.`);
         }
-        if (wager > this.MAX_WAGER) {
+        if (numAmount > this.MAX_WAGER) {
             throw new Error(`Maximum prediction wager is ${this.MAX_WAGER} PLAY.`);
         }
 
-        const tfMs = this.INTERVAL_MS[timeframe];
-        if (!tfMs) {
-            throw new Error(`Invalid timeframe: ${timeframe}. Supported: 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h.`);
+        if (!userObj || (userObj.coins || 0) < numAmount) {
+            throw new Error('Insufficient PLAYCOIN balance to place this wager.');
         }
 
-        // Idempotency check
-        if (idempotencyKey) {
-            if (this.idempotencyKeys.has(idempotencyKey)) {
-                // Return existing trade
-                for (const t of this.activeTrades.values()) {
-                    if (t.idempotencyKey === idempotencyKey) return t;
-                }
-                for (const t of this.settledTrades) {
-                    if (t.idempotencyKey === idempotencyKey) return t;
-                }
-            }
-            this.idempotencyKeys.add(idempotencyKey);
-        }
-
-        // Real Balance Validation
-        if (!userObj || (userObj.coins || 0) < wager) {
-            throw new Error(`Insufficient PLAYCOIN balance. Available: ${(userObj?.coins || 0).toLocaleString()} PLAY, Required: ${wager.toLocaleString()} PLAY.`);
-        }
-
-        // Deduct Wager from Real Balance
-        userObj.coins = parseFloat((userObj.coins - wager).toFixed(2));
-
-        const entryPrice = this.getPairPrice(pair);
+        const tf = timeframe || '30s';
+        const durationMs = this.INTERVAL_MS[tf] || (30 * 1000);
+        const pairConfig = this.pairs[pair];
+        const entryPrice = pairConfig.price;
         const now = Date.now();
-        const expiryTime = now + tfMs;
-        const tradeId = 'bin_' + now + '_' + Math.random().toString(36).substring(2, 7);
+        const expiryTime = now + durationMs;
 
+        // Deduct wager from user balance
+        userObj.coins = parseFloat(((userObj.coins || 0) - numAmount).toFixed(2));
+
+        const tradeId = 'bin_' + now + '_' + Math.random().toString(36).substring(2, 7);
         const trade = {
             id: tradeId,
+            idempotencyKey,
             userId,
-            userEmail: userEmail || '',
+            userEmail,
             pair,
-            direction,
-            amount: wager,
+            direction: upperDir,
+            amount: numAmount,
+            timeframe: tf,
             entryPrice,
-            timeframe,
-            timeframeMs: tfMs,
-            payoutRate: this.PAYOUT_RATE,
-            potentialPayout: parseFloat((wager * this.PAYOUT_RATE).toFixed(2)),
-            potentialReturn: parseFloat((wager * (1 + this.PAYOUT_RATE)).toFixed(2)),
-            status: 'ACTIVE',
             entryTime: now,
             expiryTime,
-            idempotencyKey: idempotencyKey || tradeId
+            potentialPayout: parseFloat((numAmount * this.PAYOUT_RATE).toFixed(2)),
+            potentialReturn: parseFloat((numAmount * (1 + this.PAYOUT_RATE)).toFixed(2)),
+            status: 'ACTIVE',
+            result: null,
+            exitPrice: null,
+            payout: null,
+            totalReturn: null,
+            netProfit: null,
+            userObj
         };
 
         this.activeTrades.set(tradeId, trade);
-        this.emit('tradePlaced', trade);
+        if (idempotencyKey) this.idempotencyKeys.add(idempotencyKey);
 
+        this.emit('trade_placed', trade);
         return trade;
     }
 
     /**
-     * Early close an active prediction before expiry
+     * Close an Active Prediction Early
      */
     closeEarly(tradeId, userId, userObj) {
         const trade = this.activeTrades.get(tradeId);
-        if (!trade) throw new Error('Active prediction not found.');
-        if (trade.userId !== userId) throw new Error('Unauthorized trade access.');
-        if (trade.status !== 'ACTIVE') throw new Error('Trade is no longer active.');
-
-        const currentPrice = this.getPairPrice(trade.pair);
-        const isWinning = (trade.direction === 'CALL' && currentPrice > trade.entryPrice) ||
-                          (trade.direction === 'PUT' && currentPrice < trade.entryPrice);
-
-        // Early salvage value: 60% of potential return if currently winning, 20% salvage refund if currently losing
-        const earlyReturn = isWinning
-            ? parseFloat((trade.amount * (1 + this.PAYOUT_RATE * 0.6)).toFixed(2))
-            : parseFloat((trade.amount * 0.20).toFixed(2));
-
-        trade.status = 'SETTLED';
-        trade.settlementTime = Date.now();
-        trade.exitPrice = currentPrice;
-        trade.result = isWinning ? 'WON_EARLY' : 'LOST_EARLY';
-        trade.totalReturn = earlyReturn;
-        trade.payout = parseFloat((earlyReturn - trade.amount).toFixed(2));
-        trade.netProfit = trade.payout;
-        trade.reason = 'EARLY_CLOSE';
-
-        // Credit to user balance
-        if (userObj) {
-            userObj.coins = parseFloat(((userObj.coins || 0) + earlyReturn).toFixed(2));
+        if (!trade) {
+            throw new Error('Active prediction not found or already settled.');
+        }
+        if (trade.userId !== userId) {
+            throw new Error('Unauthorized action for this trade.');
+        }
+        if (trade.status !== 'ACTIVE') {
+            throw new Error('Trade is not active.');
         }
 
-        this.activeTrades.delete(tradeId);
-        this.settledTrades.unshift(trade);
-
-        this._updateUserStats(userId, isWinning ? 'WON' : 'LOST', trade.netProfit);
-        this.emit('tradeSettled', trade);
-
-        return trade;
+        if (userObj) trade.userObj = userObj;
+        return this._settleTrade(trade, 'EARLY_CLOSE');
     }
 
     /**
-     * Get active trades for a specific user
+     * Get user active predictions with live countdown and floating P/L
      */
     getUserActiveTrades(userId) {
         const now = Date.now();
         const list = [];
 
         for (const trade of this.activeTrades.values()) {
-            if (trade.userId === userId) {
-                const currentPrice = this.getPairPrice(trade.pair);
+            if (trade.userId === userId && trade.status === 'ACTIVE') {
+                const pairConfig = this.pairs[trade.pair];
+                const currentPrice = pairConfig ? pairConfig.price : trade.entryPrice;
+                const remainingMs = Math.max(0, trade.expiryTime - now);
                 const isCall = trade.direction === 'CALL';
-                const isWinning = (isCall && currentPrice > trade.entryPrice) || (!isCall && currentPrice < trade.entryPrice);
-                const isTie = currentPrice === trade.entryPrice;
+                const isWinning = isCall ? (currentPrice > trade.entryPrice) : (currentPrice < trade.entryPrice);
+                const floatingProfit = isWinning ? trade.potentialPayout : -trade.amount;
 
                 list.push({
-                    ...trade,
+                    id: trade.id,
+                    pair: trade.pair,
+                    direction: trade.direction,
+                    amount: trade.amount,
+                    timeframe: trade.timeframe,
+                    entryPrice: trade.entryPrice,
                     currentPrice,
-                    remainingMs: Math.max(0, trade.expiryTime - now),
-                    remainingSec: Math.max(0, Math.ceil((trade.expiryTime - now) / 1000)),
+                    entryTime: trade.entryTime,
+                    expiryTime: trade.expiryTime,
+                    remainingMs,
+                    remainingSec: Math.ceil(remainingMs / 1000),
                     isWinning,
-                    isTie,
-                    floatingProfit: isWinning ? trade.potentialPayout : (isTie ? 0 : -trade.amount)
+                    floatingProfit,
+                    potentialReturn: trade.potentialReturn,
+                    potentialPayout: trade.potentialPayout
                 });
             }
         }
@@ -484,101 +515,154 @@ class BinaryTradingService extends EventEmitter {
     }
 
     /**
-     * Get trade history for a user
+     * Get settled predictions history
      */
     getUserTradeHistory(userId, limit = 50) {
         return this.settledTrades
             .filter(t => t.userId === userId)
-            .slice(0, limit);
+            .slice(0, limit)
+            .map(t => ({
+                id: t.id,
+                pair: t.pair,
+                direction: t.direction,
+                amount: t.amount,
+                timeframe: t.timeframe,
+                entryPrice: t.entryPrice,
+                exitPrice: t.exitPrice,
+                entryTime: t.entryTime,
+                settlementTime: t.settlementTime,
+                result: t.result,
+                payout: t.payout,
+                totalReturn: t.totalReturn,
+                netProfit: t.netProfit
+            }));
     }
 
     /**
-     * Get performance stats for a user
+     * Get user performance analytics
      */
     getUserPerformance(userId) {
         const stats = this.userStats.get(userId) || {
-            userId,
             totalTrades: 0,
             wins: 0,
             losses: 0,
             ties: 0,
-            totalProfitLoss: 0,
             winRate: 0,
+            totalWagered: 0,
+            totalPayout: 0,
+            totalProfitLoss: 0,
             currentStreak: 0,
-            bestStreak: 0,
-            lastTradeTime: null
+            bestStreak: 0
         };
-
         return stats;
     }
 
-    /**
-     * Get pair price
-     */
-    getPairPrice(pair) {
-        return this.pairs[pair] ? this.pairs[pair].price : 0;
-    }
-
-    /**
-     * Get all pairs summary
-     */
-    getAllPairsSummary() {
-        const summary = {};
-        Object.keys(this.pairs).forEach(pair => {
-            const p = this.pairs[pair];
-            const change = p.price - p.open24h;
-            const changePercent = p.open24h > 0 ? parseFloat(((change / p.open24h) * 100).toFixed(2)) : 0;
-
-            summary[pair] = {
-                pair,
-                symbol: p.symbol,
-                price: p.price,
-                decimals: p.decimals,
-                change: parseFloat(change.toFixed(p.decimals)),
-                changePercent,
-                high24h: p.high24h,
-                low24h: p.low24h,
-                volume24h: p.volume24h,
-                status: p.status
+    _updateUserStats(userId, trade) {
+        let stats = this.userStats.get(userId);
+        if (!stats) {
+            stats = {
+                totalTrades: 0,
+                wins: 0,
+                losses: 0,
+                ties: 0,
+                winRate: 0,
+                totalWagered: 0,
+                totalPayout: 0,
+                totalProfitLoss: 0,
+                currentStreak: 0,
+                bestStreak: 0
             };
-        });
-        return summary;
-    }
-
-    /**
-     * Get Candles for pair and timeframe
-     */
-    getCandles(pair, timeframe = '1m') {
-        const tf = this.INTERVAL_MS[timeframe] ? timeframe : '1m';
-        if (!this.candles[pair] || !this.candles[pair][tf]) {
-            return [];
+            this.userStats.set(userId, stats);
         }
-        return this.candles[pair][tf];
+
+        stats.totalTrades++;
+        stats.totalWagered = parseFloat((stats.totalWagered + trade.amount).toFixed(2));
+        stats.totalPayout = parseFloat((stats.totalPayout + (trade.payout || 0)).toFixed(2));
+        stats.totalProfitLoss = parseFloat((stats.totalProfitLoss + trade.netProfit).toFixed(2));
+
+        const isWin = trade.result === 'WON' || trade.result === 'WON_EARLY';
+        const isTie = trade.result === 'TIE';
+
+        if (isWin) {
+            stats.wins++;
+            stats.currentStreak = stats.currentStreak >= 0 ? stats.currentStreak + 1 : 1;
+            if (stats.currentStreak > stats.bestStreak) stats.bestStreak = stats.currentStreak;
+        } else if (isTie) {
+            stats.ties++;
+        } else {
+            stats.losses++;
+            stats.currentStreak = stats.currentStreak <= 0 ? stats.currentStreak - 1 : -1;
+        }
+
+        stats.winRate = stats.totalTrades > 0 ? parseFloat(((stats.wins / stats.totalTrades) * 100).toFixed(1)) : 0;
     }
 
     /**
-     * Get synthetic order book with realistic depth for an asset pair
+     * Get Live Order Book Depth for a pair
      */
     getOrderBook(pair) {
         const config = this.pairs[pair];
         if (!config) return { bids: [], asks: [] };
 
-        const mid = config.price;
-        const decimals = config.decimals;
+        const midPrice = config.price;
+        const spread = config.price * 0.0004;
         const bids = [];
         const asks = [];
 
         for (let i = 1; i <= 6; i++) {
-            const bidPrice = parseFloat((mid * (1 - (i * 0.0004))).toFixed(decimals));
-            const bidSize = parseFloat((0.2 * i + Math.random() * 1.5).toFixed(3));
-            bids.push({ price: bidPrice, size: bidSize, total: parseFloat((bidPrice * bidSize).toFixed(2)) });
+            const bidStep = i * (midPrice * 0.00025);
+            const askStep = i * (midPrice * 0.00025);
+            const bidPrice = parseFloat((midPrice - (spread / 2) - bidStep).toFixed(config.decimals));
+            const askPrice = parseFloat((midPrice + (spread / 2) + askStep).toFixed(config.decimals));
+            const bidSize = parseFloat((45 + Math.sin(i * 1.5) * 25 + Math.random() * 15).toFixed(2));
+            const askSize = parseFloat((42 + Math.cos(i * 1.5) * 22 + Math.random() * 15).toFixed(2));
 
-            const askPrice = parseFloat((mid * (1 + (i * 0.0004))).toFixed(decimals));
-            const askSize = parseFloat((0.2 * i + Math.random() * 1.5).toFixed(3));
+            bids.push({ price: bidPrice, size: bidSize, total: parseFloat((bidPrice * bidSize).toFixed(2)) });
             asks.push({ price: askPrice, size: askSize, total: parseFloat((askPrice * askSize).toFixed(2)) });
         }
 
-        return { bids, asks, midPrice: mid, spread: parseFloat((asks[0].price - bids[0].price).toFixed(decimals)) };
+        return {
+            pair,
+            midPrice,
+            spread: parseFloat(spread.toFixed(config.decimals)),
+            bids,
+            asks
+        };
+    }
+
+    /**
+     * Get Candlestick data for pair and timeframe
+     */
+    getCandles(pair, timeframe = '30s') {
+        const tf = this.candles[pair] && this.candles[pair][timeframe] ? timeframe : '30s';
+        return (this.candles[pair] && this.candles[pair][tf]) ? this.candles[pair][tf] : [];
+    }
+
+    /**
+     * Get All Pairs Real-Time Summary
+     */
+    getAllPairsSummary() {
+        const summary = {};
+        Object.keys(this.pairs).forEach(pair => {
+            const c = this.pairs[pair];
+            const change = c.price - c.open24h;
+            const changePercent = c.open24h > 0 ? (change / c.open24h) * 100 : 0;
+
+            summary[pair] = {
+                symbol: c.symbol,
+                base: c.base,
+                quote: c.quote,
+                decimals: c.decimals,
+                price: c.price,
+                change: parseFloat(change.toFixed(c.decimals)),
+                changePercent: parseFloat(changePercent.toFixed(2)),
+                high24h: c.high24h,
+                low24h: c.low24h,
+                volume24h: c.volume24h,
+                status: c.status
+            };
+        });
+        return summary;
     }
 }
 
