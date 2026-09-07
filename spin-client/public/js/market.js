@@ -1576,6 +1576,7 @@
             if (modal) {
                 modal.style.display = 'none';
                 modal.classList.remove('open', 'active');
+                modal.setAttribute('style', 'display: none !important');
             }
         },
 

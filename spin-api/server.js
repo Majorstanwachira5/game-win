@@ -32,6 +32,7 @@ const marketService = require('./services/MarketService');
 const tradingService = require('./services/TradingService');
 const BinaryTradingService = require('./services/BinaryTradingService');
 const binaryTradingService = new BinaryTradingService(marketService);
+const referralService = require('./services/ReferralService');
 
 // Hook authoritative wallet coin events to market volume
 platformEvents.on('WALLET_UPDATED', (payload) => {
@@ -1576,14 +1577,15 @@ function creditSuccessfulDeposit(userId, amount, checkoutRequestId = '', receipt
 app.post(['/api/deposit', '/api/mpesa/stkpush'], depositLimiter, requirePlayerAuth, async (req, res) => {
     try {
         const userId = req.userId || req.body.userId || 'demo-user-1';
-        const { phone = '', amount = 500 } = req.body;
+        const { phone = '', amount = 500, gameAction = '' } = req.body;
         const depositAmount = Math.round(Number(amount) || 0);
 
-        // Server-side strict minimum deposit enforcement (KSh 500)
-        if (!depositAmount || depositAmount < 500) {
+        // Allow direct game wagers (min KSh 1) or wallet funding (min KSh 10)
+        const minDeposit = gameAction ? 1 : 10;
+        if (!depositAmount || depositAmount < minDeposit) {
             return res.status(400).json({
                 success: false,
-                error: 'Minimum deposit is KSh 500. Please enter an amount of KSh 500 or more.'
+                error: `Minimum deposit is KSh ${minDeposit}. Please enter an amount of KSh ${minDeposit} or more.`
             });
         }
 
@@ -2056,8 +2058,27 @@ app.get('/api/winners/recent', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  SYSTEM HEALTH (Public)
+//  SYSTEM ROOT & HEALTH (Public)
 // ═══════════════════════════════════════════════════════════════════════════
+app.get('/', (req, res) => {
+    res.json({
+        name: 'PLAYCOIN API',
+        version: '2.4.0-RAM-PROD',
+        status: 'online',
+        database: dbConnected ? 'healthy' : 'operational',
+        mpesa: 'reachable',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/api/health',
+            docs: '/api-docs',
+            auth: '/api/auth',
+            deposit: '/api/deposit',
+            spin: '/api/spin',
+            admin: '/api/admin'
+        }
+    });
+});
+
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'healthy',
@@ -3166,4 +3187,3 @@ server.listen(PORT, () => {
 });
 
 module.exports = app;
-

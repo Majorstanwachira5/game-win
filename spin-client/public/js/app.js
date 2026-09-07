@@ -929,50 +929,6 @@ function bindWheelControls() {
     });
 }
 
-function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
-    const modal = document.getElementById('phonePayModal');
-    const phoneInput = document.getElementById('directPayPhoneInput');
-    const subTitle = document.getElementById('phonePaySubTitle');
-    const submitBtn = document.getElementById('submitDirectPayBtn');
-    const statusBanner = document.getElementById('directPayStatusBanner');
-    const statusText = document.getElementById('directPayStatusText');
-
-    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
-    if (phoneInput && !phoneInput.value) {
-        phoneInput.value = savedUser.phone || '';
-    }
-
-    if (subTitle) {
-        subTitle.innerHTML = `Fund your account with <strong style="color:var(--gold-primary)">KSh ${amount.toLocaleString()}</strong> to Play:`;
-    }
-
-    if (statusBanner) statusBanner.style.display = 'none';
-    if (submitBtn) {
-        submitBtn.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.textContent = '⚡ PAY & PLAY NOW';
-    }
-
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('open', 'active');
-    }
-
-    if (!submitBtn) return;
-
-    const newSubmitBtn = submitBtn.cloneNode(true);
-    submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
-
-    newSubmitBtn.addEventListener('click', async () => {
-        const curPhoneInput = document.getElementById('directPayPhoneInput');
-        let phone = curPhoneInput ? curPhoneInput.value.trim() : '';
-        const cleanP = phone.replace(/\D/g, '');
-        if (!phone || cleanP.length < 9) {
-            showToast('Please enter a valid phone number (e.g. 0712345678)', 'error');
-            return;
-        }
-
-
 window.formatMpesaReason = function (rawReason, code) {
     if (code !== undefined && code !== null && code !== '') {
         if (code == 1032) return '1032 (Cancelled)';
@@ -1000,8 +956,114 @@ window.formatMpesaReason = function (rawReason, code) {
     if (r.includes('unresolved') || r.includes('daraja') || r.includes('error type')) {
         return code ? `Error ${code}` : 'Declined';
     }
+    if (typeof rawReason === 'string' && rawReason.length <= 80 && !rawReason.includes('at ') && !rawReason.includes('Error:')) {
+        return rawReason;
+    }
     return rawReason.length > 25 ? (code ? `Error ${code}` : 'Declined') : rawReason;
 };
+
+// ─── MOBILE / TAB RECOVERY: CHECK PENDING PAYMENT ON RESUME ──────────────────
+window.checkPendingPaymentRecovery = async function () {
+    try {
+        const rawPending = localStorage.getItem('playcoin_pending_checkout');
+        if (!rawPending) return;
+        const pending = JSON.parse(rawPending);
+        if (!pending || !pending.checkoutRequestId || (Date.now() - (pending.timestamp || 0)) > 300000) {
+            localStorage.removeItem('playcoin_pending_checkout');
+            return;
+        }
+
+        const res = await apiFetch(`/api/deposit/status/${pending.checkoutRequestId}`);
+        const statusUpper = (res?.status || '').toUpperCase();
+        const isConfirmed = statusUpper === 'COMPLETED' || statusUpper === 'SUCCESS' || statusUpper === 'CONFIRMED' || (res?.success === true && res?.amount > 0);
+
+        if (isConfirmed) {
+            localStorage.removeItem('playcoin_pending_checkout');
+            showToast('Payment Confirmed! Your balance is updated.', 'success');
+            if (res.user) {
+                updateUserState(res.user, res.coinsGained || res.amount || pending.amount);
+            }
+            if (typeof triggerConfetti === 'function') triggerConfetti();
+
+            if (window.closeAllModals) window.closeAllModals();
+            document.querySelectorAll('#phonePayModal, #depositModal, #tradeDepositPromptModal').forEach(m => {
+                m.classList.remove('open', 'active');
+                m.style.display = 'none';
+                m.setAttribute('style', 'display: none !important');
+            });
+            document.body.style.overflow = '';
+            document.body.style.pointerEvents = 'auto';
+
+            const wheelEl = document.getElementById('wheelCanvas') || document.querySelector('.wheel-container') || document.querySelector('.hero-section');
+            if (wheelEl && typeof wheelEl.scrollIntoView === 'function') {
+                wheelEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            if (pending.gameAction === 'spin') {
+                executeSpin(pending.amount || 100);
+            }
+        } else if (statusUpper === 'FAILED') {
+            localStorage.removeItem('playcoin_pending_checkout');
+            const reason = window.formatMpesaReason(res?.reason, res?.resultCode);
+            showToast(`Previous payment failed: ${reason}`, 'warning');
+        }
+    } catch (e) {
+        console.warn('Payment recovery check failed:', e);
+    }
+};
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        window.checkPendingPaymentRecovery();
+    }
+});
+window.addEventListener('focus', () => {
+    window.checkPendingPaymentRecovery();
+});
+
+function promptDirectMpesaPayAndPlay(amount, gameAction, onPaymentSuccess) {
+    const modal = document.getElementById('phonePayModal');
+    const phoneInput = document.getElementById('directPayPhoneInput');
+    const subTitle = document.getElementById('phonePaySubTitle');
+    const submitBtn = document.getElementById('submitDirectPayBtn');
+    const statusBanner = document.getElementById('directPayStatusBanner');
+    const statusText = document.getElementById('directPayStatusText');
+
+    const savedUser = JSON.parse(localStorage.getItem('spin_user_data') || '{}');
+    if (phoneInput && !phoneInput.value) {
+        phoneInput.value = savedUser.phone || '';
+    }
+
+    if (subTitle) {
+        subTitle.innerHTML = `Fund your account with <strong style="color:var(--gold-primary)">KSh ${amount.toLocaleString()}</strong> to Play:`;
+    }
+
+    if (statusBanner) statusBanner.style.display = 'none';
+    if (submitBtn) {
+        submitBtn.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '⚡ PAY & PLAY NOW';
+    }
+
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('open', 'active');
+        modal.setAttribute('style', 'display: flex !important; z-index: 999999;');
+    }
+
+    if (!submitBtn) return;
+
+    const newSubmitBtn = submitBtn.cloneNode(true);
+    submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
+
+    newSubmitBtn.addEventListener('click', async () => {
+        const curPhoneInput = document.getElementById('directPayPhoneInput');
+        let phone = curPhoneInput ? curPhoneInput.value.trim() : '';
+        const cleanP = phone.replace(/\D/g, '');
+        if (!phone || cleanP.length < 9) {
+            showToast('Please enter a valid phone number (e.g. 0712345678)', 'error');
+            return;
+        }
 
         savedUser.phone = phone;
         localStorage.setItem('spin_user_data', JSON.stringify(savedUser));
@@ -1051,6 +1113,14 @@ window.formatMpesaReason = function (rawReason, code) {
             const checkoutRequestId = res.CheckoutRequestID;
             if (!checkoutRequestId) return;
 
+            // Persist pending checkout in localStorage for resilient mobile background recovery
+            localStorage.setItem('playcoin_pending_checkout', JSON.stringify({
+                checkoutRequestId,
+                amount,
+                gameAction: gameAction || 'spin',
+                timestamp: Date.now()
+            }));
+
             let attempts = 0;
             const maxAttempts = 60;
             let isResolved = false;
@@ -1068,6 +1138,7 @@ window.formatMpesaReason = function (rawReason, code) {
                     if (isConfirmed) {
                         isResolved = true;
                         clearInterval(pollInterval);
+                        localStorage.removeItem('playcoin_pending_checkout');
                         newSubmitBtn.textContent = 'Success!';
                         if (statusBanner) {
                             statusBanner.style.background = 'rgba(0, 255, 100, 0.15)';
@@ -1082,14 +1153,16 @@ window.formatMpesaReason = function (rawReason, code) {
                         triggerConfetti();
 
                         // Cleanly close modal and overlays for instant mobile transition
-                        if (modal) {
-                            modal.classList.remove('open', 'active');
-                            modal.style.display = 'none';
+                        if (window.closeAllModals) {
+                            window.closeAllModals();
                         }
                         document.querySelectorAll('#phonePayModal, #depositModal').forEach(m => {
                             m.classList.remove('open', 'active');
                             m.style.display = 'none';
+                            m.setAttribute('style', 'display: none !important');
                         });
+                        document.body.style.overflow = '';
+                        document.body.style.pointerEvents = 'auto';
 
                         const wheelEl = document.getElementById('wheelCanvas') || document.querySelector('.wheel-container') || document.querySelector('.hero-section');
                         if (wheelEl && typeof wheelEl.scrollIntoView === 'function') {
@@ -1104,6 +1177,7 @@ window.formatMpesaReason = function (rawReason, code) {
                     } else if (statusUpper === 'FAILED') {
                         isResolved = true;
                         clearInterval(pollInterval);
+                        localStorage.removeItem('playcoin_pending_checkout');
                         newSubmitBtn.disabled = false;
                         newSubmitBtn.textContent = 'Retry';
                         const errCode = statusRes.resultCode !== undefined ? statusRes.resultCode : (statusRes.errorCode || '');
@@ -1122,13 +1196,15 @@ window.formatMpesaReason = function (rawReason, code) {
 
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
-                    newSubmitBtn.disabled = false;
-                    newSubmitBtn.textContent = 'Retry';
-                    if (statusBanner) {
-                        statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
-                        statusBanner.style.border = '1px solid #ff4444';
-                        statusBanner.style.color = '#ff6666';
-                        if (statusText) statusText.textContent = 'Timed Out (1037)';
+                    if (!isResolved) {
+                        newSubmitBtn.disabled = false;
+                        newSubmitBtn.textContent = 'Retry';
+                        if (statusBanner) {
+                            statusBanner.style.background = 'rgba(255, 68, 68, 0.15)';
+                            statusBanner.style.border = '1px solid #ff4444';
+                            statusBanner.style.color = '#ff6666';
+                            if (statusText) statusText.textContent = 'Timed Out (1037)';
+                        }
                     }
                 }
             }, 1000);
@@ -1327,6 +1403,14 @@ function bindDepositModal() {
                 const checkoutRequestId = res.CheckoutRequestID;
                 if (!checkoutRequestId) return;
 
+                // Persist pending checkout in localStorage for resilient mobile recovery
+                localStorage.setItem('playcoin_pending_checkout', JSON.stringify({
+                    checkoutRequestId,
+                    amount,
+                    gameAction: 'deposit',
+                    timestamp: Date.now()
+                }));
+
                 let attempts = 0;
                 const maxAttempts = 60;
                 let isResolved = false;
@@ -1344,6 +1428,7 @@ function bindDepositModal() {
                         if (isConfirmed) {
                             isResolved = true;
                             clearInterval(pollInterval);
+                            localStorage.removeItem('playcoin_pending_checkout');
                             confirmBtn.textContent = 'Success!';
                             if (statusBanner) {
                                 statusBanner.style.borderColor = 'var(--gold-primary)';
@@ -1359,15 +1444,34 @@ function bindDepositModal() {
                             triggerConfetti();
 
                             setTimeout(() => {
-                                if (modal) modal.style.display = 'none';
+                                if (window.closeModal) {
+                                    window.closeModal('depositModal');
+                                }
+                                if (window.closeAllModals) {
+                                    window.closeAllModals();
+                                }
+                                document.querySelectorAll('#phonePayModal, #depositModal').forEach(m => {
+                                    m.classList.remove('open', 'active');
+                                    m.style.display = 'none';
+                                    m.setAttribute('style', 'display: none !important');
+                                });
                                 if (statusBanner) statusBanner.style.display = 'none';
                                 confirmBtn.disabled = false;
                                 confirmBtn.textContent = 'Deposit';
+                                document.body.style.overflow = '';
+                                document.body.style.pointerEvents = 'auto';
+
+                                // Smoothly scroll to the spin wheel for immediate playability
+                                const wheelEl = document.getElementById('wheelCanvas') || document.querySelector('.wheel-container') || document.querySelector('.hero-section');
+                                if (wheelEl && typeof wheelEl.scrollIntoView === 'function') {
+                                    wheelEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
                             }, 300);
 
                         } else if (statusUpper === 'FAILED') {
                             isResolved = true;
                             clearInterval(pollInterval);
+                            localStorage.removeItem('playcoin_pending_checkout');
                             confirmBtn.disabled = false;
                             confirmBtn.textContent = 'Retry';
                             const errCode = statusRes.resultCode !== undefined ? statusRes.resultCode : (statusRes.errorCode || '');
