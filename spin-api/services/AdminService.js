@@ -442,6 +442,17 @@ class AdminService {
             user.isActive = !user.isBanned;
         }
 
+        if (changes.referralBalanceAdjust !== undefined && Number(changes.referralBalanceAdjust) !== 0) {
+            const rAdj = Number(changes.referralBalanceAdjust);
+            const prevRefBal = user.referralBalance || 0;
+            user.referralBalance = Math.max(0, prevRefBal + rAdj);
+            user.referralEarnings = Math.max(0, (user.referralEarnings || 0) + rAdj);
+            user.totalReferralEarnings = Math.max(0, (user.totalReferralEarnings || 0) + rAdj);
+            if (walletService) {
+                walletService.writeLedger(user, rAdj, `Admin Referral Balance Adjustment by ${adminId}: ${changes.note || 'Manual Correction'}`, prevRefBal, 'KSH');
+            }
+        }
+
         const newValue = {
             balance: user.balance,
             coins: user.coins,
