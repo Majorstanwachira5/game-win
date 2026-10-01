@@ -10,8 +10,10 @@ const platformEvents = require("../events/EventEmitter");
 const SUPABASE_URL =
   process.env.SUPABASE_URL || "https://tyznjnbpsobrapbamtbn.supabase.co";
 const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
-  "sb_publishable_8i5lE6rUTJR2q-lw3tWmrA_6AsG2b23";
+  '';
 
 async function dbFetch(table, options = {}) {
   const url = `${SUPABASE_URL}/rest/v1/${table}${options.query ? "?" + options.query : ""}`;
@@ -21,15 +23,21 @@ async function dbFetch(table, options = {}) {
     "Content-Type": "application/json",
     Prefer: options.prefer || "return=representation",
   };
+  const controller = new AbortController();
+  const timeoutMs = options.timeout || 3000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       method: options.method || "GET",
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
+    clearTimeout(timeoutId);
     console.warn("[MPESA DB PERSIST WARNING]", e.message);
     return null;
   }

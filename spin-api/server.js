@@ -523,12 +523,36 @@ function handleLogin(user) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  SUPABASE REST DATABASE PERSISTENCE HELPER
+//  SUPABASE REST DATABASE PERSISTENCE HELPER (OFFLINE-FIRST RESILIENT)
 // ═══════════════════════════════════════════════════════════════════════════
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tyznjnbpsobrapbamtbn.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_8i5lE6rUTJR2q-lw3tWmrA_6AsG2b23';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || '';
+
+let supabaseConsecutiveFailures = 0;
+let supabaseOfflineUntil = 0;
+
+function isSupabaseAvailable() {
+    if (Date.now() < supabaseOfflineUntil) return false;
+    return true;
+}
+
+function recordSupabaseSuccess() {
+    supabaseConsecutiveFailures = 0;
+    supabaseOfflineUntil = 0;
+}
+
+function recordSupabaseFailure(reason) {
+    supabaseConsecutiveFailures++;
+    if (supabaseConsecutiveFailures >= 2) {
+        supabaseOfflineUntil = Date.now() + 30000;
+        console.warn(`[SUPABASE CIRCUIT BREAKER] Supabase offline/unreachable (${reason}). Degrading to fast local store for 30s.`);
+    }
+}
 
 async function supabaseFetch(table, options = {}) {
+    if (!isSupabaseAvailable()) {
+        return null;
+    }
     const url = `${SUPABASE_URL}/rest/v1/${table}${options.query ? '?' + options.query : ''}`;
     const headers = {
         'apikey': SUPABASE_KEY,
@@ -536,16 +560,28 @@ async function supabaseFetch(table, options = {}) {
         'Content-Type': 'application/json',
         'Prefer': options.prefer || 'return=representation'
     };
+    const controller = new AbortController();
+    const timeoutMs = options.timeout || 2500;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
         const res = await fetch(url, {
             method: options.method || 'GET',
             headers,
-            body: options.body ? JSON.stringify(options.body) : undefined
+            body: options.body ? JSON.stringify(options.body) : undefined,
+            signal: controller.signal
         });
-        if (!res.ok) return null;
+        clearTimeout(timeoutId);
+        if (!res.ok) {
+            if (res.status >= 500) recordSupabaseFailure(`HTTP ${res.status}`);
+            return null;
+        }
+        recordSupabaseSuccess();
         return await res.json();
     } catch (e) {
-        console.warn('Supabase DB fetch error:', e.message);
+        clearTimeout(timeoutId);
+        recordSupabaseFailure(e.name === 'AbortError' ? 'Timeout' : e.message);
+        console.warn('Supabase DB fetch error/timeout:', e.message);
         return null;
     }
 }
@@ -673,18 +709,13 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
             return uEmail === formattedEmail || uPhone === formattedEmail || (cleanPhone.length >= 9 && uCleanPhone === cleanPhone);
         });
 
-        // 2. Check Supabase Database
+        // 2. Check Supabase Database (Fast single-shot query with circuit-breaker protection)
         let dbUsers = null;
         if (!existingKey) {
             try {
                 dbUsers = await supabaseFetch('players', {
-                    query: `email=eq.${encodeURIComponent(formattedEmail)}`
+                    query: `or=(email.eq.${encodeURIComponent(formattedEmail)},phone_number.eq.${encodeURIComponent(formattedEmail)})&limit=1`
                 });
-                if (!dbUsers || dbUsers.length === 0) {
-                    dbUsers = await supabaseFetch('players', {
-                        query: `phone_number=eq.${encodeURIComponent(formattedEmail)}`
-                    });
-                }
             } catch (e) {}
         }
 
@@ -727,21 +758,17 @@ app.post(['/api/auth/register', '/auth/register', '/register', '/api/register'],
         users[userId] = user;
         saveUsersCache();
 
-        // Persist to Supabase Database (public.players)
-        try {
-            await supabaseFetch('players', {
-                method: 'POST',
-                body: {
-                    email: formattedEmail,
-                    display_name: user.name,
-                    phone_number: formattedEmail,
-                    xp_points: 50,
-                    free_spins_count: isTester ? 10 : 0
-                }
-            });
-        } catch (e) {
-            console.warn('Supabase player persist warning:', e.message);
-        }
+        // Persist to Supabase Database asynchronously without blocking client HTTP response
+        supabaseFetch('players', {
+            method: 'POST',
+            body: {
+                email: formattedEmail,
+                display_name: user.name,
+                phone_number: formattedEmail,
+                xp_points: 50,
+                free_spins_count: isTester ? 10 : 0
+            }
+        }).catch(e => console.warn('Supabase player async persist notice:', e.message));
 
         const token = generatePlayerToken(userId);
         res.json({
@@ -788,17 +815,12 @@ app.post(['/api/auth/login', '/auth/login', '/login', '/api/login'], async (req,
 
         let user = userKey ? users[userKey] : null;
 
-        // 2. Query Supabase Database if not in local cache
+        // 2. Query Supabase Database if not in local cache (Fast single-shot query)
         if (!user) {
             try {
                 let dbUsers = await supabaseFetch('players', {
-                    query: `email=eq.${encodeURIComponent(formattedEmail)}`
+                    query: `or=(email.eq.${encodeURIComponent(formattedEmail)},phone_number.eq.${encodeURIComponent(formattedEmail)})&limit=1`
                 });
-                if (!dbUsers || dbUsers.length === 0) {
-                    dbUsers = await supabaseFetch('players', {
-                        query: `phone_number=eq.${encodeURIComponent(formattedEmail)}`
-                    });
-                }
                 if (dbUsers && dbUsers.length > 0) {
                     const dbUser = dbUsers[0];
                     const isTester = checkIsTester(dbUser.email || formattedEmail);
